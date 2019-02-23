@@ -7,6 +7,6 @@ setup(
       author='Dominique Eckert',
       author_email='Dominique.Eckert@unige.ch',
       url='http://www.isdc.unige.ch/~deckert/newsite/Proffit.html',
-      py_modules=['pyproffit','miscellaneous','data'],
+      packages=['pyproffit'],
 )
 

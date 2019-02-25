@@ -117,7 +117,7 @@ class Data:
                 src = np.where(np.hypot(x - xsrc, y - ysrc) < rad)
                 expo[src] = 0.0
                 nsrc = nsrc + 1
-            elif 'annulus' in lreg[i]:
+            elif 'ellipse' in lreg[i]:
                 vals = lreg[i].split('(')[1].split(')')[0]
                 if regtype == 'fk5':
                     xsrc = float(vals.split(',')[0])
@@ -148,9 +148,9 @@ class Data:
                 aoverb = rad1/rad2
                 xtil = np.cos(ellang)*(x-xsrc) + np.sin(ellang)*(y-ysrc)
                 ytil = -np.sin(ellang)*(x-xsrc) + np.cos(ellang)*(y-ysrc)
-                src = np.where(aoverb*np.hypot(xtil, ytil/aoverb) < rad)
+                src = np.where(aoverb*np.hypot(xtil, ytil/aoverb) < rad1)
                 expo[src] = 0.0
                 nsrc = nsrc + 1
 
         print('Excluded %d sources' % (nsrc))
-        data.exposure = expo
+        self.exposure = expo

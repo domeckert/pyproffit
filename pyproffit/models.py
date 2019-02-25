@@ -26,7 +26,7 @@ class Model:
     # Class containing PROFFIT models
     def __init__(self,model,vals=None):
         self.model=model
-         if vals is not None:
+        if vals is not None:
             self.params=vals
         else:
             self.params=None

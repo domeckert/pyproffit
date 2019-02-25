@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import  cdist
 from scipy.stats import poisson
-from scipy.ndimage.filters import gaussian_filter
 
 def logbinning(binsize,maxrad):
     nbin=int(maxrad/binsize*60.+0.5)
@@ -144,6 +143,16 @@ def heaviside(x):
     a = np.sum(a)
     return a
 
+from scipy.ndimage.filters import gaussian_filter
+
+def smooth_bkg(data,smoothing_scale=25):
+    bkg = data.bkg
+    expo = data.exposure
+    gsb = gaussian_filter(bkg,smoothing_scale)
+    gsexp = gaussian_filter(expo,smoothing_scale)
+    bkgsmoothed = np.nan_to_num(np.divide(gsb,gsexp))*expo
+    return  bkgsmoothed
+
 from scipy.ndimage import generic_filter
 
 def clean_bkg(img,bkg):
@@ -159,11 +168,3 @@ def clean_bkg(img,bkg):
     remove=np.where(vals<prob)
     img[y[remove],x[remove]]=0
     return img
-
-def smooth_bkg(data,smoothing_scale=25):
-    bkg = data.bkg
-    expo = data.exposure
-    gsb = gaussian_filter(bkg,smoothing_scale)
-    gsexp = gaussian_filter(expo,smoothing_scale)
-    bkgsmoothed = np.nan_to_num(np.divide(gsb,gsexp))*expo
-    return  bkgsmoothed

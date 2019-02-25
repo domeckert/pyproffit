@@ -109,7 +109,7 @@ class Profile:
         self.bkgprof=None
         self.bkgcounts=None
 
-    def sb_profile(self,ellipse=False,aoverb=1.0,voronoi=False):
+    def sb_profile(self,aoverb=1.0,angle=0.0,voronoi=False):
         #######################################
         # Function to extract surface-brightness profiles
         # Currently ellipse is not yet implemented
@@ -130,7 +130,14 @@ class Profile:
             self.nbin=nbin
         profile,eprof,counts,area,effexp,bkgprof,bkgcounts=np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin)
         y,x=np.indices(data.axes)
-        rads=np.sqrt((x-self.cra)**2+(y-self.cdec)**2)*pixsize
+        tta=angle-90.
+        if tta<-90. or tta>270.:
+            print('Error: input angle must be between 0 and 360 degrees')
+            return
+        ellang=tta*np.pi/180.
+        xtil=np.cos(ellang)*(x-self.cra)*pixsize+np.sin(ellang)*(y-self.cdec)*pixsize
+        ytil=-np.sin(ellang)*(x-self.cra)*pixsize+np.cos(ellang)*(y-self.cdec)*pixsize
+        rads=aoverb*np.hypot(xtil,ytil/aoverb)
         tol=0.5e-5
         for i in range(nbin):
             if i==0:

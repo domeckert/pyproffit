@@ -1,6 +1,5 @@
 import numpy as np
 import iminuit
-import sys
 
 # Generic class to fit data with chi-square
 class ChiSquared:
@@ -47,7 +46,7 @@ class Fitter:
         prof=self.profile
         if prof.profile is None:
             print('Error: No valid profile exists in provided object')
-            sys.exit(2)
+            return
         if method=='chi2':
             x=prof.bins
             y=prof.profile

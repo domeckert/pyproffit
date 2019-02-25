@@ -36,17 +36,20 @@ class Cstat:
 # Class including fitting tool
 class Fitter:
     def __init__(self, model, profile):
-        self.model=model
+        self.mod=model
         self.profile=profile
         self.mlike=None
         self.params=None
         self.errors=None
+        self.minuit=None
+        self.out=None
 
     def Migrad(self, method='chi2', fitlow=None, fithigh=None, **kwargs):
         prof=self.profile
         if prof.profile is None:
             print('Error: No valid profile exists in provided object')
             return
+        model=self.mod.model
         if method=='chi2':
             x=prof.bins
             y=prof.profile
@@ -63,15 +66,9 @@ class Fitter:
                 y=y[reg]
                 dy=dy[reg]
             # Define the fitting algorithm
-            chi2=ChiSquared(self.model,x,y,dy)
+            chi2=ChiSquared(model,x,y,dy)
             # Run Migrad
             minuit=iminuit.Minuit(chi2,**kwargs)
-            fmin, param=minuit.migrad()
-            self.params=minuit.values
-            self.errors=minuit.errors
-            self.mlike=fmin
-            self.minuit=minuit
-            self.out=param
         elif method=='cstat':
             x=prof.bins
             counts=prof.counts
@@ -94,13 +91,21 @@ class Fitter:
                 effexp=effexp[reg]
                 bkgc=bkgc[reg]
             # Define the fitting algorithm
-            cstat=Cstat(self.model,x,counts,area,effexp,bkgc)
+            cstat=Cstat(model,x,counts,area,effexp,bkgc)
             # Run Migrad
             minuit=iminuit.Minuit(cstat,**kwargs)
-            fmin, param=minuit.migrad()
-            self.params=minuit.values
-            self.errors=minuit.errors
-            self.mlike=fmin
-            self.minuit=minuit
-            self.out=param
+        else:
+            print('Unknown method ',method)
+            return
+        fmin, param=minuit.migrad()
+        npar = len(minuit.values)
+        outval = np.empty(npar)
+        for i in range(npar):
+            outval[i] = minuit.values[i]
+        self.mod.SetParameters(outval)
+        self.params=minuit.values
+        self.errors=minuit.errors
+        self.mlike=fmin
+        self.minuit=minuit
+        self.out=param
 

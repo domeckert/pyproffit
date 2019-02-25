@@ -33,6 +33,8 @@ class Profile:
                 return
             self.cra=centroid_ra-1.
             self.cdec=centroid_dec-1.
+            self.ellangle=None
+            self.ellratio=None
         elif method==4:
             if centroid_ra is None or centroid_dec is None:
                 print('Error: please provide X and Y coordinates')
@@ -41,6 +43,8 @@ class Profile:
             x=data.wcs_inp.wcs_world2pix(wc,1)
             self.cra=x[0][0]-1.
             self.cdec=x[0][1]-1.
+            self.ellangle=None
+            self.ellratio=None
             print('Corresponding pixels coordinates: ',self.cra+1,self.cdec+1)
         elif method==1:
             print('Computing centroid and ellipse parameters using pincipal component analysis')
@@ -70,6 +74,8 @@ class Profile:
             print('Ellipse axis ratio and position angle:',sig_x/sig_y,ellangle)
             self.cra=x_c
             self.cdec=y_c
+            self.ellangle=ellangle
+            self.ellratio=sig_x/sig_y
         elif method==2:
             print('Determining X-ray peak')
             if data.exposure is None:
@@ -87,6 +93,8 @@ class Profile:
             cra=xp[ismax]
             self.cra=np.mean(cra)
             self.cdec=np.mean(cdec)
+            self.ellangle=None
+            self.ellratio=None
             print('Coordinates of surface-brightness peak:',self.cra+1,self.cdec+1)
         else:
             print('Unknown method',method)
@@ -109,7 +117,7 @@ class Profile:
         self.bkgprof=None
         self.bkgcounts=None
 
-    def sb_profile(self,aoverb=1.0,angle=0.0,voronoi=False):
+    def sb_profile(self,ellipse_ratio=1.0,ellipse_angle=0.0,voronoi=False):
         #######################################
         # Function to extract surface-brightness profiles
         # Currently ellipse is not yet implemented
@@ -130,14 +138,16 @@ class Profile:
             self.nbin=nbin
         profile,eprof,counts,area,effexp,bkgprof,bkgcounts=np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin),np.empty(self.nbin)
         y,x=np.indices(data.axes)
-        tta=angle-90.
+        self.ellangle=ellipse_angle
+        self.ellratio=ellipse_ratio
+        tta=ellipse_angle-90.
         if tta<-90. or tta>270.:
             print('Error: input angle must be between 0 and 360 degrees')
             return
         ellang=tta*np.pi/180.
         xtil=np.cos(ellang)*(x-self.cra)*pixsize+np.sin(ellang)*(y-self.cdec)*pixsize
         ytil=-np.sin(ellang)*(x-self.cra)*pixsize+np.cos(ellang)*(y-self.cdec)*pixsize
-        rads=aoverb*np.hypot(xtil,ytil/aoverb)
+        rads=ellipse_ratio*np.hypot(xtil,ytil/ellipse_ratio)
         tol=0.5e-5
         for i in range(nbin):
             if i==0:
@@ -307,4 +317,29 @@ class Profile:
                     sn=sort_list[p]
                     psfout[n,p]=np.sum(blurred[sn])
             self.psfmat=psfout
+
+    def save_model_image(self,model,outfile,vignetting=True):
+        # Save model image to output FITS file
+        head=self.data.header
+        pixsize=self.data.pixsize
+        y,x=np.indices(self.data.axes)
+        ellipse_angle=self.ellangle
+        ellipse_ratio=self.ellratio
+        tta=ellipse_angle-90.
+        if tta<-90. or tta>270.:
+            print('Error: input angle must be between 0 and 360 degrees')
+            return
+        ellang=tta*np.pi/180.
+        xtil=np.cos(ellang)*(x-self.cra)*pixsize+np.sin(ellang)*(y-self.cdec)*pixsize
+        ytil=-np.sin(ellang)*(x-self.cra)*pixsize+np.cos(ellang)*(y-self.cdec)*pixsize
+        rads=ellipse_ratio*np.hypot(xtil,ytil/ellipse_ratio)
+        if vignetting:
+            modimg=model(rads)*pixsize**2*self.data.exposure
+        else:
+            modimg=model(rads)*pixsize**2
+        hdu = fits.PrimaryHDU(modimg)
+        hdu.header=head
+        hdu.writeto(outfile,overwrite=True)
+
+
 

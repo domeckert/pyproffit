@@ -34,3 +34,5 @@ class Model:
     def SetParameters(self,vals):
         self.params=vals
 
+    def SetErrors(self,vals):
+        self.errors=vals

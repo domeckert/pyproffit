@@ -5,7 +5,6 @@ from scipy.signal import convolve
 # from iminuit import Minuit
 from miscellaneous import *
 
-
 # from data import *
 # from fitting import *
 # from models import *
@@ -215,7 +214,7 @@ class Profile:
         self.profile = profile
         self.eprof = eprof
 
-    def save(self, outfile=None):
+    def save(self, outfile=None, model=None):
         #####################################################
         # Function to save profile into FITS file
         # First extension is data
@@ -254,6 +253,9 @@ class Profile:
                 hdr.comments['DEC_C'] = 'Declination of center value'
                 hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
                 hdul.append(tbhdu)
+            #if model is not None:
+            #    cols = []
+            #    cols.append(fits.Column(name='NAME', format='E', array=self.bins))
             if self.psfmat is not None:
                 psfhdu = fits.ImageHDU(self.psfmat, name='PSF')
                 hdul.append(psfhdu)
@@ -352,6 +354,7 @@ class Profile:
             modimg = outmod(rads) * pixsize ** 2 * self.data.exposure
         else:
             modimg = outmod(rads) * pixsize ** 2
-        hdu = fits.PrimaryHDU(modimg)
+        bkgsmoothed=smooth_bkg(self.data)
+        hdu = fits.PrimaryHDU(modimg+bkgsmoothed)
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)

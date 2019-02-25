@@ -100,9 +100,12 @@ class Fitter:
         fmin, param=minuit.migrad()
         npar = len(minuit.values)
         outval = np.empty(npar)
+        outerr = np.empty(npar)
         for i in range(npar):
             outval[i] = minuit.values[i]
+            outerr[i] = minuit.errors[i]
         self.mod.SetParameters(outval)
+        self.mod.SetErrors(outerr)
         self.params=minuit.values
         self.errors=minuit.errors
         self.mlike=fmin

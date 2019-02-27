@@ -4,6 +4,9 @@ from astropy import wcs
 from scipy.signal import convolve
 # from iminuit import Minuit
 from miscellaneous import *
+from scipy.ndimage.filters import gaussian_filter
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 # from data import *
 # from fitting import *
@@ -354,7 +357,74 @@ class Profile:
             modimg = outmod(rads) * pixsize ** 2 * self.data.exposure
         else:
             modimg = outmod(rads) * pixsize ** 2
-        bkgsmoothed=smooth_bkg(self.data)
+        smoothing_scale=25
+        gsb = gaussian_filter(self.data.bkg, smoothing_scale)
+        gsexp = gaussian_filter(self.data.exposure, smoothing_scale)
+        bkgsmoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.data.exposure
+ #       bkgsmoothed = bkg_smooth(self.data,smoothing_scale)
         hdu = fits.PrimaryHDU(modimg+bkgsmoothed)
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
+
+    def Plot(self,model=None,save_plot=False,outfile=None):
+        # Plot extracted profile
+        if self.profile is None:
+            print('Error: No profile extracted')
+            return
+        plt.clf()
+        fig = plt.figure(figsize=(13, 10))
+        gs0 = gridspec.GridSpec(1, 1)
+        if model is not None:
+            gs0.update(left=0.12, right=0.95, wspace=0.0, top=0.95, bottom=0.35)
+        else:
+            gs0.update(left=0.12, right=0.95, wspace=0.0, top=0.95, bottom=0.12)
+        ax = plt.subplot(gs0[0])
+        ax.minorticks_on()
+        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(18)
+        if model is None:
+            plt.xlabel('Radius [arcmin]', fontsize=40)
+            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=40)
+        else:
+            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=28)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.errorbar(self.bins, self.profile, xerr=self.ebins, yerr=self.eprof, fmt='o', color='black', elinewidth=2,
+                     markersize=7, capsize=0,mec='black', label='Brightness')
+        plt.plot(self.bins, self.bkgprof, color='green', label='Background')
+        if model is not None:
+            tmod = model.model(self.bins, *model.params)
+            plt.plot(self.bins, tmod, color='blue', label='Model')
+        xmin = self.bins[0] * 0.9
+        xmax = self.bins[len(self.bins) - 1] * 1.1
+        ylim = ax.get_ylim()
+        ax.axis([xmin,xmax,ylim[0],ylim[1]])
+        plt.legend(fontsize=22)
+        if model is not None:
+            gs1 = gridspec.GridSpec(1, 1)
+            gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
+            ax2 = plt.subplot(gs1[0])
+            plt.errorbar(self.bins,(self.profile-tmod)/self.eprof, yerr=np.ones(len(self.bins)), fmt='o', color='black', elinewidth=2,
+                     markersize=7, capsize=0,mec='black')
+            plt.xlabel('Radius [arcmin]', fontsize=28)
+            plt.ylabel('$\chi$', fontsize=28)
+            plt.xscale('log')
+            #xmin=np.min(self.bins-self.ebins)
+            #if xmin<=0:
+            #    xmin=1e-2
+            xl = np.logspace(np.log10(self.bins[0] / 2.), np.log10(self.bins[len(self.bins) - 1] * 2.), 100)
+            plt.plot(xl, np.zeros(len(xl)), color='blue', linestyle='--')
+            ax2.yaxis.set_label_coords(-0.07, 0.5)
+            ax2.minorticks_on()
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
+                item.set_fontsize(18)
+            ylim = ax2.get_ylim()
+            ax2.axis([xmin, xmax, ylim[0], ylim[1]])
+        if save_plot:
+            plt.savefig(outfile)
+        else:
+            plt.show()

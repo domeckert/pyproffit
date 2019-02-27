@@ -145,7 +145,7 @@ def heaviside(x):
 
 from scipy.ndimage.filters import gaussian_filter
 
-def smooth_bkg(data,smoothing_scale=25):
+def bkg_smooth(data,smoothing_scale=25):
     bkg = data.bkg
     expo = data.exposure
     gsb = gaussian_filter(bkg,smoothing_scale)

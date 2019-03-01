@@ -7,6 +7,8 @@ from miscellaneous import *
 from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from scipy.optimize import brentq
+
 
 # from data import *
 # from fitting import *
@@ -264,7 +266,7 @@ class Profile:
                 hdul.append(psfhdu)
             hdul.writeto(outfile, overwrite=True)
 
-    def psf(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None):
+    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None):
         #####################################################
         # Function to calculate a PSF convolution matrix given an input PSF image or function
         # Images of each annuli are convolved with the PSF image using FFT
@@ -302,6 +304,14 @@ class Profile:
             if psffunc is not None:
                 kernel = psffunc(rads)
                 norm = np.sum(kernel)
+                psfmin = 1e-7 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
+                frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
+                rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize # pixsize
+                npix = int(rmax)
+                yp, xp = np.indices((2 * npix + 1, 2 * npix + 1))
+                rpix = np.sqrt((xp - npix) ** 2 + (yp - npix) ** 2) * self.data.pixsize
+                kernel = psffunc(rpix)
+                norm = np.sum(kernel)
                 kernel = kernel / norm
             if psfimage is not None:
                 norm = np.sum(psfimage)
@@ -316,12 +326,10 @@ class Profile:
             for n in range(nbin):
                 if n == 0:
                     sort_list.append(np.where(
-                        np.logical_and(np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol),
-                                       exposure > 0.0)))
+                        np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol)))
                 else:
-                    sort_list.append(np.where(np.logical_and(np.logical_and(rads >= np.round(rad[n] - erad[n], 5) + tol,
-                                                                            rads < np.round(rad[n] + erad[n], 5) + tol),
-                                                             exposure > 0.0)))
+                    sort_list.append(np.where(np.logical_and(rads >= np.round(rad[n] - erad[n], 5) + tol,
+                                                                    rads < np.round(rad[n] + erad[n], 5) + tol)))
             # Calculate average of PSF image pixel-by-pixel and sort it by radial bins
             for n in range(nbin):
                 # print('Working with bin',n+1)
@@ -329,9 +337,10 @@ class Profile:
                 npt = len(x[region])
                 imgt = np.zeros(exposure.shape)
                 imgt[region] = 1. / npt
-                imgtc = np.roll(imgt, -1, axis=(0, 1))
                 # FFT-convolve image with kernel
-                blurred = convolve(imgtc, kernel, mode='same')
+                blurred = convolve(imgt, kernel, mode='same')
+                numnoise = np.where(blurred<1e-15)
+                blurred[numnoise]=0.0
                 for p in range(nbin):
                     sn = sort_list[p]
                     psfout[n, p] = np.sum(blurred[sn])

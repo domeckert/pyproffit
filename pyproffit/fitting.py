@@ -3,34 +3,63 @@ import iminuit
 
 # Generic class to fit data with chi-square
 class ChiSquared:
-    def __init__(self, model, x , y, dy):
+    def __init__(self, model, x , y, dy, psfmat=None, fitlow=None, fithigh=None):
         self.model = model  # model predicts y for given x
         self.x = x
         self.y = y
         self.dy = dy
+        fitl = 0.
+        fith = 1e10
+        if fitlow is not None:
+            fitl = fitlow
+        if fithigh is not None:
+            fith = fithigh
+        self.region = np.where(np.logical_and(x>=fitl,x<=fith))
+        if psfmat is not None:
+            self.psfmat = psfmat
+        else:
+            self.psfmat = None
         self.func_code = iminuit.util.make_func_code(iminuit.util.describe(self.model)[1:])
 
     def __call__(self, *par):  # par are a variable number of model parameters
         ym = self.model(self.x, *par)
-        chi2 = np.sum((self.y - ym)**2/self.dy**2)
+        if self.psfmat is not None:
+            ym = np.dot(self.psfmat,ym)
+        reg = self.region
+        chi2 = np.sum((self.y[reg] - ym[reg])**2/self.dy[reg]**2)
         return chi2
 
 # Generic class to fit data with C-stat
 class Cstat:
-    def __init__(self, model, x, counts, area, effexp, bkgc):
+    def __init__(self, model, x, counts, area, effexp, bkgc, psfmat=None, fitlow=None, fithigh=None):
         self.model = model  # model predicts y for given x
         self.x = x
         self.c = counts
         self.area = area
         self.effexp = effexp
         self.bkgc = bkgc
+        fitl = 0.
+        fith = 1e10
+        if fitlow is not None:
+            fitl = fitlow
+        if fithigh is not None:
+            fith = fithigh
+        self.region = np.where(np.logical_and(x>=fitl,x<=fith))
+        if psfmat is not None:
+            self.psfmat = psfmat
+        else:
+            self.psfmat = None
         self.func_code = iminuit.util.make_func_code(iminuit.util.describe(self.model)[1:])
 
     def __call__(self, *par):
         ym = self.model(self.x, *par)
-        mm = ym*self.area*self.effexp + self.bkgc # model counts
+        modcounts = ym*self.area*self.effexp
+        if self.psfmat is not None:
+            modcounts = np.dot(self.psfmat,modcounts)
+        mm = modcounts + self.bkgc # model counts
+        reg = self.region
         nc = self.c
-        cstat = 2.*np.sum(mm-nc*np.log(mm)-nc+nc*np.log(nc)) # normalized C-statistic
+        cstat = 2.*np.sum(mm[reg]-nc[reg]*np.log(mm[reg])-nc[reg]+nc[reg]*np.log(nc[reg])) # normalized C-statistic
         return cstat
 
 # Class including fitting tool
@@ -50,49 +79,19 @@ class Fitter:
             print('Error: No valid profile exists in provided object')
             return
         model=self.mod.model
+        if prof.psfmat is not None:
+            psfmat = np.transpose(prof.psfmat)
+        else:
+            psfmat = None
         if method=='chi2':
-            x=prof.bins
-            y=prof.profile
-            dy=prof.eprof
-            # Define boundaries
-            if fitlow is not None:
-                reg=np.where(x>=fitlow)
-                x=x[reg]
-                y=y[reg]
-                dy=dy[reg]
-            if fithigh is not None:
-                reg=np.where(x<=fithigh)
-                x=x[reg]
-                y=y[reg]
-                dy=dy[reg]
-            # Define the fitting algorithm
-            chi2=ChiSquared(model,x,y,dy)
-            # Run Migrad
+             # Define the fitting algorithm
+            chi2=ChiSquared(model,prof.bins,prof.profile,prof.eprof,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
+            # Construct iminuit object
             minuit=iminuit.Minuit(chi2,**kwargs)
         elif method=='cstat':
-            x=prof.bins
-            counts=prof.counts
-            area=prof.area
-            effexp=prof.effexp
-            bkgc=prof.bkgcounts
-            # Define boundaries
-            if fitlow is not None:
-                reg=np.where(x>=fitlow)
-                x=x[reg]
-                area=area[reg]
-                counts=counts[reg]
-                effexp=effexp[reg]
-                bkgc=bkgc[reg]
-            if fithigh is not None:
-                reg=np.where(x<=fithigh)
-                x=x[reg]
-                area=area[reg]
-                counts=counts[reg]
-                effexp=effexp[reg]
-                bkgc=bkgc[reg]
             # Define the fitting algorithm
-            cstat=Cstat(model,x,counts,area,effexp,bkgc)
-            # Run Migrad
+            cstat=Cstat(model,prof.bins,prof.counts,prof.area,prof.effexp,prof.bkgcounts,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
+            # Construct iminuit object
             minuit=iminuit.Minuit(cstat,**kwargs)
         else:
             print('Unknown method ',method)

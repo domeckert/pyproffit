@@ -304,7 +304,7 @@ class Profile:
             if psffunc is not None:
                 kernel = psffunc(rads)
                 norm = np.sum(kernel)
-                psfmin = 1e-7 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
+                psfmin = 1e-5 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
                 frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
                 rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize # pixsize
                 npix = int(rmax)

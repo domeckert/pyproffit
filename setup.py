@@ -8,5 +8,8 @@ setup(
       author_email='Dominique.Eckert@unige.ch',
       url='http://www.isdc.unige.ch/~deckert/newsite/Proffit.html',
       packages=['pyproffit'],
+      install_requires=[
+            'numpy','scipy','astropy','matplotlib','iminuit','pymc3'
+      ],
 )
 

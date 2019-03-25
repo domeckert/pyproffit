@@ -405,6 +405,8 @@ class Profile:
         plt.plot(self.bins, self.bkgprof, color='green', label='Background')
         if model is not None:
             tmod = model.model(self.bins, *model.params)
+            if self.psfmat is not None:
+                tmod = np.dot(np.transpose(self.psfmat),tmod*self.area*self.effexp)/self.area/self.effexp
             plt.plot(self.bins, tmod, color='blue', label='Model')
         xmin = self.bins[0] * 0.9
         xmax = self.bins[len(self.bins) - 1] * 1.1

@@ -62,8 +62,8 @@ class Profile:
                 print('Denoising image...')
                 bkg = np.mean(img)
                 imgc = clean_bkg(img, bkg)
-                x = np.repeat(xp, img.flat)
-                y = np.repeat(yp, img.flat)
+                x = np.repeat(xp, imgc.flat)
+                y = np.repeat(yp, imgc.flat)
                 print('Running PCA...')
                 x_c, y_c, sig_x, sig_y, r_cluster, ellangle, pos_err = get_bary(x, y)
             else:
@@ -375,7 +375,7 @@ class Profile:
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self,model=None,save_plot=False,outfile=None):
+    def Plot(self,model=None,outfile=None):
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -435,7 +435,19 @@ class Profile:
                 item.set_fontsize(18)
             ylim = ax2.get_ylim()
             ax2.axis([xmin, xmax, ylim[0], ylim[1]])
-        if save_plot:
+        if outfile is not None:
             plt.savefig(outfile)
         else:
             plt.show()
+
+    def Backsub(self,fitter):
+        if fitter.minuit is None:
+            print('Error: no adequate fit found')
+            return
+        if self.profile is None:
+            print('Error: no surface brightness profile found')
+            return
+        val=np.power(10.,fitter.minuit.values['bkg'])
+        eval=val*np.log(10.)*fitter.minuit.errors['bkg']
+        self.profile = self.profile - val
+        self.eprof = np.sqrt(self.eprof**2 + eval**2)

@@ -134,9 +134,8 @@ def get_bary(x,y,x_c=None,y_c=None,weight=None, wdist=False):
     r_cluster= np.sqrt(sig_x*sig_x+sig_y*sig_y)
     return x_c_w,y_c_w,sig_x,sig_y,r_cluster,semi_major_angle,pos_err
 
-nsmooth=10
-
 def heaviside(x):
+    nsmooth = 10
     a = x.reshape((nsmooth,nsmooth))
     weights = np.ones([nsmooth,nsmooth])
     a = np.multiply(a,weights)
@@ -161,8 +160,10 @@ def clean_bkg(img,bkg):
     y=yp[id]
     x=xp[id]
     npt=len(img[id])
-    timg=generic_filter(img,heaviside,footprint=np.ones((nsmooth,nsmooth)),mode='constant',cval=0.0,origin=0.0)
-    tbkg=generic_filter(np.ones(img.shape)*bkg,heaviside,footprint=np.ones((nsmooth,nsmooth)),mode='constant',cval=0.0,origin=0.0)
+    nsm: int=10
+    ons=np.ones((nsm,nsm))
+    timg=generic_filter(img,heaviside,footprint=ons,mode='constant')
+    tbkg=generic_filter(np.ones(img.shape)*bkg,heaviside,footprint=ons,mode='constant',cval=0,origin=0)
     prob=1.-poisson.cdf(timg[id],tbkg[id])
     vals=np.random.rand(npt)
     remove=np.where(vals<prob)

@@ -118,6 +118,26 @@ def calc_density_operator(rad,sourcereg,pars,z):
     return Ktot
 
 
+def calc_int_operator(a, b, pars):
+    # Select values in the source region
+    npars = len(pars[:, 0])
+    rads = np.array([a, b])
+    npt = 2
+
+    # Compute linear combination of basis functions in the source region
+    beta = np.repeat(pars[:, 0], npt).reshape(npars, npt)
+    rc = np.repeat(pars[:, 1], npt).reshape(npars, npt)
+    base = 1. + np.power(rads / rc, 2)
+    expon = -3. * beta + 1.5
+    func_base = 2. * np.pi * np.power(base, expon) / (3 - 6 * beta) * rc**2
+
+    # Recast into full matrix and add column for background
+    Kint = np.zeros((npt, npars + 1))
+    Kint[0:npt, 0:npars] = func_base.T
+    Kint[:, npars] = 0.0
+    return Kint
+
+
 def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
     prof = deproj.profile
     sb = prof.profile
@@ -131,8 +151,10 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
     # Define maximum radius for source deprojection, assuming we have only background for r>bkglim
     if bkglim is None:
         bkglim=np.max(rad+erad)
+        deproj.bkglim = bkglim
         back = sb[len(sb)-1]
     else:
+        deproj.bkglim = bkglim
         backreg=np.where(rad>bkglim)
         back=np.mean(sb[backreg])
 
@@ -319,7 +341,7 @@ def OP(deproj,nmc=1000):
         e_em0 = prof.profile * area
         corr = EdgeCorr(nbin,rinam,routam)
 
-    # Deproject and run Monte Carlo
+    # Deproject and propagate error using Monte Carlo
     emres = np.repeat(e_em0,nmc).reshape(nbin,nmc) * np.random.randn(nbin,nmc) + np.repeat(em0,nmc).reshape(nbin,nmc)
     ct = np.repeat(corr,nmc).reshape(nbin,nmc)
     allres = np.linalg.solve(vol, emres * (1. - ct))
@@ -352,6 +374,7 @@ class Deproject:
         self.covmat = None
         self.bkg = None
         self.samples = None
+        self.bkglim = None
 
     def Multiscale(self,nmcmc=1000,bkglim=None,samplefile=None):
         Deproject_Multiscale(self,bkglim=bkglim,nmcmc=nmcmc,samplefile=samplefile)
@@ -363,6 +386,9 @@ class Deproject:
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
+            return
+        if self.dens is None:
+            print('Error: No density profile extracted')
             return
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
@@ -385,3 +411,23 @@ class Deproject:
             plt.savefig(outfile)
         else:
             plt.show()
+
+    def CountRate(self,a,b):
+        if self.samples is None:
+            print('Error: no MCMC samples found')
+            return
+        # Set source region
+        prof = self.profile
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        # Set vector with list of parameters
+        pars = list_params(rad, sourcereg)
+        Kint = calc_int_operator(a, b, pars)
+        allint = np.dot(Kint, np.exp(self.samples.T))
+        medint = np.median(allint[1, :] - allint[0, :])
+        intlo = np.percentile(allint[1, :] - allint[0, :], 50. - 68.3 / 2.)
+        inthi = np.percentile(allint[1, :] - allint[0, :], 50. + 68.3 / 2.)
+        print('Reconstructed count rate: %g (%g , %g)' % (medint, intlo, inthi))
+        return  medint,intlo,inthi
+

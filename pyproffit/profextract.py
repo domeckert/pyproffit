@@ -54,7 +54,7 @@ class Profile:
             self.ellratio = None
             print('Corresponding pixels coordinates: ', self.cra + 1, self.cdec + 1)
         elif method == 1:
-            print('Computing centroid and ellipse parameters using pincipal component analysis')
+            print('Computing centroid and ellipse parameters using principal component analysis')
             img = data.img.astype(int)
             yp, xp = np.indices(img.shape)
             if data.exposure is None:
@@ -258,9 +258,17 @@ class Profile:
                 hdr.comments['DEC_C'] = 'Declination of center value'
                 hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
                 hdul.append(tbhdu)
-            #if model is not None:
-            #    cols = []
-            #    cols.append(fits.Column(name='NAME', format='E', array=self.bins))
+            if model is not None:
+                cols = []
+                npar = len(model.params)
+                plist = np.arange(1,npar+1,1)
+                cols.append(fits.Column(name='PAR', format='1I', array=plist))
+                cols.append(fits.Column(name='NAME', format='16A', array=model.parnames))
+                cols.append(fits.Column(name='VALUE', format='E', array=model.params))
+                cols.append(fits.Column(name='ERROR', format='E', array=model.errors))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='MODEL')
+                hdul.append(tbhdu)
             if self.psfmat is not None:
                 psfhdu = fits.ImageHDU(self.psfmat, name='PSF')
                 hdul.append(psfhdu)

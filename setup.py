@@ -1,4 +1,5 @@
-from distutils.core import setup
+from setuptools import setup
+
 
 setup(
       name='pyproffit',    # This is the name of your PyPI-package.
@@ -6,7 +7,7 @@ setup(
       description='Python package for PROFFIT',
       author='Dominique Eckert',
       author_email='Dominique.Eckert@unige.ch',
-      url='http://www.isdc.unige.ch/~deckert/newsite/Proffit.html',
+      url="https://github.com/domeckert/pyproffit",
       packages=['pyproffit'],
       install_requires=[
             'numpy','scipy','astropy','matplotlib','iminuit','pymc3'

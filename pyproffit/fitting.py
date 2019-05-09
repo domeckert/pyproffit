@@ -105,6 +105,7 @@ class Fitter:
             outerr[i] = minuit.errors[i]
         self.mod.SetParameters(outval)
         self.mod.SetErrors(outerr)
+        self.mod.parnames = minuit.parameters
         self.params=minuit.values
         self.errors=minuit.errors
         self.mlike=fmin

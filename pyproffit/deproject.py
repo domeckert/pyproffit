@@ -4,10 +4,14 @@ import pymc3 as pm
 import time
 from scipy.special import gamma
 import matplotlib.pyplot as plt
+from scipy.interpolate import  interp1d
 
 Mpc=3.0856776e+24 #cm
 nhc=1.21 #proton to electron ratio in pristine fully ionized gas
-
+kpc = 3.0856776e+21 #cm
+mup = 0.6125 #mean molecular weight
+msun = 1.9891e33 #g
+mh = 1.67262178e-24 #proton mass in g
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -407,12 +411,12 @@ class Deproject:
         plt.errorbar(self.profile.bins, self.dens, xerr=self.profile.ebins, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='black', elinewidth=2,
                      markersize=7, capsize=0,mec='black')
         plt.fill_between(self.profile.bins,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
-        if outfile is not  None:
+        if outfile is not None:
             plt.savefig(outfile)
         else:
             plt.show()
 
-    def CountRate(self,a,b):
+    def CountRate(self,a,b,plot=True,outfile=None):
         if self.samples is None:
             print('Error: no MCMC samples found')
             return
@@ -433,5 +437,77 @@ class Deproject:
         intlo = np.percentile(allint[1, :] - allint[0, :], 50. - 68.3 / 2.)
         inthi = np.percentile(allint[1, :] - allint[0, :], 50. + 68.3 / 2.)
         print('Reconstructed count rate: %g (%g , %g)' % (medint, intlo, inthi))
+        if plot:
+            plt.clf()
+            fig = plt.figure(figsize=(13, 10))
+            ax_size = [0.14, 0.12,
+                       0.85, 0.85]
+            ax = fig.add_axes(ax_size)
+            ax.minorticks_on()
+            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(22)
+            # plt.yscale('log')
+            plt.hist(allint[1,:]-allint[0,:], bins=30)
+            plt.xlabel('Count Rate [cts/s]', fontsize=40)
+            plt.ylabel('Frequency', fontsize=40)
+            if outplot is not None:
+                plt.savefig(outplot)
+            else:
+                plt.show()
+
         return  medint,intlo,inthi
 
+    # Compute Mgas within radius in kpc
+    def Mgas(self,radius,plot=True,outfile=None):
+        if self.samples is None or self.z is None or self.cf is None:
+            print('Error: no gas density profile found')
+            return
+        prof = self.profile
+        kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        rkpc = prof.bins * kpcp
+        erkpc = prof.ebins * kpcp
+        nhconv = (1. + nhc) * mh * mup * kpc ** 3 / msun  # Msun/kpc^3
+
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / nhc / Mpc * 1e3
+        pardens = list_params_density(rad, sourcereg, self.z)
+        Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
+
+        # All gas density profiles
+        alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
+
+        # Matrix containing integration volumes
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(prof.bins),alldens.shape[1])
+
+        # Compute Mgas profile as cumulative sum over the volume
+        mgas = np.cumsum(alldens * nhconv * volmat, axis=0)
+
+        # Interpolate at the radius of interest
+        f = interp1d(rkpc, mgas, axis=0)
+        mgasdist = f(radius)
+        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
+        if plot:
+            plt.clf()
+            fig = plt.figure(figsize=(13, 10))
+            ax_size = [0.14, 0.12,
+                       0.85, 0.85]
+            ax = fig.add_axes(ax_size)
+            ax.minorticks_on()
+            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(22)
+            # plt.yscale('log')
+            plt.hist(mgasdist, bins=30)
+            plt.xlabel('$M_{gas} [M_\odot]$', fontsize=40)
+            plt.ylabel('Frequency', fontsize=40)
+            if outplot is not None:
+                plt.savefig(outplot)
+            else:
+                plt.show()
+
+        return mg,mgl,mgh

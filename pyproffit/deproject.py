@@ -77,6 +77,26 @@ def calc_sb_operator(rad,sourcereg,pars):
     Ktot[:,npars]=1.0
     return Ktot
 
+def calc_int_operator(a, b, pars):
+    # Select values in the source region
+    npars = len(pars[:, 0])
+    rads = np.array([a, b])
+    npt = 2
+
+    # Compute linear combination of basis functions in the source region
+    beta = np.repeat(pars[:, 0], npt).reshape(npars, npt)
+    rc = np.repeat(pars[:, 1], npt).reshape(npars, npt)
+    base = 1. + np.power(rads / rc, 2)
+    expon = -3. * beta + 1.5
+    func_base = 2. * np.pi * np.power(base, expon) / (3 - 6 * beta) * rc**2
+
+    # Recast into full matrix and add column for background
+    Kint = np.zeros((npt, npars + 1))
+    Kint[0:npt, 0:npars] = func_base.T
+    Kint[:, npars] = 0.0
+    return Kint
+
+
 def list_params_density(rad,sourcereg,z):
     rfit=rad[sourcereg]
     npfit=len(rfit)
@@ -116,26 +136,6 @@ def calc_density_operator(rad,sourcereg,pars,z):
     Ktot[0:npt,0:npars]=fng.T
     Ktot[:,npars]=0.0
     return Ktot
-
-
-def calc_int_operator(a, b, pars):
-    # Select values in the source region
-    npars = len(pars[:, 0])
-    rads = np.array([a, b])
-    npt = 2
-
-    # Compute linear combination of basis functions in the source region
-    beta = np.repeat(pars[:, 0], npt).reshape(npars, npt)
-    rc = np.repeat(pars[:, 1], npt).reshape(npars, npt)
-    base = 1. + np.power(rads / rc, 2)
-    expon = -3. * beta + 1.5
-    func_base = 2. * np.pi * np.power(base, expon) / (3 - 6 * beta) * rc**2
-
-    # Recast into full matrix and add column for background
-    Kint = np.zeros((npt, npars + 1))
-    Kint[0:npt, 0:npars] = func_base.T
-    Kint[:, npars] = 0.0
-    return Kint
 
 
 def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
@@ -420,6 +420,10 @@ class Deproject:
         prof = self.profile
         rad = prof.bins
         sourcereg = np.where(rad < self.bkglim)
+
+        # Avoid diverging profiles in the center by cutting to the innermost points, if necessary
+        if a<prof.bins[0]:
+            a = prof.bins[0]
 
         # Set vector with list of parameters
         pars = list_params(rad, sourcereg)

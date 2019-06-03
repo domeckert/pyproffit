@@ -174,13 +174,22 @@ class Profile:
                 profile[i] = np.average(img[id], weights=1. / errmap[id] ** 2)
                 eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
             else:
-                bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
-                profile[i] = np.sum(img[id] / exposure[id]) / nv / pixsize ** 2 - bkgprof[i]
-                eprof[i] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / pixsize ** 2
-                counts[i] = np.sum(img[id])
-                bkgcounts[i] = np.sum(bkg[id])
-                area[i] = nv * pixsize ** 2
-                effexp[i] = np.sum(exposure[id]) / nv
+                if len(img[id])>0:
+                    bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
+                    profile[i] = np.sum(img[id] / exposure[id]) / nv / pixsize ** 2 - bkgprof[i]
+                    eprof[i] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / pixsize ** 2
+                    counts[i] = np.sum(img[id])
+                    bkgcounts[i] = np.sum(bkg[id])
+                    area[i] = nv * pixsize ** 2
+                    effexp[i] = np.sum(exposure[id]) / nv
+                else:
+                    bkgprof[i] = 0.
+                    profile[i] = 0.
+                    eprof[i] = 0.
+                    counts[i] = 0.
+                    bkgcounts[i] = 0.
+                    area[i] = 0.
+                    effexp[i] = 0.
         self.profile = profile
         self.eprof = eprof
         if not voronoi:

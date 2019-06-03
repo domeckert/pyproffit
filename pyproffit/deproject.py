@@ -4,7 +4,7 @@ import pymc3 as pm
 import time
 from scipy.special import gamma
 import matplotlib.pyplot as plt
-from scipy.interpolate import  interp1d
+from scipy.interpolate import interp1d
 
 Mpc=3.0856776e+24 #cm
 nhc=1.21 #proton to electron ratio in pristine fully ionized gas
@@ -178,10 +178,20 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
     # Compute linear combination kernel
     K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
     basic_model = pm.Model()
+    if np.isnan(sb[0]) or sb[0] == 0:
+        testval = -10.
+    else:
+        testval = np.log(sb[0] / npt)
+    if np.isnan(back) or back == 0:
+        testbkg = -10.
+    else:
+        testbkg = np.log(back)
+    print('testval: ',testval)
+
     with basic_model:
         # Priors for unknown model parameters
-        coefs = pm.Normal('coefs', mu=np.log(sb[0] / npt), sd=20, shape=npt)
-        bkgd = pm.Normal('bkg', mu=np.log(back), sd=0.05, shape=1)
+        coefs = pm.Normal('coefs', mu=testval, sd=20, shape=npt)
+        bkgd = pm.Normal('bkg', mu=testbkg, sd=0.05, shape=1)
         ctot = pm.math.concatenate((coefs, bkgd), axis=0)
 
         # Expected value of outcome
@@ -218,8 +228,8 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
 
     z = deproj.z
     cf = deproj.cf
-    transf = 4.*(1.+z)**2*(180.*60.)**2/np.pi/1e-14/nhc/Mpc*1e3
     if z is not None and cf is not None:
+        transf = 4.*(1.+z)**2*(180.*60.)**2/np.pi/1e-14/nhc/Mpc*1e3
         pardens = list_params_density(rad, sourcereg, z)
         Kdens = calc_density_operator(rad, sourcereg, pardens, z)
         alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T))/cf*transf) #[0:nptfit, :]
@@ -452,8 +462,8 @@ class Deproject:
             plt.hist(allint[1,:]-allint[0,:], bins=30)
             plt.xlabel('Count Rate [cts/s]', fontsize=40)
             plt.ylabel('Frequency', fontsize=40)
-            if outplot is not None:
-                plt.savefig(outplot)
+            if outfile is not None:
+                plt.savefig(outfile)
             else:
                 plt.show()
 
@@ -505,8 +515,8 @@ class Deproject:
             plt.hist(mgasdist, bins=30)
             plt.xlabel('$M_{gas} [M_\odot]$', fontsize=40)
             plt.ylabel('Frequency', fontsize=40)
-            if outplot is not None:
-                plt.savefig(outplot)
+            if outfile is not None:
+                plt.savefig(outfile)
             else:
                 plt.show()
 

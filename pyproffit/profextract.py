@@ -1,18 +1,11 @@
-import numpy as np
 from astropy.io import fits
-from astropy import wcs
 from scipy.signal import convolve
-# from iminuit import Minuit
 from .miscellaneous import *
 from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from scipy.optimize import brentq
 
-
-# from data import *
-# from fitting import *
-# from models import *
 
 class Profile:
     ################################

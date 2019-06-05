@@ -15,6 +15,7 @@ class ChiSquared:
         if fithigh is not None:
             fith = fithigh
         self.region = np.where(np.logical_and(x>=fitl,x<=fith))
+        self.nonz = np.where(dy[self.region]>0.)
         if psfmat is not None:
             self.psfmat = psfmat
         else:
@@ -26,7 +27,8 @@ class ChiSquared:
         if self.psfmat is not None:
             ym = np.dot(self.psfmat,ym)
         reg = self.region
-        chi2 = np.sum((self.y[reg] - ym[reg])**2/self.dy[reg]**2)
+        nonz = self.nonz
+        chi2 = np.sum((self.y[reg][nonz] - ym[reg][nonz])**2/self.dy[reg][nonz]**2)
         return chi2
 
 # Generic class to fit data with C-stat
@@ -45,6 +47,8 @@ class Cstat:
         if fithigh is not None:
             fith = fithigh
         self.region = np.where(np.logical_and(x>=fitl,x<=fith))
+        self.nonz = np.where(counts[self.region]>0.)
+        self.isz = np.where(counts[self.region]==0)
         if psfmat is not None:
             self.psfmat = psfmat
         else:
@@ -59,7 +63,10 @@ class Cstat:
         mm = modcounts + self.bkgc # model counts
         reg = self.region
         nc = self.c
-        cstat = 2.*np.sum(mm[reg]-nc[reg]*np.log(mm[reg])-nc[reg]+nc[reg]*np.log(nc[reg])) # normalized C-statistic
+        nonz = self.nonz
+        cstat = 2.*np.sum(mm[reg][nonz]-nc[reg][nonz]*np.log(mm[reg][nonz])-nc[reg][nonz]+nc[reg][nonz]*np.log(nc[reg][nonz])) # normalized C-statistic
+        isz = self.isz
+        cstat = cstat + 2.*np.sum(mm[reg][isz])
         return cstat
 
 # Class including fitting tool

@@ -117,7 +117,7 @@ class Profile:
         self.bkgprof = None
         self.bkgcounts = None
 
-    def sb_profile(self, ellipse_ratio=1.0, ellipse_angle=0.0, voronoi=False):
+    def sb_profile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
         #######################################
         # Function to extract surface-brightness profiles
         # Currently ellipse is not yet implemented
@@ -149,16 +149,33 @@ class Profile:
         xtil = np.cos(ellang) * (x - self.cra) * pixsize + np.sin(ellang) * (y - self.cdec) * pixsize
         ytil = -np.sin(ellang) * (x - self.cra) * pixsize + np.cos(ellang) * (y - self.cdec) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
+        anglow = np.deg2rad(angle_low)
+        anghigh = np.deg2rad(angle_high)
+        if anghigh<anglow: #We cross the zero
+            anghigh = anghigh + 2.*np.pi - anglow
+        else:
+            anghigh = anghigh - anglow
+        angles = np.arctan((y - self.cdec) / (x - self.cra))
+        # Set all angles between 0 and 2pi
+        xneg = np.where( x - self.cra < 0.)
+        angles[xneg] = angles[xneg] + np.pi
+        yopp = np.where(np.logical_and(y - self.cdec < 0., x - self.cra > 0.))
+        angles[yopp] = angles[yopp] + 2.*np.pi
+        if angle_high < angle_low:
+            zcross = np.where(angles < np.deg2rad(angle_low))
+            angles[zcross] = angles[zcross] + 2.*np.pi - anglow
+        else:
+            angles = angles - anglow
         tol = 0.5e-5
         for i in range(nbin):
             if i == 0:
                 id = np.where(
-                    np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
-                                   exposure > 0.0))
+                    np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
+                                   exposure > 0.0),angles>0.),angles<anghigh))
             else:
-                id = np.where(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
+                id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
                                                             rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
-                                             exposure > 0.0))
+                                             exposure > 0.0),angles>0.),angles<anghigh))
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])

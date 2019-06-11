@@ -117,7 +117,7 @@ class Profile:
         self.bkgprof = None
         self.bkgcounts = None
 
-    def sb_profile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
+    def SBprofile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
         #######################################
         # Function to extract surface-brightness profiles
         # Currently ellipse is not yet implemented
@@ -149,21 +149,29 @@ class Profile:
         xtil = np.cos(ellang) * (x - self.cra) * pixsize + np.sin(ellang) * (y - self.cdec) * pixsize
         ytil = -np.sin(ellang) * (x - self.cra) * pixsize + np.cos(ellang) * (y - self.cdec) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
-        anglow = np.deg2rad(angle_low)
-        anghigh = np.deg2rad(angle_high)
+        # Convert degree to radian and rescale to 0-2pi
+        if angle_low < 0.0:
+            anglow = np.deg2rad(np.fmod(angle_low, 360.) + 360.)
+        else:
+            anglow = np.deg2rad(np.fmod(angle_low, 360.))
+        if angle_high < 0.0:
+            anghigh = np.deg2rad(np.fmod(angle_high, 360.) + 360.)
+        else:
+            anghigh = np.deg2rad(np.fmod(angle_high, 360.))
+        # Compute angles and set them between 0 and 2pi
+        angles = np.arctan2(y - self.cdec , x - self.cra)
+        aneg = np.where( angles < 0.)
+        angles[aneg] = angles[aneg] + 2. * np.pi
+        # Now set angles relative to anglow
         if anghigh<anglow: #We cross the zero
             anghigh = anghigh + 2.*np.pi - anglow
         else:
             anghigh = anghigh - anglow
-        angles = np.arctan((y - self.cdec) / (x - self.cra))
-        # Set all angles between 0 and 2pi
-        xneg = np.where( x - self.cra < 0.)
-        angles[xneg] = angles[xneg] + np.pi
-        yopp = np.where(np.logical_and(y - self.cdec < 0., x - self.cra > 0.))
-        angles[yopp] = angles[yopp] + 2.*np.pi
         if angle_high < angle_low:
             zcross = np.where(angles < np.deg2rad(angle_low))
             angles[zcross] = angles[zcross] + 2.*np.pi - anglow
+            zgr = np.where(angles >= np.deg2rad(angle_low))
+            angles[zgr] = angles[zgr] - anglow
         else:
             angles = angles - anglow
         tol = 0.5e-5
@@ -171,11 +179,10 @@ class Profile:
             if i == 0:
                 id = np.where(
                     np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
-                                   exposure > 0.0),angles>0.),angles<anghigh))
+                                   exposure > 0.0), angles >= 0.), angles <= anghigh))
             else:
                 id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
-                                                            rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
-                                             exposure > 0.0),angles>0.),angles<anghigh))
+                                            rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure >= 0.0), angles > 0.), angles <= anghigh))
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
@@ -209,7 +216,7 @@ class Profile:
             self.bkgprof = bkgprof
             self.bkgcounts = bkgcounts
 
-    def median_sb(self):
+    def MedianSB(self):
         # Function to compute median profile from Voronoi map
         data = self.data
         img = data.img
@@ -238,7 +245,7 @@ class Profile:
         self.profile = profile
         self.eprof = eprof
 
-    def save(self, outfile=None, model=None):
+    def Save(self, outfile=None, model=None):
         #####################################################
         # Function to save profile into FITS file
         # First extension is data
@@ -373,7 +380,7 @@ class Profile:
                     psfout[n, p] = np.sum(blurred[sn])
             self.psfmat = psfout
 
-    def save_model_image(self, model, outfile, vignetting=True):
+    def SaveModelImage(self, model, outfile, vignetting=True):
         # Save model image to output FITS file
         head = self.data.header
         pixsize = self.data.pixsize
@@ -402,7 +409,7 @@ class Profile:
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self,model=None,outfile=None):
+    def Plot(self,model=None,outfile=None,axes=None):
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -438,13 +445,17 @@ class Profile:
         xmin = self.bins[0] * 0.9
         xmax = self.bins[len(self.bins) - 1] * 1.1
         ylim = ax.get_ylim()
-        ax.axis([xmin,xmax,ylim[0],ylim[1]])
+        if axes is None:
+            ax.axis([xmin,xmax,ylim[0],ylim[1]])
+        else:
+            ax.axis(axes)
         plt.legend(fontsize=22)
         if model is not None:
             gs1 = gridspec.GridSpec(1, 1)
             gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
             ax2 = plt.subplot(gs1[0])
-            plt.errorbar(self.bins,(self.profile-tmod)/self.eprof, yerr=np.ones(len(self.bins)), fmt='o', color='black', elinewidth=2,
+            chi = (self.profile-tmod)/self.eprof
+            plt.errorbar(self.bins, chi, yerr=np.ones(len(self.bins)), fmt='o', color='black', elinewidth=2,
                      markersize=7, capsize=0,mec='black')
             plt.xlabel('Radius [arcmin]', fontsize=28)
             plt.ylabel('$\chi$', fontsize=28)
@@ -461,7 +472,15 @@ class Profile:
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)
             ylim = ax2.get_ylim()
-            ax2.axis([xmin, xmax, ylim[0], ylim[1]])
+            if axes is None:
+                ax2.axis([xmin, xmax, ylim[0], ylim[1]])
+            else:
+                xmin = axes[0]
+                xmax = axes[1]
+                reg = np.where(np.logical_and(self.bins>=xmin, self.bins<=xmax))
+                ymin = np.min(chi[reg]) - 1.
+                ymax = np.max(chi[reg]) + 1.
+                ax2.axis([xmin, xmax, ymin, ymax])
         if outfile is not None:
             plt.savefig(outfile)
         else:

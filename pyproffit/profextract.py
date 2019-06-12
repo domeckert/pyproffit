@@ -150,14 +150,18 @@ class Profile:
         ytil = -np.sin(ellang) * (x - self.cra) * pixsize + np.cos(ellang) * (y - self.cdec) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
         # Convert degree to radian and rescale to 0-2pi
-        if angle_low < 0.0:
-            anglow = np.deg2rad(np.fmod(angle_low, 360.) + 360.)
+        if angle_low != 0.0 and angle_high != 360.:
+            if angle_low < 0.0:
+                anglow = np.deg2rad(np.fmod(angle_low, 360.) + 360.)
+            else:
+                anglow = np.deg2rad(np.fmod(angle_low, 360.))
+            if angle_high < 0.0:
+                anghigh = np.deg2rad(np.fmod(angle_high, 360.) + 360.)
+            else:
+                anghigh = np.deg2rad(np.fmod(angle_high, 360.))
         else:
-            anglow = np.deg2rad(np.fmod(angle_low, 360.))
-        if angle_high < 0.0:
-            anghigh = np.deg2rad(np.fmod(angle_high, 360.) + 360.)
-        else:
-            anghigh = np.deg2rad(np.fmod(angle_high, 360.))
+            anglow = 0.
+            anghigh = 2. * np.pi
         # Compute angles and set them between 0 and 2pi
         angles = np.arctan2(y - self.cdec , x - self.cra)
         aneg = np.where( angles < 0.)
@@ -182,7 +186,7 @@ class Profile:
                                    exposure > 0.0), angles >= 0.), angles <= anghigh))
             else:
                 id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
-                                            rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure >= 0.0), angles > 0.), angles <= anghigh))
+                                            rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), angles >= 0.), angles <= anghigh))
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
@@ -191,7 +195,7 @@ class Profile:
                 profile[i] = np.average(img[id], weights=1. / errmap[id] ** 2)
                 eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
             else:
-                if len(img[id])>0:
+                if nv > 0:
                     bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
                     profile[i] = np.sum(img[id] / exposure[id]) / nv / pixsize ** 2 - bkgprof[i]
                     eprof[i] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / pixsize ** 2

@@ -48,8 +48,8 @@ nsh=4. # number of basis functions to set
 def list_params(rad,sourcereg):
     rfit=rad[sourcereg]
     npfit=len(rfit)
-    allrc=np.logspace(np.log10(rfit[0]/nsh),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))
-    allbetas=np.linspace(0.4,3.,int(npfit/nsh))
+    allrc=np.logspace(np.log10(3.*rfit[0]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))
+    allbetas=np.linspace(0.4,3.,6)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)

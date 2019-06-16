@@ -4,6 +4,7 @@ import pymc3 as pm
 import time
 from scipy.special import gamma
 import matplotlib.pyplot as plt
+#plt.switch_backend('Agg')
 from scipy.interpolate import interp1d
 
 Mpc=3.0856776e+24 #cm
@@ -105,8 +106,8 @@ def list_params_density(rad,sourcereg,z):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
-    allrc=np.logspace(np.log10(rfit[0]/nsh),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))*kpcp
-    allbetas=np.linspace(0.5,3.,int(npfit/nsh))
+    allrc=np.logspace(np.log10(3.*rfit[0]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))*kpcp
+    allbetas=np.linspace(0.5,3.,6)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -178,7 +179,7 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
     # Compute linear combination kernel
     K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
     basic_model = pm.Model()
-    if np.isnan(sb[0]) or sb[0] == 0:
+    if np.isnan(sb[0]) or sb[0] <= 0:
         testval = -10.
     else:
         testval = np.log(sb[0] / npt)
@@ -186,7 +187,6 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
         testbkg = -10.
     else:
         testbkg = np.log(back)
-    print('testval: ',testval)
 
     with basic_model:
         # Priors for unknown model parameters
@@ -226,27 +226,12 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
     pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1)
     pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1)
 
-    z = deproj.z
-    cf = deproj.cf
-    if z is not None and cf is not None:
-        transf = 4.*(1.+z)**2*(180.*60.)**2/np.pi/1e-14/nhc/Mpc*1e3
-        pardens = list_params_density(rad, sourcereg, z)
-        Kdens = calc_density_operator(rad, sourcereg, pardens, z)
-        alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T))/cf*transf) #[0:nptfit, :]
-        covmat = np.cov(alldens)
-        deproj.covmat = covmat
-        pmcd = np.median(alldens, axis=1)
-        pmcdl = np.percentile(alldens, 50. - 68.3 / 2., axis=1)
-        pmcdh = np.percentile(alldens, 50. + 68.3 / 2., axis=1)
-        deproj.dens = pmcd
-        deproj.dens_lo = pmcdl
-        deproj.dens_hi = pmcdh
-
     deproj.samples = samples
     deproj.sb = pmc
     deproj.sb_lo = pmcl
     deproj.sb_hi = pmch
     deproj.bkg = bfit
+
 
 
 class MyDeprojVol:
@@ -396,7 +381,7 @@ class Deproject:
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
 
-    def Plot(self,outfile=None):
+    def PlotDensity(self,outfile=None):
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -425,6 +410,62 @@ class Deproject:
             plt.savefig(outfile)
         else:
             plt.show()
+
+    def Density(self):
+        z = self.z
+        cf = self.cf
+        samples = self.samples
+        prof = self.profile
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        if z is not None and cf is not None:
+            transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / nhc / Mpc * 1e3
+            pardens = list_params_density(rad, sourcereg, z)
+            Kdens = calc_density_operator(rad, sourcereg, pardens, z)
+            alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T)) / cf * transf)  # [0:nptfit, :]
+            covmat = np.cov(alldens)
+            self.covmat = covmat
+            pmcd = np.median(alldens, axis=1)
+            pmcdl = np.percentile(alldens, 50. - 68.3 / 2., axis=1)
+            pmcdh = np.percentile(alldens, 50. + 68.3 / 2., axis=1)
+            self.dens = pmcd
+            self.dens_lo = pmcdl
+            self.dens_hi = pmcdh
+        else:
+            print('No redshift and/or conversion factor, nothing to do')
+
+    def PlotSB(self,outfile=None):
+        if self.profile is None:
+            print('Error: No profile extracted')
+            return
+        if self.sb is None:
+            print('Error: No reconstruction available')
+            return
+        plt.clf()
+        fig = plt.figure(figsize=(13, 10))
+        ax_size = [0.14, 0.14,
+                   0.83, 0.83]
+        ax = fig.add_axes(ax_size)
+        ax.minorticks_on()
+        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(18)
+        plt.xlabel('Radius [arcmin]', fontsize=40)
+        plt.ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,
+                     markersize=7, capsize=0,mec='blue',label='Reconstruction')
+        plt.fill_between(self.profile.bins,self.sb_lo,self.sb_hi,color='blue',alpha=0.5)
+        plt.errorbar(self.profile.bins, self.profile.profile, xerr=self.profile.ebins, yerr=self.profile.eprof, fmt='o', color='black', elinewidth=2,
+                     markersize=7, capsize=0,mec='black',label='Data')
+        if outfile is not None:
+            plt.savefig(outfile)
+        else:
+            plt.show()
+
 
     def CountRate(self,a,b,plot=True,outfile=None):
         if self.samples is None:

@@ -389,6 +389,11 @@ class Deproject:
         if self.dens is None:
             print('Error: No density profile extracted')
             return
+
+        kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        rkpc = self.profile.bins * kpcp
+        erkpc = self.profile.ebins * kpcp
+
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
         ax_size = [0.14, 0.14,
@@ -399,13 +404,13 @@ class Deproject:
         ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
-        plt.xlabel('Radius [arcmin]', fontsize=40)
+        plt.xlabel('Radius [kpc]', fontsize=40)
         plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
         plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(self.profile.bins, self.dens, xerr=self.profile.ebins, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='black', elinewidth=2,
+        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='black', elinewidth=2,
                      markersize=7, capsize=0,mec='black')
-        plt.fill_between(self.profile.bins,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
+        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
         if outfile is not None:
             plt.savefig(outfile)
         else:
@@ -477,8 +482,8 @@ class Deproject:
         sourcereg = np.where(rad < self.bkglim)
 
         # Avoid diverging profiles in the center by cutting to the innermost points, if necessary
-        if a<prof.bins[0]:
-            a = prof.bins[0]
+        if a<prof.bins[0]/2.:
+            a = prof.bins[0]/2.
 
         # Set vector with list of parameters
         pars = list_params(rad, sourcereg)
@@ -562,3 +567,89 @@ class Deproject:
                 plt.show()
 
         return mg,mgl,mgh
+
+    def Reload(self,samplefile,bkglim=None):
+        # Reload the output of a previous PyMC3 run
+        samples = np.loadtxt(samplefile)
+        self.samples = samples
+        if self.profile is None:
+            print('Error: no profile provided')
+            return
+
+        prof = self.profile
+        sb = prof.profile
+        rad = prof.bins
+        erad = prof.ebins
+
+        if bkglim is not None:
+            self.bkglim = bkglim
+        else:
+            if self.bkglim is None:
+                bkglim = np.max(rad + erad)
+                self.bkglim = bkglim
+
+        # Set source region
+        sourcereg = np.where(rad < bkglim)
+
+        # Set vector with list of parameters
+        pars = list_params(rad, sourcereg)
+        npt = len(pars)
+        # Compute output deconvolved brightness profile
+        Ksb = calc_sb_operator(rad, sourcereg, pars)
+        allsb = np.dot(Ksb, np.exp(samples.T))
+        bfit = np.median(np.exp(samples[:, npt]))
+        pmc = np.median(allsb, axis=1)
+        pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1)
+        pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1)
+
+        self.sb = pmc
+        self.sb_lo = pmcl
+        self.sb_hi = pmch
+        self.bkg = bfit
+
+    def CSB(self,rin=40.,rout=400.,plot=True,outfile=None):
+        if self.samples is None or self.z is None:
+            print('Error: no profile reconstruction found')
+            return
+        prof = self.profile
+        kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+
+        sourcereg = np.where(prof.bins < self.bkglim)
+
+        # Set vector with list of parameters
+        pars = list_params(prof.bins, sourcereg)
+        Kin = calc_int_operator(prof.bins[0]/2., rin/kpcp, pars)
+        allvin = np.dot(Kin, np.exp(self.samples.T))
+        Kout = calc_int_operator(prof.bins[0]/2., rout/kpcp, pars)
+        allvout = np.dot(Kout, np.exp(self.samples.T))
+        medcsb = np.median((allvin[1, :] - allvin[0, :]) / (allvout[1, :] - allvout[0, :]))
+        csblo = np.percentile((allvin[1, :] - allvin[0, :]) / (allvout[1, :] - allvout[0, :]), 50. - 68.3 / 2.)
+        csbhi = np.percentile((allvin[1, :] - allvin[0, :]) / (allvout[1, :] - allvout[0, :]), 50. + 68.3 / 2.)
+        print('Surface brightness concentration: %g (%g , %g)' % (medcsb, csblo, csbhi))
+
+        if plot:
+            plt.clf()
+            fig = plt.figure(figsize=(13, 10))
+            ax_size = [0.14, 0.12,
+                       0.85, 0.85]
+            ax = fig.add_axes(ax_size)
+            ax.minorticks_on()
+            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(22)
+            # plt.yscale('log')
+            plt.hist((allvin[1, :] - allvin[0, :]) / (allvout[1, :] - allvout[0, :]), bins=30)
+            plt.xlabel('$C_{SB}$', fontsize=40)
+            plt.ylabel('Frequency', fontsize=40)
+            if outfile is not None:
+                plt.savefig(outfile)
+            else:
+                plt.show()
+
+        return  medcsb,csblo,csbhi
+
+
+
+
+

@@ -241,7 +241,7 @@ class Profile:
         profile, eprof = np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         rads = np.sqrt((x - self.cra) ** 2 + (y - self.cdec) ** 2) * pixsize
-        for i in range(nbin):
+        for i in range(self.nbin):
             id = np.where(np.logical_and(
                 np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
                 errmap > 0.0))  # left-inclusive
@@ -440,7 +440,8 @@ class Profile:
         plt.yscale('log')
         plt.errorbar(self.bins, self.profile, xerr=self.ebins, yerr=self.eprof, fmt='o', color='black', elinewidth=2,
                      markersize=7, capsize=0,mec='black', label='Brightness')
-        plt.plot(self.bins, self.bkgprof, color='green', label='Background')
+        if self.bkgprof is not None:
+            plt.plot(self.bins, self.bkgprof, color='green', label='Background')
         if model is not None:
             tmod = model.model(self.bins, *model.params)
             if self.psfmat is not None:

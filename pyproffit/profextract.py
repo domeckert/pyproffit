@@ -304,7 +304,7 @@ class Profile:
                 hdul.append(psfhdu)
             hdul.writeto(outfile, overwrite=True)
 
-    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None):
+    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None):
         #####################################################
         # Function to calculate a PSF convolution matrix given an input PSF image or function
         # Images of each annuli are convolved with the PSF image using FFT
@@ -340,12 +340,16 @@ class Profile:
             rads = np.hypot(x - self.cra, y - self.cdec) * self.data.pixsize  # arcmin
             kernel = None
             if psffunc is not None:
+                psfmin = 1e-7 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
                 kernel = psffunc(rads)
                 norm = np.sum(kernel)
-                psfmin = 1e-5 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
+                # psfmin = 0.
                 frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
-                rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize # pixsize
-                npix = int(rmax)
+                if frmax(exposure.shape[0] / 2) < 0.:
+                    rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize  # pixsize
+                    npix = int(rmax)
+                else:
+                    npix = int(exposure.shape[0] / 2)
                 yp, xp = np.indices((2 * npix + 1, 2 * npix + 1))
                 rpix = np.sqrt((xp - npix) ** 2 + (yp - npix) ** 2) * self.data.pixsize
                 kernel = psffunc(rpix)
@@ -374,7 +378,12 @@ class Profile:
                 region = sort_list[n]
                 npt = len(x[region])
                 imgt = np.zeros(exposure.shape)
-                imgt[region] = 1. / npt
+                if sourcemodel is None or sourcemodel.params is None:
+                    imgt[region] = 1. / npt
+                else:
+                    imgt[region] = sourcemodel.model(rads[region],*sourcemodel.params)
+                    norm = np.sum(imgt[region])
+                    imgt[region] = imgt[region]/norm
                 # FFT-convolve image with kernel
                 blurred = convolve(imgt, kernel, mode='same')
                 numnoise = np.where(blurred<1e-15)

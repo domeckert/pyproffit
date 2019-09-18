@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 Mpc=3.0856776e+24 #cm
-nhc=1.21 #proton to electron ratio in pristine fully ionized gas
+nhc = 1.1738 #proton to electron ratio in pristine fully ionized gas
 kpc = 3.0856776e+21 #cm
 mup = 0.6125 #mean molecular weight
 msun = 1.9891e33 #g
-mh = 1.67262178e-24 #proton mass in g
+mh = 1.66053904e-24 #proton mass in g
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -49,8 +49,9 @@ nsh=4. # number of basis functions to set
 def list_params(rad,sourcereg):
     rfit=rad[sourcereg]
     npfit=len(rfit)
-    allrc=np.logspace(np.log10(3.*rfit[0]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))
-    allbetas=np.linspace(0.4,3.,6)
+    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))
+    #allbetas=np.linspace(0.4,3.,6)
+    allbetas = np.linspace(0.6, 3., 6)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -106,8 +107,9 @@ def list_params_density(rad,sourcereg,z):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
-    allrc=np.logspace(np.log10(3.*rfit[0]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))*kpcp
-    allbetas=np.linspace(0.5,3.,6)
+    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))*kpcp
+    #allbetas=np.linspace(0.5,3.,6)
+    allbetas=np.linspace(0.6,3.,6)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -143,7 +145,7 @@ def calc_density_operator(rad,sourcereg,pars,z):
     return Ktot
 
 
-def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
+def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -157,11 +159,13 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,samplefile=None):
     if bkglim is None:
         bkglim=np.max(rad+erad)
         deproj.bkglim = bkglim
-        back = sb[len(sb)-1]
+        if back is None:
+            back = sb[len(sb) - 1]
     else:
         deproj.bkglim = bkglim
-        backreg=np.where(rad>bkglim)
-        back=np.mean(sb[backreg])
+        backreg = np.where(rad>bkglim)
+        if back is None:
+            back = np.mean(sb[backreg])
 
     # Set source region
     sourcereg = np.where(rad < bkglim)
@@ -375,8 +379,8 @@ class Deproject:
         self.samples = None
         self.bkglim = None
 
-    def Multiscale(self,nmcmc=1000,bkglim=None,samplefile=None):
-        Deproject_Multiscale(self,bkglim=bkglim,nmcmc=nmcmc,samplefile=samplefile)
+    def Multiscale(self,nmcmc=1000,bkglim=None,back=None,samplefile=None):
+        Deproject_Multiscale(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
@@ -514,6 +518,56 @@ class Deproject:
                 plt.show()
 
         return  medint,intlo,inthi
+
+    def Ncounts(self,plot=True,outfile=None):
+        if self.samples is None:
+            print('Error: no MCMC samples found')
+            return
+        # Set source region
+        prof = self.profile
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+        area = prof.area
+        exposure = prof.effexp
+
+        if prof.psfmat is not None:
+            psfmat = np.transpose(prof.psfmat)
+        else:
+            psfmat = np.eye(prof.nbin)
+
+        # Set vector with list of parameters
+        pars = list_params(rad, sourcereg)
+        K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
+        npars = len(pars[:, 0])
+        K[:,npars] = 0.
+        allnc = np.dot(K, np.exp(self.samples.T))
+        ncv = np.sum(allnc, axis=0)
+        pnc = np.median(ncv)
+        pncl = np.percentile(ncv, 50. - 68.3 / 2.)
+        pnch = np.percentile(ncv, 50. + 68.3 / 2.)
+        print('Reconstructed counts: %g (%g , %g)' % (pnc, pncl, pnch))
+        if plot:
+            plt.clf()
+            fig = plt.figure(figsize=(13, 10))
+            ax_size = [0.14, 0.12,
+                       0.85, 0.85]
+            ax = fig.add_axes(ax_size)
+            ax.minorticks_on()
+            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(22)
+            # plt.yscale('log')
+            plt.hist(ncv, bins=30)
+            plt.xlabel('$N_{count}$', fontsize=40)
+            plt.ylabel('Frequency', fontsize=40)
+            if outfile is not None:
+                plt.savefig(outfile)
+            else:
+                plt.show()
+
+        return  pnc,pncl,pnch
+
 
     # Compute Mgas within radius in kpc
     def Mgas(self,radius,plot=True,outfile=None):

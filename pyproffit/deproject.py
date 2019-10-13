@@ -7,12 +7,13 @@ import matplotlib.pyplot as plt
 #plt.switch_backend('Agg')
 from scipy.interpolate import interp1d
 
-Mpc=3.0856776e+24 #cm
-nhc = 1.1738 #proton to electron ratio in pristine fully ionized gas
+Mpc = 3.0856776e+24 #cm
+mu_e = 1.1738 #proton to electron ratio in pristine fully ionized gas
 kpc = 3.0856776e+21 #cm
 mup = 0.6125 #mean molecular weight
 msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
+nhc = 1./0.8337
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -578,7 +579,7 @@ class Deproject:
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         rkpc = prof.bins * kpcp
         erkpc = prof.ebins * kpcp
-        nhconv = (1. + nhc) * mh * mup * kpc ** 3 / msun  # Msun/kpc^3
+        nhconv =  mh * mu_e * nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
         sourcereg = np.where(rad < self.bkglim)

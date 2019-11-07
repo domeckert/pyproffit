@@ -139,8 +139,15 @@ class Profile:
         profile, eprof, counts, area, effexp, bkgprof, bkgcounts = np.empty(self.nbin), np.empty(self.nbin), np.empty(
             self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
-        self.ellangle = ellipse_angle
-        self.ellratio = ellipse_ratio
+        if ellipse_angle is not None:
+            self.ellangle = ellipse_angle
+        else:
+            self.ellangle = 0.0
+
+        if ellipse_ratio is not None:
+            self.ellratio = ellipse_ratio
+        else:
+            self.ellratio = 1.0
         tta = ellipse_angle - 90.
         if tta < -90. or tta > 270.:
             print('Error: input angle must be between 0 and 360 degrees')
@@ -234,10 +241,10 @@ class Profile:
             nbin = len(self.bins)
             self.nbin = nbin
         else:
-            nb = int(self.maxrad / self.binsize * 60.)
-            self.bins = np.arange(self.binsize / 60. / 2., (nb + 0.5) * self.binsize / 60., self.binsize / 60.)
-            self.ebins = np.ones(nb) * self.binsize / 60. / 2.
-            self.nbin = nb
+            nbin = int(self.maxrad / self.binsize * 60.)
+            self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
+            self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
+            self.nbin = nbin
         profile, eprof = np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         rads = np.sqrt((x - self.cra) ** 2 + (y - self.cdec) ** 2) * pixsize

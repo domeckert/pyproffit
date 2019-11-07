@@ -47,12 +47,14 @@ def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
 # Function to create the list of parameters for the basis functions
 nsh=4. # number of basis functions to set
 
-def list_params(rad,sourcereg):
+def list_params(rad,sourcereg,nrc=None,nbetas=6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
-    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))
+    if nrc is None:
+        nrc = int(npfit/nsh)
+    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
     #allbetas=np.linspace(0.4,3.,6)
-    allbetas = np.linspace(0.6, 3., 6)
+    allbetas = np.linspace(0.6, 3., nbetas)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -104,13 +106,15 @@ def calc_int_operator(a, b, pars):
     return Kint
 
 
-def list_params_density(rad,sourcereg,z):
+def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
-    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),int(npfit/nsh))*kpcp
+    if nrc is None:
+        nrc = int(npfit/nsh)
+    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
     #allbetas=np.linspace(0.5,3.,6)
-    allbetas=np.linspace(0.6,3.,6)
+    allbetas = np.linspace(0.6, 3., nbetas)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -146,7 +150,7 @@ def calc_density_operator(rad,sourcereg,pars,z):
     return Ktot
 
 
-def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None):
+def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -173,7 +177,7 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None
     nptfit = len(sb[sourcereg])
 
     # Set vector with list of parameters
-    pars = list_params(rad, sourcereg)
+    pars = list_params(rad, sourcereg, nrc, nbetas)
     npt = len(pars)
 
     if prof.psfmat is not None:
@@ -418,8 +422,9 @@ class Deproject:
         plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
         if outfile is not None:
             plt.savefig(outfile)
+            plt.close()
         else:
-            plt.show()
+            plt.show(block=False)
 
     def Density(self):
         z = self.z
@@ -473,8 +478,9 @@ class Deproject:
                      markersize=7, capsize=0,mec='black',label='Data')
         if outfile is not None:
             plt.savefig(outfile)
+            plt.close()
         else:
-            plt.show()
+            plt.show(block=False)
 
 
     def CountRate(self,a,b,plot=True,outfile=None):
@@ -515,8 +521,9 @@ class Deproject:
             plt.ylabel('Frequency', fontsize=40)
             if outfile is not None:
                 plt.savefig(outfile)
+                plt.close()
             else:
-                plt.show()
+                plt.show(block=False)
 
         return  medint,intlo,inthi
 
@@ -564,8 +571,9 @@ class Deproject:
             plt.ylabel('Frequency', fontsize=40)
             if outfile is not None:
                 plt.savefig(outfile)
+                plt.close()
             else:
-                plt.show()
+                plt.show(block=False)
 
         return  pnc,pncl,pnch
 
@@ -618,8 +626,9 @@ class Deproject:
             plt.ylabel('Frequency', fontsize=40)
             if outfile is not None:
                 plt.savefig(outfile)
+                plt.close()
             else:
-                plt.show()
+                plt.show(block=False)
 
         return mg,mgl,mgh
 
@@ -699,8 +708,9 @@ class Deproject:
             plt.ylabel('Frequency', fontsize=40)
             if outfile is not None:
                 plt.savefig(outfile)
+                plt.close()
             else:
-                plt.show()
+                plt.show(block=False)
 
         return  medcsb,csblo,csbhi
 

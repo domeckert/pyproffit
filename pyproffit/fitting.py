@@ -96,6 +96,9 @@ class Fitter:
             # Construct iminuit object
             minuit=iminuit.Minuit(chi2,**kwargs)
         elif method=='cstat':
+            if prof.counts is None:
+                print('Error: No count profile exists')
+                return
             # Define the fitting algorithm
             cstat=Cstat(model,prof.bins,prof.counts,prof.area,prof.effexp,prof.bkgcounts,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
             # Construct iminuit object

@@ -1,7 +1,8 @@
 import numpy as np
 from astropy.io import fits
 from astropy import wcs
-
+from scipy.ndimage.filters import gaussian_filter
+from scipy.interpolate import griddata
 
 def get_extnum(fitsfile):
     next = 0
@@ -114,8 +115,19 @@ class Data:
                     xsrc = float(vals.split(',')[0])
                     ysrc = float(vals.split(',')[1])
                     rad = float(vals.split(',')[2])
-                src = np.where(np.hypot(x - xsrc, y - ysrc) < rad)
-                expo[src] = 0.0
+
+                # Define box around source to spped up calculation
+                boxsize = np.round(rad+0.5).astype(int)
+                intcx = np.round(xsrc).astype(int)
+                intcy = np.round(ysrc).astype(int)
+                xmin = np.max([intcx-boxsize, 0])
+                xmax = np.min([intcx+boxsize+1, self.axes[1]])
+                ymin = np.max([intcy-boxsize, 0])
+                ymax = np.min([intcy+boxsize+1, self.axes[0]])
+                rbox = np.hypot(x[xmin:xmax] - xsrc,y[ymin:ymax] - ysrc)
+                # Mask source
+                src = np.where(rbox < rad)
+                expo[xmin:xmax,ymin:ymax][src] = 0.0
                 nsrc = nsrc + 1
             elif 'ellipse' in lreg[i]:
                 vals = lreg[i].split('(')[1].split(')')[0]
@@ -146,11 +158,56 @@ class Data:
                     angle = float(vals.split(',')[2])
                 ellang = angle * np.pi / 180. + np.pi / 2.
                 aoverb = rad1/rad2
-                xtil = np.cos(ellang)*(x-xsrc) + np.sin(ellang)*(y-ysrc)
+                # Define box around source to spped up calculation
+                boxsize = np.round(np.max([rad1, rad2]) + 0.5).astype(int)
+                intcx = np.round(xsrc).astype(int)
+                intcy = np.round(ysrc).astype(int)
+                xmin = np.max([intcx-boxsize, 0])
+                xmax = np.min([intcx+boxsize + 1, self.axes[1]])
+                ymin = np.max([intcy-boxsize, 0])
+                ymax = np.min([intcy+boxsize + 1, self.axes[0]])
+                xtil = np.cos(ellang)*(x[xmin:xmax]-xsrc) + np.sin(ellang)*(y[ymin:ymax]-ysrc)
                 ytil = -np.sin(ellang)*(x-xsrc) + np.cos(ellang)*(y-ysrc)
-                src = np.where(aoverb*np.hypot(xtil, ytil/aoverb) < rad1)
-                expo[src] = 0.0
+                rbox = aoverb * np.hypot(xtil, ytil / aoverb)
+                # Mask source
+                src = np.where(rbox < rad1)
+                expo[xmin:xmax,ymin:ymax][src] = 0.0
                 nsrc = nsrc + 1
 
         print('Excluded %d sources' % (nsrc))
         self.exposure = expo
+
+    def dmfilth(self,outfile=None):
+        if self.img is None:
+            print('No data given')
+            return
+        # Apply source mask on image
+        chimg = np.where(self.exposure == 0.0)
+        self.img[chimg] = 0.0
+
+        # High-pass filter
+        print('Applying high-pass filter')
+        smoothing_scale = 25
+        gsb = gaussian_filter(self.img, smoothing_scale)
+        gsexp = gaussian_filter(self.exposure, smoothing_scale)
+        img_smoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.exposure
+
+        # Interpolate
+        print('Interpolating in the masked regions')
+        y, x = np.indices(self.axes)
+        nonz = np.where(img_smoothed > 0.)
+        p_ok = np.array([x[nonz], y[nonz]]).T
+        vals = img_smoothed[nonz]
+        int_vals = np.nan_to_num(griddata(p_ok, vals, (x, y), method='cubic'))
+
+        # Fill holes
+        print('Filling holes')
+        area_to_fill = np.where(np.logical_and(int_vals > 0., self.exposure == 0))
+        dmfilth = np.copy(self.img)
+        dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill])
+
+        if outfile is not None:
+            hdu = fits.PrimaryHDU(dmfilth)
+            hdu.header = self.header
+            hdu.writeto(outfile, overwrite=True)
+            print('Dmfilth image written to file '+outfile)

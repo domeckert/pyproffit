@@ -83,7 +83,7 @@ class Data:
         if self.exposure is None:
             print('No exposure given')
             return
-        expo = self.exposure
+        expo = np.copy(self.exposure)
         y, x = np.indices(self.axes)
         regtype = None
         for i in range(nreg):
@@ -117,17 +117,17 @@ class Data:
                     rad = float(vals.split(',')[2])
 
                 # Define box around source to spped up calculation
-                boxsize = np.round(rad+0.5).astype(int)
+                boxsize = np.round(rad + 0.5).astype(int)
                 intcx = np.round(xsrc).astype(int)
                 intcy = np.round(ysrc).astype(int)
                 xmin = np.max([intcx-boxsize, 0])
-                xmax = np.min([intcx+boxsize+1, self.axes[1]])
+                xmax = np.min([intcx+boxsize + 1, self.axes[1]])
                 ymin = np.max([intcy-boxsize, 0])
-                ymax = np.min([intcy+boxsize+1, self.axes[0]])
-                rbox = np.hypot(x[xmin:xmax] - xsrc,y[ymin:ymax] - ysrc)
+                ymax = np.min([intcy+boxsize + 1, self.axes[0]])
+                rbox = np.hypot(x[ymin:ymax,xmin:xmax] - xsrc,y[ymin:ymax,xmin:xmax] - ysrc)
                 # Mask source
                 src = np.where(rbox < rad)
-                expo[xmin:xmax,ymin:ymax][src] = 0.0
+                expo[ymin:ymax,xmin:xmax][src] = 0.0
                 nsrc = nsrc + 1
             elif 'ellipse' in lreg[i]:
                 vals = lreg[i].split('(')[1].split(')')[0]
@@ -166,12 +166,12 @@ class Data:
                 xmax = np.min([intcx+boxsize + 1, self.axes[1]])
                 ymin = np.max([intcy-boxsize, 0])
                 ymax = np.min([intcy+boxsize + 1, self.axes[0]])
-                xtil = np.cos(ellang)*(x[xmin:xmax]-xsrc) + np.sin(ellang)*(y[ymin:ymax]-ysrc)
-                ytil = -np.sin(ellang)*(x-xsrc) + np.cos(ellang)*(y-ysrc)
+                xtil = np.cos(ellang)*(x[ymin:ymax,xmin:xmax]-xsrc) + np.sin(ellang)*(y[ymin:ymax,xmin:xmax]-ysrc)
+                ytil = -np.sin(ellang)*(x[ymin:ymax,xmin:xmax]-xsrc) + np.cos(ellang)*(y[ymin:ymax,xmin:xmax]-ysrc)
                 rbox = aoverb * np.hypot(xtil, ytil / aoverb)
                 # Mask source
                 src = np.where(rbox < rad1)
-                expo[xmin:xmax,ymin:ymax][src] = 0.0
+                expo[ymin:ymax,xmin:xmax][src] = 0.0
                 nsrc = nsrc + 1
 
         print('Excluded %d sources' % (nsrc))

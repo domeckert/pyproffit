@@ -277,8 +277,8 @@ class PowerSpectrum:
         noexp = np.where(expo == 0.0)
         imgt[noexp] = 0.0
         # Set the region of interest
-        x_c = self.profile.cra  # Center coordinates
-        y_c = self.profile.cdec
+        x_c = self.profile.cx  # Center coordinates
+        y_c = self.profile.cy
         kpcp = cosmo.kpc_proper_per_arcmin(z).value
         Mpcpix = 1000. / kpcp / pixsize  # 1 Mpc in pixel
         regsizepix = region_size * Mpcpix

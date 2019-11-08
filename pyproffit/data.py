@@ -73,6 +73,7 @@ class Data:
                 return
             self.bkg = bkg
             fbkg.close()
+        self.filth = None
 
     def region(self, regfile):
         freg = open(regfile)
@@ -183,12 +184,13 @@ class Data:
             return
         # Apply source mask on image
         chimg = np.where(self.exposure == 0.0)
-        self.img[chimg] = 0.0
+        imgc = np.copy(self.img)
+        imgc[chimg] = 0.0
 
         # High-pass filter
         print('Applying high-pass filter')
         smoothing_scale = 25
-        gsb = gaussian_filter(self.img, smoothing_scale)
+        gsb = gaussian_filter(imgc, smoothing_scale)
         gsexp = gaussian_filter(self.exposure, smoothing_scale)
         img_smoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.exposure
 
@@ -205,6 +207,8 @@ class Data:
         area_to_fill = np.where(np.logical_and(int_vals > 0., self.exposure == 0))
         dmfilth = np.copy(self.img)
         dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill])
+
+        self.filth = dmfilth
 
         if outfile is not None:
             hdu = fits.PrimaryHDU(dmfilth)

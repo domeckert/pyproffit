@@ -14,8 +14,8 @@ class Profile:
     # method=2: find X-ray peak
     # method=3/4: user-given center in image (3) of FK5 (4) coordinates
     ################################
-    def __init__(self, data=None, method=None, maxrad=None, binsize=None, centroid_ra=None, centroid_dec=None,
-                 islogbin=None):
+    def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
+                 binning='linear', centroid_region=None):
         if data is None:
             print('No data given')
             return
@@ -27,84 +27,124 @@ class Profile:
             return
         self.data = data
 
-        if method == 3:
-            if centroid_ra is None or centroid_dec is None:
+        method = center_choice
+        if method == 'custom_ima':
+            if center_ra is None or center_dec is None:
                 print('Error: please provide X and Y coordinates')
                 return
-            self.cra = centroid_ra - 1.
-            self.cdec = centroid_dec - 1.
+            self.cx = center_ra - 1.
+            self.cy = center_dec - 1.
             self.ellangle = None
             self.ellratio = None
-        elif method == 4:
-            if centroid_ra is None or centroid_dec is None:
+            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            world = data.wcs_inp.all_pix2world(pixcrd, 0)
+            self.cra = world[0][0]
+            self.cdec = world[0][1]
+            print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
+        elif method == 'custom_fk5':
+            if center_ra is None or center_dec is None:
                 print('Error: please provide X and Y coordinates')
                 return
-            wc = np.array([[centroid_ra, centroid_dec]])
+            self.cra = center_ra
+            self.cdec = center_dec
+            wc = np.array([[center_ra, center_dec]])
             x = data.wcs_inp.wcs_world2pix(wc, 1)
-            self.cra = x[0][0] - 1.
-            self.cdec = x[0][1] - 1.
+            self.cx = x[0][0] - 1.
+            self.cy = x[0][1] - 1.
             self.ellangle = None
             self.ellratio = None
-            print('Corresponding pixels coordinates: ', self.cra + 1, self.cdec + 1)
-        elif method == 1:
+            print('Corresponding pixels coordinates: ', self.cx + 1, self.cy + 1)
+        elif method == 'centroid':
             print('Computing centroid and ellipse parameters using principal component analysis')
-            img = data.img.astype(int)
+            if data.filth is not None:
+                img = np.copy(data.filth).astype(int)
+            else:
+                img = np.copy(data.img).astype(int)
             yp, xp = np.indices(img.shape)
-            if data.exposure is None:
-                print('No exposure map given, proceeding with no weights')
+            if centroid_region is not None:
+                regrad = centroid_region / data.pixsize
+            else:
+                regrad = np.max(np.array([data.axes[0], data.axes[1]])/ 2.)
+            xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+            if data.exposure is None or data.filth is not None:
+                region = np.where(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0))
+                #print('No exposure map given, proceeding with no weights')
                 print('Denoising image...')
-                bkg = np.mean(img)
+                if data.exposure is None:
+                    bkg = np.mean(img)
+                else:
+                    nonzero = np.where(data.exposure > 0.0)
+                    bkg = np.mean(img[nonzero])
                 imgc = clean_bkg(img, bkg)
-                x = np.repeat(xp, imgc.flat)
-                y = np.repeat(yp, imgc.flat)
+                x = np.repeat(xp[region], imgc[region])
+                y = np.repeat(yp[region], imgc[region])
                 print('Running PCA...')
                 x_c, y_c, sig_x, sig_y, r_cluster, ellangle, pos_err = get_bary(x, y)
             else:
-                expo = data.exposure
-                nonzero = np.where(expo > 0.0)
+                region = np.where(np.logical_and(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0),data.exposure>0.))
+                nonzero = np.where(data.exposure > 0.0)
                 print('Denoising image...')
                 bkg = np.mean(img[nonzero])
                 imgc = clean_bkg(img, bkg)
-                x = np.repeat(xp[nonzero], imgc[nonzero])
-                y = np.repeat(yp[nonzero], imgc[nonzero])
-                weights = np.repeat(1. / expo[nonzero], img[nonzero])
+                x = np.repeat(xp[region], imgc[region])
+                y = np.repeat(yp[region], imgc[region])
+                weights = np.repeat(1. / data.exposure[region], img[region])
                 print('Running PCA...')
                 x_c, y_c, sig_x, sig_y, r_cluster, ellangle, pos_err = get_bary(x, y, weight=weights, wdist=True)
             print('Centroid position:', x_c + 1, y_c + 1)
+            self.cx = x_c
+            self.cy = y_c
+            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            world = data.wcs_inp.all_pix2world(pixcrd, 0)
+            self.cra = world[0][0]
+            self.cdec = world[0][1]
+            print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
             print('Ellipse axis ratio and position angle:', sig_x / sig_y, ellangle)
-            self.cra = x_c
-            self.cdec = y_c
             self.ellangle = ellangle
             self.ellratio = sig_x / sig_y
-        elif method == 2:
+        elif method == 'peak':
             print('Determining X-ray peak')
+            if data.filth is not None:
+                img = np.copy(data.filth).astype(int)
+            else:
+                img = np.copy(data.img).astype(int)
+            smc = 5 # 5-pixel smoothing to get the peak
+            gsb = gaussian_filter(img, smc)
             if data.exposure is None:
-                maxval = np.max(data.img)
-                ismax = np.where(data.img == maxval)
+                maxval = np.max(gsb)
+                ismax = np.where(gsb == maxval)
             else:
                 expo = data.exposure
                 nonzero = np.where(expo > 0.1 * np.max(expo))
-                maxval = np.max(data.img[nonzero] / expo[nonzero])
-                imgcorr = data.img * 1.0
-                imgcorr[nonzero] = data.img[nonzero] / expo[nonzero]
-                ismax = np.where(imgcorr == maxval)
+                gexpo = gaussian_filter(expo, smc)
+                sm_sbmap = np.nan_to_num(gsb / gexpo)
+                maxval = np.max(sm_sbmap[nonzero])
+                ismax = np.where(sm_sbmap == maxval)
             yp, xp = np.indices(data.img.shape)
             cdec = yp[ismax]
             cra = xp[ismax]
-            self.cra = np.mean(cra)
-            self.cdec = np.mean(cdec)
+            self.cx = np.mean(cra)
+            self.cy = np.mean(cdec)
             self.ellangle = None
             self.ellratio = None
-            print('Coordinates of surface-brightness peak:', self.cra + 1, self.cdec + 1)
+            print('Coordinates of surface-brightness peak:', self.cx + 1, self.cy + 1)
+            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            world = data.wcs_inp.all_pix2world(pixcrd, 0)
+            self.cra = world[0][0]
+            self.cdec = world[0][1]
+            print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
         else:
             print('Unknown method', method)
             return
         self.maxrad = maxrad
         self.binsize = binsize
-        if islogbin is None:
+        if binning=='log':
+            self.islogbin = True
+        elif binning=='linear':
             self.islogbin = False
         else:
-            self.islogbin = islogbin
+            print('Unknown binning option '+binning+', reverting to linear')
+            self.islogbin = False
         self.psfmat = None
         self.nbin = None
         self.bins = None
@@ -153,8 +193,8 @@ class Profile:
             print('Error: input angle must be between 0 and 360 degrees')
             return
         ellang = tta * np.pi / 180.
-        xtil = np.cos(ellang) * (x - self.cra) * pixsize + np.sin(ellang) * (y - self.cdec) * pixsize
-        ytil = -np.sin(ellang) * (x - self.cra) * pixsize + np.cos(ellang) * (y - self.cdec) * pixsize
+        xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
+        ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
         # Convert degree to radian and rescale to 0-2pi
         if angle_low != 0.0 and angle_high != 360.:
@@ -170,7 +210,7 @@ class Profile:
             anglow = 0.
             anghigh = 2. * np.pi
         # Compute angles and set them between 0 and 2pi
-        angles = np.arctan2(y - self.cdec , x - self.cra)
+        angles = np.arctan2(y - self.cy , x - self.cx)
         aneg = np.where( angles < 0.)
         angles[aneg] = angles[aneg] + 2. * np.pi
         # Now set angles relative to anglow
@@ -247,7 +287,7 @@ class Profile:
             self.nbin = nbin
         profile, eprof = np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
-        rads = np.sqrt((x - self.cra) ** 2 + (y - self.cdec) ** 2) * pixsize
+        rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
         for i in range(self.nbin):
             id = np.where(np.logical_and(
                 np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
@@ -283,14 +323,12 @@ class Profile:
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='DATA')
                 hdr = tbhdu.header
-                hdr['X_C'] = self.cra + 1
-                hdr['Y_C'] = self.cdec + 1
+                hdr['X_C'] = self.cx + 1
+                hdr['Y_C'] = self.cy + 1
                 hdr.comments['X_C'] = 'X coordinate of center value'
                 hdr.comments['Y_C'] = 'Y coordinate of center value'
-                pixcrd = np.array([[self.cdec, self.cra]], np.float_)
-                world = self.data.wcs_inp.all_pix2world(pixcrd, 0)
-                hdr['RA_C'] = world[0][0]
-                hdr['DEC_C'] = world[0][1]
+                hdr['RA_C'] = self.cra
+                hdr['DEC_C'] = self.cdec
                 hdr.comments['RA_C'] = 'Right ascension of center value'
                 hdr.comments['DEC_C'] = 'Declination of center value'
                 hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
@@ -344,7 +382,7 @@ class Profile:
             psfout = np.zeros((nbin, nbin))
             exposure = data.exposure
             y, x = np.indices(exposure.shape)
-            rads = np.hypot(x - self.cra, y - self.cdec) * self.data.pixsize  # arcmin
+            rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
             kernel = None
             if psffunc is not None:
                 psfmin = 1e-7 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
@@ -412,8 +450,8 @@ class Profile:
             print('Error: input angle must be between 0 and 360 degrees')
             return
         ellang = tta * np.pi / 180.
-        xtil = np.cos(ellang) * (x - self.cra) * pixsize + np.sin(ellang) * (y - self.cdec) * pixsize
-        ytil = -np.sin(ellang) * (x - self.cra) * pixsize + np.cos(ellang) * (y - self.cdec) * pixsize
+        xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
+        ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
         outmod = lambda x: model.model(x, *model.params)
         if vignetting:

@@ -18,13 +18,13 @@ class Profile:
                  binning='linear', centroid_region=None):
         '''
 
-        :**param** data:
+        :**param** data: the data module in pyproffit
 
-        :param center_choice:
+        :param center_choice: the center choosed by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
 
-        :param maxrad:
+        :param maxrad: the maximum radius (in arcmin) within which compute the surface brightness profile
 
-        :param binsize:
+        :param binsize: the minumum size of the bin (in arcsec)
 
         :param center_ra:
 

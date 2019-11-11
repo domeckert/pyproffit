@@ -232,7 +232,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
     f.close()
-    sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
+    sm = su.compile_model('mybeta_GP.stan', model_name='model_GP')
 
     datas = dict(K=K, cts_tot=counts.astype(int), cts_back=bkgcounts, N=K.shape[0], M=K.shape[1],
                  norm0=norm0)
@@ -512,8 +512,7 @@ class Deproject:
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
         # nhc: conversion factor from H n-density to e- n-density
-        def_
-        calc_conv_fact(f_abund):
+
         if f_abund == 'angr':
             nhc = 1 / 0.8337
             mup = 0.6125

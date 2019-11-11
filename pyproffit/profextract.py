@@ -16,6 +16,25 @@ class Profile:
     ################################
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
                  binning='linear', centroid_region=None):
+        '''
+
+        :**param** data:
+
+        :param center_choice:
+
+        :param maxrad:
+
+        :param binsize:
+
+        :param center_ra:
+
+        :param center_dec:
+
+        :param binning:
+
+        :param centroid_region:
+
+        '''
         if data is None:
             print('No data given')
             return

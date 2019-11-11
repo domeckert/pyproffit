@@ -475,7 +475,7 @@ def OP(deproj,nmc=1000):
 
 
 class Deproject:
-    def __init__(self,z=None,profile=None,cf=None):
+    def __init__(self,z=None,profile=None,cf=None,f_abund='aspl'):
         self.profile = profile
         self.z = z
         self.samples = None

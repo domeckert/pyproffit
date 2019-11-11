@@ -149,7 +149,114 @@ def calc_density_operator(rad,sourcereg,pars,z):
     Ktot[:,npars]=0.0
     return Ktot
 
+def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+    prof = deproj.profile
+    sb = prof.profile
+    rad = prof.bins
+    erad = prof.ebins
+    counts = prof.counts
+    area = prof.area
+    exposure = prof.effexp
+    bkgcounts = prof.bkgcounts
 
+    # Define maximum radius for source deprojection, assuming we have only background for r>bkglim
+    if bkglim is None:
+        bkglim=np.max(rad+erad)
+        deproj.bkglim = bkglim
+        if back is None:
+            back = sb[len(sb) - 1]
+    else:
+        deproj.bkglim = bkglim
+        backreg = np.where(rad>bkglim)
+        if back is None:
+            back = np.mean(sb[backreg])
+
+    # Set source region
+    sourcereg = np.where(rad < bkglim)
+    nptfit = len(sb[sourcereg])
+
+    # Set vector with list of parameters
+    pars = list_params(rad, sourcereg, nrc, nbetas)
+    npt = len(pars)
+
+    if prof.psfmat is not None:
+        psfmat = np.transpose(prof.psfmat)
+    else:
+        psfmat = np.eye(prof.nbin)
+
+    # Compute linear combination kernel
+    K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
+    basic_model = pm.Model()
+    if np.isnan(sb[0]) or sb[0] <= 0:
+        testval = -10.
+    else:
+        testval = np.log(sb[0] / npt)
+    if np.isnan(back) or back == 0:
+        testbkg = -10.
+    else:
+        testbkg = np.log(back)
+
+    import pystan
+    import stan_utility as su
+
+    if not os.path.isfile('mybeta_GP.stan'):  # write and compile code if not already present
+        code = '''
+        data {
+        int<lower=0> N;
+        int<lower=0> M;
+        int cts_tot[N];
+        vector[N] cts_back;
+        matrix[N,M] K;
+        vector[M] norm0;
+        }
+        parameters {
+        vector[M] log_norm;
+        }
+        transformed parameters{
+        vector[M] norm = exp(log_norm);
+        }
+        model {
+        log_norm ~ normal(norm0,10);
+        cts_tot ~ poisson(K * norm + cts_back);
+        }'''
+        f = open('mybeta_GP.stan', 'w')
+        print(code, file=f)
+        f.close()
+        sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
+
+    depth = 10
+    datas = dict(K=K, cts_tot=counts.astype(int), cts_back=bkgcounts, N=K.shape[0], M=K.shape[1],
+                 norm0=np.append(testval, testbkg))
+    tinit = time.time()
+    print('Running MCMC...')
+    fit = sm.sampling(data=datas, chains=1, iter=nmcmc, thin=1, n_jobs=1, control={'max_treedepth': depth})
+    print('Done.')
+    tend = time.time()
+    print(' Total computing time is: ', (tend - tinit) / 60., ' minutes')
+    chain = fit.extract()
+    samples = chain['log_norm']
+
+    # Get chains and save them to file
+
+    if samplefile is not  None:
+        np.savetxt(samplefile, samples)
+
+    # Compute output deconvolved brightness profile
+    Ksb = calc_sb_operator(rad, sourcereg, pars)
+    allsb = np.dot(Ksb, np.exp(samples.T))
+    bfit = np.median(np.exp(samples[:, npt]))
+    pmc = np.median(allsb, axis=1)
+    pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1)
+    pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1)
+
+    deproj.samples = samples
+    deproj.sb = pmc
+    deproj.sb_lo = pmcl
+    deproj.sb_hi = pmch
+    deproj.bkg = bfit
+    
+    
+    
 def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile

@@ -143,7 +143,7 @@ class Profile:
         mrad = np.max(rads[ii])*pixsize
         if maxrad is None:
             maxrad=mrad
-            print("maximum radius is %.4f"%maxrad)
+            print("Maximum radius is %.4f arcmin"%maxrad)
         else:
             if maxrad > mrad:
                 maxrad=mrad

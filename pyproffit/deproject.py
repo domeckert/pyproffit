@@ -187,7 +187,6 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     # Compute linear combination kernel
     K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
-    basic_model = pm.Model()
     if np.isnan(sb[0]) or sb[0] <= 0:
         testval = -10.
     else:
@@ -197,37 +196,38 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     else:
         testbkg = np.log(back)
 
+    norm0=np.append(np.repeat(testval,npt),testbkg)
+
     import pystan
     import stan_utility as su
 
-    if not os.path.isfile('mybeta_GP.stan'):  # write and compile code if not already present
-        code = '''
-        data {
-        int<lower=0> N;
-        int<lower=0> M;
-        int cts_tot[N];
-        vector[N] cts_back;
-        matrix[N,M] K;
-        vector[M] norm0;
-        }
-        parameters {
-        vector[M] log_norm;
-        }
-        transformed parameters{
-        vector[M] norm = exp(log_norm);
-        }
-        model {
-        log_norm ~ normal(norm0,10);
-        cts_tot ~ poisson(K * norm + cts_back);
-        }'''
-        f = open('mybeta_GP.stan', 'w')
-        print(code, file=f)
-        f.close()
-        sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
+    code = '''
+    data {
+    int<lower=0> N;
+    int<lower=0> M;
+    int cts_tot[N];
+    vector[N] cts_back;
+    matrix[N,M] K;
+    vector[M] norm0;
+    }
+    parameters {
+    vector[M] log_norm;
+    }
+    transformed parameters{
+    vector[M] norm = exp(log_norm);
+    }
+    model {
+    log_norm ~ normal(norm0,10);
+    cts_tot ~ poisson(K * norm + cts_back);
+    }'''
+    f = open('mybeta_GP.stan', 'w')
+    print(code, file=f)
+    f.close()
+    sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
 
     depth = 10
     datas = dict(K=K, cts_tot=counts.astype(int), cts_back=bkgcounts, N=K.shape[0], M=K.shape[1],
-                 norm0=np.append(testval, testbkg))
+                 norm0=norm0)
     tinit = time.time()
     print('Running MCMC...')
     fit = sm.sampling(data=datas, chains=1, iter=nmcmc, thin=1, n_jobs=1, control={'max_treedepth': depth})

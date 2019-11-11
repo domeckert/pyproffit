@@ -360,7 +360,15 @@ def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None
 
 
 class MyDeprojVol:
+    '''
+    Mydeproj
+    '''
     def __init__(self, radin, radot):
+        '''
+
+        :param radin:
+        :param radot:
+        '''
         self.radin=radin
         self.radot=radot
         self.help=''

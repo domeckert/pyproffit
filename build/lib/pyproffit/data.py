@@ -1,0 +1,217 @@
+import numpy as np
+from astropy.io import fits
+from astropy import wcs
+from scipy.ndimage.filters import gaussian_filter
+from scipy.interpolate import griddata
+
+def get_extnum(fitsfile):
+    next = 0
+    if fitsfile[0].header['NAXIS'] == 2:
+        return 0
+    else:
+        print('Primary HDU is not an image, moving on')
+        nhdu = len(fitsfile)
+        if nhdu == 1:
+            print('Error: No IMAGE extension found in input file')
+            return -1
+        cont = 1
+        next = 1
+        while (cont and next < nhdu):
+            extension = fitsfile[next].header['XTENSION']
+            if extension == 'IMAGE':
+                print('IMAGE HDU found in extension ', next)
+                cont = 0
+            else:
+                next = next + 1
+        if cont == 1:
+            print('Error: No IMAGE extension found in input file')
+            return -1
+        return next
+
+
+class Data:
+    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False):
+        if imglink is None:
+            print('Error: Image file not provided')
+            return
+        fimg = fits.open(imglink)
+        next = get_extnum(fimg)
+        self.img = fimg[next].data.astype(float)
+        head = fimg[next].header
+        self.header = head
+        self.wcs_inp = wcs.WCS(head, relax=False)
+        if 'CDELT2' in head:
+            self.pixsize = head['CDELT2'] * 60.  # arcmin
+        elif 'CD2_2' in head:
+            self.pixsize = head['CD2_2'] * 60.  # arcmin
+        else:
+            print('No pixel size could be found in header, will assume a pixel size of 2.5 arcsec')
+            self.pixsize = 2.5 / 60.
+        self.axes = self.img.shape
+        if voronoi:
+            self.errmap = fimg[1].data.astype(float)
+        fimg.close()
+        if explink is None:
+            self.exposure = np.ones(self.axes)
+        else:
+            fexp = fits.open(explink)
+            next = get_extnum(fexp)
+            expo = fexp[next].data.astype(float)
+            if expo.shape != self.axes:
+                print('Error: Image and exposure map sizes do not match')
+                return
+            self.exposure = expo
+            fexp.close()
+        if bkglink is None:
+            self.bkg = np.zeros(self.axes)
+        else:
+            fbkg = fits.open(bkglink)
+            next = get_extnum(fbkg)
+            bkg = fbkg[next].data.astype(float)
+            if bkg.shape != self.axes:
+                print('Error: Image and background map sizes do not match')
+                return
+            self.bkg = bkg
+            fbkg.close()
+        self.filth = None
+
+    def region(self, regfile):
+        freg = open(regfile)
+        lreg = freg.readlines()
+        freg.close()
+        nsrc = 0
+        nreg = len(lreg)
+        if self.exposure is None:
+            print('No exposure given')
+            return
+        expo = np.copy(self.exposure)
+        y, x = np.indices(self.axes)
+        regtype = None
+        for i in range(nreg):
+            if 'fk5' in lreg[i]:
+                regtype = 'fk5'
+            elif 'image' in lreg[i]:
+                regtype = 'image'
+        if regtype is None:
+            print('Error: invalid format')
+            return
+        for i in range(nreg):
+            if 'circle' in lreg[i]:
+                vals = lreg[i].split('(')[1].split(')')[0]
+                if regtype == 'fk5':
+                    xsrc = float(vals.split(',')[0])
+                    ysrc = float(vals.split(',')[1])
+                    rad = vals.split(',')[2]
+                    if '"' in rad:
+                        rad = float(rad.split('"')[0]) / self.pixsize / 60.
+                    elif '\'' in rad:
+                        rad = float(rad.split('\'')[0]) / self.pixsize
+                    else:
+                        rad = float(rad) / self.pixsize * 60.
+                    wc = np.array([[xsrc, ysrc]])
+                    pixcrd = self.wcs_inp.wcs_world2pix(wc, 1)
+                    xsrc = pixcrd[0][0] - 1.
+                    ysrc = pixcrd[0][1] - 1.
+                else:
+                    xsrc = float(vals.split(',')[0])
+                    ysrc = float(vals.split(',')[1])
+                    rad = float(vals.split(',')[2])
+
+                # Define box around source to spped up calculation
+                boxsize = np.round(rad + 0.5).astype(int)
+                intcx = np.round(xsrc).astype(int)
+                intcy = np.round(ysrc).astype(int)
+                xmin = np.max([intcx-boxsize, 0])
+                xmax = np.min([intcx+boxsize + 1, self.axes[1]])
+                ymin = np.max([intcy-boxsize, 0])
+                ymax = np.min([intcy+boxsize + 1, self.axes[0]])
+                rbox = np.hypot(x[ymin:ymax,xmin:xmax] - xsrc,y[ymin:ymax,xmin:xmax] - ysrc)
+                # Mask source
+                src = np.where(rbox < rad)
+                expo[ymin:ymax,xmin:xmax][src] = 0.0
+                nsrc = nsrc + 1
+            elif 'ellipse' in lreg[i]:
+                vals = lreg[i].split('(')[1].split(')')[0]
+                if regtype == 'fk5':
+                    xsrc = float(vals.split(',')[0])
+                    ysrc = float(vals.split(',')[1])
+                    rad1 = vals.split(',')[2]
+                    rad2 = vals.split(',')[3]
+                    angle = float(vals.split(',')[4])
+                    if '"' in rad1:
+                        rad1 = float(rad1.split('"')[0]) / self.pixsize / 60.
+                        rad2 = float(rad2.split('"')[0]) / self.pixsize / 60.
+                    elif '\'' in rad1:
+                        rad1 = float(rad1.split('\'')[0]) / self.pixsize
+                        rad2 = float(rad2.split('\'')[0]) / self.pixsize
+                    else:
+                        rad1 = float(rad1) / self.pixsize * 60.
+                        rad2 = float(rad2) / self.pixsize * 60.
+                    wc = np.array([[xsrc, ysrc]])
+                    pixcrd = self.wcs_inp.wcs_world2pix(wc, 1)
+                    xsrc = pixcrd[0][0] - 1.
+                    ysrc = pixcrd[0][1] - 1.
+                else:
+                    xsrc = float(vals.split(',')[0])
+                    ysrc = float(vals.split(',')[1])
+                    rad1 = float(vals.split(',')[2])
+                    rad2 = float(vals.split(',')[3])
+                    angle = float(vals.split(',')[2])
+                ellang = angle * np.pi / 180. + np.pi / 2.
+                aoverb = rad1/rad2
+                # Define box around source to spped up calculation
+                boxsize = np.round(np.max([rad1, rad2]) + 0.5).astype(int)
+                intcx = np.round(xsrc).astype(int)
+                intcy = np.round(ysrc).astype(int)
+                xmin = np.max([intcx-boxsize, 0])
+                xmax = np.min([intcx+boxsize + 1, self.axes[1]])
+                ymin = np.max([intcy-boxsize, 0])
+                ymax = np.min([intcy+boxsize + 1, self.axes[0]])
+                xtil = np.cos(ellang)*(x[ymin:ymax,xmin:xmax]-xsrc) + np.sin(ellang)*(y[ymin:ymax,xmin:xmax]-ysrc)
+                ytil = -np.sin(ellang)*(x[ymin:ymax,xmin:xmax]-xsrc) + np.cos(ellang)*(y[ymin:ymax,xmin:xmax]-ysrc)
+                rbox = aoverb * np.hypot(xtil, ytil / aoverb)
+                # Mask source
+                src = np.where(rbox < rad1)
+                expo[ymin:ymax,xmin:xmax][src] = 0.0
+                nsrc = nsrc + 1
+
+        print('Excluded %d sources' % (nsrc))
+        self.exposure = expo
+
+    def dmfilth(self,outfile=None):
+        if self.img is None:
+            print('No data given')
+            return
+        # Apply source mask on image
+        chimg = np.where(self.exposure == 0.0)
+        imgc = np.copy(self.img)
+        imgc[chimg] = 0.0
+
+        # High-pass filter
+        print('Applying high-pass filter')
+        smoothing_scale = 25
+        gsb = gaussian_filter(imgc, smoothing_scale)
+        gsexp = gaussian_filter(self.exposure, smoothing_scale)
+        img_smoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.exposure
+
+        # Interpolate
+        print('Interpolating in the masked regions')
+        y, x = np.indices(self.axes)
+        nonz = np.where(img_smoothed > 0.)
+        p_ok = np.array([x[nonz], y[nonz]]).T
+        vals = img_smoothed[nonz]
+        int_vals = np.nan_to_num(griddata(p_ok, vals, (x, y), method='cubic'))
+
+        # Fill holes
+        print('Filling holes')
+        area_to_fill = np.where(np.logical_and(int_vals > 0., self.exposure == 0))
+        dmfilth = np.copy(self.img)
+        dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill])
+
+        self.filth = dmfilth
+
+        if outfile is not None:
+            hdu = fits.PrimaryHDU(dmfilth)
+            hdu.header = self.header
+            hdu.writeto(outfile, overwrite=True)
+            print('Dmfilth image written to file '+outfile)

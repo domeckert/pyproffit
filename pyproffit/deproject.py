@@ -367,6 +367,7 @@ class MyDeprojVol:
         '''
 
         :param radin:
+
         :param radot:
         '''
         self.radin=radin

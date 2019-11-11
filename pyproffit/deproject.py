@@ -225,7 +225,6 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     f.close()
     sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
 
-    depth = 10
     datas = dict(K=K, cts_tot=counts.astype(int), cts_back=bkgcounts, N=K.shape[0], M=K.shape[1],
                  norm0=norm0)
     tinit = time.time()

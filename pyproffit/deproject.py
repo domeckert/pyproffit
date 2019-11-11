@@ -19,6 +19,15 @@ mh = 1.66053904e-24 #proton mass in g
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
+    '''
+    :param rad:
+    :param sourcereg:
+    :param pars:
+    :param area:
+    :param expo:
+    :param psf:
+    :return:
+    '''
     # Select values in the source region
     rfit=rad[sourcereg]
     npt=len(rfit)

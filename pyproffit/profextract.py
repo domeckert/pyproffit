@@ -32,7 +32,7 @@ class Profile:
 
         :param binning: 'linear' or 'log'
 
-        :param centroid_region:
+        :param centroid_region: option to define region within which calculate the centroid
 
         '''
         if data is None:

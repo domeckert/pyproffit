@@ -20,8 +20,7 @@ class Profile:
             print('No data given')
             return
         if maxrad is None:
-            print('No maximum radius given')
-            return
+            print('No maximum radius given, using maximum distance of image from center')
         if binsize is None:
             print('No bin size given')
             return
@@ -136,6 +135,19 @@ class Profile:
         else:
             print('Unknown method', method)
             return
+
+        pixsize = data.header['CDELT2'] * 60  # 1 pix = pixsize arcmin
+        yima, xima = np.indices(data.img.shape)
+        rads = np.hypot(xima - self.cx, yima - self.cy)
+        ii = np.where(data.exposure > 0)
+        mrad = np.max(rads[ii])*pixsize
+        if maxrad is None:
+            maxrad=mrad
+            print("Maximum radius is %.4f arcmin"%maxrad)
+        else:
+            if maxrad > mrad:
+                maxrad=mrad
+
         self.maxrad = maxrad
         self.binsize = binsize
         if binning=='log':

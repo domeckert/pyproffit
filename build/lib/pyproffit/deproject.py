@@ -6,6 +6,7 @@ from scipy.special import gamma
 import matplotlib.pyplot as plt
 #plt.switch_backend('Agg')
 from scipy.interpolate import interp1d
+import os
 
 Mpc = 3.0856776e+24 #cm
 mu_e = 1.1738 #proton to electron ratio in pristine fully ionized gas
@@ -493,6 +494,9 @@ class Deproject:
 
     def Multiscale(self,nmcmc=1000,bkglim=None,back=None,samplefile=None):
         Deproject_Multiscale(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile)
+        
+    def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
+        Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)

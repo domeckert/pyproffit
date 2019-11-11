@@ -6,6 +6,7 @@ from scipy.special import gamma
 import matplotlib.pyplot as plt
 #plt.switch_backend('Agg')
 from scipy.interpolate import interp1d
+import os
 
 Mpc = 3.0856776e+24 #cm
 mu_e = 1.1738 #proton to electron ratio in pristine fully ionized gas

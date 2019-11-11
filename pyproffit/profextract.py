@@ -26,11 +26,11 @@ class Profile:
 
         :param binsize: the minumum size of the bin (in arcsec)
 
-        :param center_ra:
+        :param center_ra: user defined center, to be consistent with center_choice
 
-        :param center_dec:
+        :param center_dec:user defined center, to be consistent with center_choice
 
-        :param binning:
+        :param binning: 'linear' or 'log'
 
         :param centroid_region:
 

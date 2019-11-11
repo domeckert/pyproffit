@@ -210,6 +210,9 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     import pystan
     import stan_utility as su
 
+    if not os.path.exists("~/.stan_cache"):
+        os.makedirs("~/.stan_cache")
+
     code = '''
     data {
     int<lower=0> N;

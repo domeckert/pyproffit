@@ -16,6 +16,25 @@ class Profile:
     ################################
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
                  binning='linear', centroid_region=None):
+        '''
+
+        :**param** data: the data module in pyproffit
+
+        :param center_choice: the center choosed by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
+
+        :param maxrad: the maximum radius (in arcmin) within which compute the surface brightness profile
+
+        :param binsize: the minumum size of the bin (in arcsec)
+
+        :param center_ra:
+
+        :param center_dec:
+
+        :param binning:
+
+        :param centroid_region:
+
+        '''
         if data is None:
             print('No data given')
             return

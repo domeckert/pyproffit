@@ -19,6 +19,15 @@ mh = 1.66053904e-24 #proton mass in g
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
+    '''
+    :param rad:
+    :param sourcereg:
+    :param pars:
+    :param area:
+    :param expo:
+    :param psf:
+    :return:
+    '''
     # Select values in the source region
     rfit=rad[sourcereg]
     npt=len(rfit)
@@ -201,6 +210,9 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     import pystan
     import stan_utility as su
 
+    if not os.path.exists("~/.stan_cache"):
+        os.makedirs("~/.stan_cache")
+
     code = '''
     data {
     int<lower=0> N;
@@ -355,7 +367,16 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
 
 
 class MyDeprojVol:
+    '''
+    Mydeproj
+    '''
     def __init__(self, radin, radot):
+        '''
+
+        :param radin:
+
+        :param radot:
+        '''
         self.radin=radin
         self.radot=radot
         self.help=''
@@ -498,8 +519,7 @@ class Deproject:
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
         # nhc: conversion factor from H n-density to e- n-density
-        #def_
-        #calc_conv_fact(f_abund):
+
         if f_abund == 'angr':
             nhc = 1 / 0.8337
             mup = 0.6125

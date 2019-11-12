@@ -9,12 +9,12 @@ from scipy.interpolate import interp1d
 import os
 
 Mpc = 3.0856776e+24 #cm
-mu_e = 1.1738 #proton to electron ratio in pristine fully ionized gas
 kpc = 3.0856776e+21 #cm
-mup = 0.6125 #mean molecular weight
 msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
-nhc = 1./0.8337
+
+
+
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -223,9 +223,8 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
     f.close()
-    sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
+    sm = su.compile_model('mybeta_GP.stan', model_name='model_GP')
 
-    depth = 10
     datas = dict(K=K, cts_tot=counts.astype(int), cts_back=bkgcounts, N=K.shape[0], M=K.shape[1],
                  norm0=norm0)
     tinit = time.time()
@@ -258,7 +257,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -444,7 +443,7 @@ def OP(deproj,nmc=1000):
         x=MyDeprojVol(rin_cm,rout_cm)
         vol=np.transpose(x.deproj_vol())
         dlum=cosmo.luminosity_distance(deproj.z).value*Mpc
-        K2em=4.*np.pi*1e14*dlum**2/(1+deproj.z)**2/nhc/deproj.cf
+        K2em=4.*np.pi*1e14*dlum**2/(1+deproj.z)**2/deproj.nhc/deproj.cf
 
         # Projected emission measure profiles
         em0 = prof.profile * K2em * area
@@ -476,7 +475,7 @@ def OP(deproj,nmc=1000):
 
 
 class Deproject:
-    def __init__(self,z=None,profile=None,cf=None):
+    def __init__(self,z=None,profile=None,cf=None,f_abund='aspl'):
         self.profile = profile
         self.z = z
         self.samples = None
@@ -492,9 +491,40 @@ class Deproject:
         self.samples = None
         self.bkglim = None
 
-    def Multiscale(self,nmcmc=1000,bkglim=None,back=None,samplefile=None):
-        Deproject_Multiscale(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile)
-        
+        # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
+        # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
+        # nhc: conversion factor from H n-density to e- n-density
+        #def_
+        #calc_conv_fact(f_abund):
+        if f_abund == 'angr':
+            nhc = 1 / 0.8337
+            mup = 0.6125
+            mu_e = 1.1738
+        elif f_abund == 'aspl':
+            nhc = 1 / 0.8527
+            mup = 0.5994
+            mu_e = 1.1548
+        elif f_abund == 'grsa':
+            nhc = 1 / 0.8520
+            mup = 0.6000
+            mu_e = 1.1555
+        else:  # aspl default
+            nhc = 1 / 0.8527
+            mup = 0.5994
+            mu_e = 1.1548
+        self.nhc=nhc
+        self.mup=mup
+        self.mu_e=mu_e
+
+
+    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+        if backend=='pymc3':
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
+        elif backend=='stan':
+            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
+        else:
+            print('Unknown method '+method)
+
     def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
         Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)
 
@@ -546,7 +576,7 @@ class Deproject:
         sourcereg = np.where(rad < self.bkglim)
 
         if z is not None and cf is not None:
-            transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / nhc / Mpc * 1e3
+            transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
             pardens = list_params_density(rad, sourcereg, z)
             Kdens = calc_density_operator(rad, sourcereg, pardens, z)
             alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T)) / cf * transf)  # [0:nptfit, :]
@@ -698,12 +728,12 @@ class Deproject:
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         rkpc = prof.bins * kpcp
         erkpc = prof.ebins * kpcp
-        nhconv =  mh * mu_e * nhc * kpc ** 3 / msun  # Msun/kpc^3
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
         sourcereg = np.where(rad < self.bkglim)
 
-        transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / nhc / Mpc * 1e3
+        transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
         pardens = list_params_density(rad, sourcereg, self.z)
         Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
 

@@ -220,10 +220,14 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     log_norm ~ normal(norm0,10);
     cts_tot ~ poisson(K * norm + cts_back);
     }'''
+
+    if not os.path.exists('~/.stan_cache'):
+        os.mkdir('~/.stan_cache')
+
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
     f.close()
-    sm = su.compile_model('mybeta_gauss.stan', model_name='model_GP')
+    sm = su.compile_model('mybeta_GP.stan', model_name='model_GP')
 
     datas = dict(K=K, cts_tot=counts.astype(int), cts_back=bkgcounts, N=K.shape[0], M=K.shape[1],
                  norm0=norm0)
@@ -257,7 +261,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -494,8 +498,8 @@ class Deproject:
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
         # nhc: conversion factor from H n-density to e- n-density
-        def_
-        calc_conv_fact(f_abund):
+        #def_
+        #calc_conv_fact(f_abund):
         if f_abund == 'angr':
             nhc = 1 / 0.8337
             mup = 0.6125
@@ -517,9 +521,14 @@ class Deproject:
         self.mu_e=mu_e
 
 
-    def Multiscale(self,nmcmc=1000,bkglim=None,back=None,samplefile=None):
-        Deproject_Multiscale(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile)
-        
+    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+        if backend=='pymc3':
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
+        elif backend=='stan':
+            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
+        else:
+            print('Unknown method '+method)
+
     def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
         Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)
 
@@ -723,7 +732,7 @@ class Deproject:
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         rkpc = prof.bins * kpcp
         erkpc = prof.ebins * kpcp
-        nhconv =  mh * slef.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
         sourcereg = np.where(rad < self.bkglim)

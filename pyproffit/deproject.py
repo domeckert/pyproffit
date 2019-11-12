@@ -579,9 +579,9 @@ class Deproject:
         plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
         plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black')
-        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
+        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='C0', elinewidth=2,
+                     markersize=7, capsize=3,mec='black')
+        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()

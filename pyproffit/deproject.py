@@ -547,7 +547,7 @@ class Deproject:
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
         else:
-            print('Unknown method '+method)
+            print('Unknown method '+backend)
 
     def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
         Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)

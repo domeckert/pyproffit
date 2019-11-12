@@ -1,4 +1,4 @@
-from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 import numpy as np
 import pymc3 as pm
 import time
@@ -210,6 +210,9 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     import pystan
     import stan_utility as su
 
+    if not os.path.exists("~/.stan_cache"):
+        os.makedirs("~/.stan_cache")
+
     code = '''
     data {
     int<lower=0> N;
@@ -229,6 +232,10 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     log_norm ~ normal(norm0,10);
     cts_tot ~ poisson(K * norm + cts_back);
     }'''
+
+    if not os.path.exists('~/.stan_cache'):
+        os.mkdir('~/.stan_cache')
+
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
     f.close()
@@ -266,7 +273,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -534,11 +541,13 @@ class Deproject:
         self.mu_e=mu_e
 
 
-    def Multiscale(self,nmcmc=1000,bkglim=None,back=None,samplefile=None):
-        Deproject_Multiscale(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile)
-        
-    def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
-        Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)
+    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+        if backend=='pymc3':
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
+        elif backend=='stan':
+            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
+        else:
+            print('Unknown method '+method)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
@@ -740,7 +749,7 @@ class Deproject:
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         rkpc = prof.bins * kpcp
         erkpc = prof.ebins * kpcp
-        nhconv =  mh * slef.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
         sourcereg = np.where(rad < self.bkglim)

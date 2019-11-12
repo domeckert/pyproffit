@@ -1,4 +1,4 @@
-from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 import numpy as np
 import pymc3 as pm
 import time

@@ -203,7 +203,7 @@ class Profile:
             nbin = len(self.bins)
             self.nbin = nbin
         else:
-            nbin = int(self.maxrad / self.binsize * 60.)
+            nbin = int(self.maxrad / self.binsize * 60. + 0.5)
             self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
             self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
             self.nbin = nbin

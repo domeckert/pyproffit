@@ -656,23 +656,63 @@ class Deproject:
             return
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
-        ax_size = [0.14, 0.14,
-                   0.83, 0.83]
-        ax = fig.add_axes(ax_size)
+
+        ax=fig.add_axes([0.1,0.2,0.8,0.7])
+        ax_res=fig.add_axes([0.1,0.1,0.8,0.1])
+
+        ax_res.set_xlabel('Radius [arcmin]', fontsize=40)
+        ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+
+        ax.errorbar(self.profile.bins, self.profile.profile, xerr=self.profile.ebins, yerr=self.profile.eprof, fmt='o', color='black', elinewidth=2,
+                     markersize=7, capsize=0,mec='black',label='Data')
+
+        #plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
+        ax.plot(self.profile.bins, self.sb, color='C0', lw=2,label='Reconstruction - PSF not applied')
+        ax.fill_between(self.profile.bins,self.sb_lo,self.sb_hi,color='C0',alpha=0.5)
+
+
+
+        rad = self.profile.bins
+        sourcereg = np.where(rad < self.bkglim)
+        area = self.profile.area
+        exposure = self.profile.effexp
+
+        if self.profile.psfmat is not None:
+            psfmat = np.transpose(self.profile.psfmat)
+        else:
+            psfmat = np.eye(self.profile.nbin)
+
+        # Set vector with list of parameters
+        pars = list_params(rad, sourcereg)
+        K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
+        npars = len(pars[:, 0])
+        K[:, npars] = 0.
+        allnc = np.dot(K, np.exp(self.samples.T))
+        rec_counts_bin = np.median(allnc, axis=1) +self.profile.bkgcounts#/ self.profile.area / self.profile.effexp
+        rec_counts_bin_lo = np.percentile(allnc,(16), axis=1)+self.profile.bkgcounts
+        rec_counts_bin_hi = np.percentile(allnc,(84), axis=1)+self.profile.bkgcounts
+
+        ax.plot(self.profile.bins, rec_counts_bin/ self.profile.area / self.profile.effexp, color='r', lw=2,label='Reconstruction - PSF applied')
+        ax.fill_between(self.profile.bins,rec_counts_bin_lo/ self.profile.area / self.profile.effexp,rec_counts_bin_hi/ self.profile.area / self.profile.effexp,color='C1',alpha=0.5)
+
+        ax.set_xticklabels([])
+        ax_res.errorbar(self.profile.bins,(rec_counts_bin-self.profile.counts)/np.sqrt(rec_counts_bin))
+        ax_res.set_xscale('log')
+        ax_res.axhline(1,color='k')
+        ax.legend(loc=0)
+
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
         ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax_res.minorticks_on()
+        ax_res.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+        ax_res.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
-        plt.xlabel('Radius [arcmin]', fontsize=40)
-        plt.ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,
-                     markersize=7, capsize=0,mec='blue',label='Reconstruction')
-        plt.fill_between(self.profile.bins,self.sb_lo,self.sb_hi,color='blue',alpha=0.5)
-        plt.errorbar(self.profile.bins, self.profile.profile, xerr=self.profile.ebins, yerr=self.profile.eprof, fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black',label='Data')
+
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()
@@ -746,6 +786,7 @@ class Deproject:
         npars = len(pars[:, 0])
         K[:,npars] = 0.
         allnc = np.dot(K, np.exp(self.samples.T))
+        self.rec_counts=np.median(allnc,axis=1)
         ncv = np.sum(allnc, axis=0)
         pnc = np.median(ncv)
         pncl = np.percentile(ncv, 50. - 68.3 / 2.)

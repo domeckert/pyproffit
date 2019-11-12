@@ -14,7 +14,42 @@ msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
 
 
+def plot_multi_methods(profs, deps, labels=None):
+    if len(profs) != len(deps):
+        print("ERROR: different numbers of profiles and deprojection elements")
+        return
 
+    print("Showing %d density profiles" % len(deps))
+    if labels is None:
+        labels = [None] * len(deps)
+
+    fig = plt.figure(figsize=(13, 10))
+    ax_size = [0.14, 0.14,
+               0.83, 0.83]
+    ax = fig.add_axes(ax_size)
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+    plt.xlabel('Radius [kpc]', fontsize=40)
+    plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
+    plt.xscale('log')
+    plt.yscale('log')
+    for i in range(len(deps)):
+        dep = deps[i]
+        prof = profs[i]
+
+        kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
+
+        rkpc = prof.bins * kpcp
+        erkpc = prof.ebins * kpcp
+
+        plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt='.',
+                     color='C%d' % i, elinewidth=2,
+                     markersize=7, capsize=3, label=labels[i])
+        plt.fill_between(rkpc, dep.dens_lo, dep.dens_hi, color='C%d' % i, alpha=0.3)
+    plt.legend(loc=0)
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -579,9 +614,9 @@ class Deproject:
         plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
         plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black')
-        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
+        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
+                     markersize=7, capsize=3)
+        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()

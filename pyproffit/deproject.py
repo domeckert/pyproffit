@@ -549,9 +549,6 @@ class Deproject:
         else:
             print('Unknown method '+method)
 
-    def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
-        Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)
-
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
 

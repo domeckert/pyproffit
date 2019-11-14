@@ -170,3 +170,4 @@ def clean_bkg(img,bkg):
     img[y[remove],x[remove]]=0
     return img
 
+

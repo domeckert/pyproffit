@@ -26,13 +26,13 @@ class Profile:
 
         :param binsize: the minumum size of the bin (in arcsec)
 
-        :param center_ra:
+        :param center_ra: user defined center, to be consistent with center_choice
 
-        :param center_dec:
+        :param center_dec:user defined center, to be consistent with center_choice
 
-        :param binning:
+        :param binning: 'linear' or 'log'
 
-        :param centroid_region:
+        :param centroid_region: option to define region within which calculate the centroid
 
         '''
         if data is None:
@@ -291,6 +291,7 @@ class Profile:
                     effexp[i] = 0.
         self.profile = profile
         self.eprof = eprof
+
         if not voronoi:
             self.counts = counts
             self.area = area
@@ -312,7 +313,7 @@ class Profile:
             nbin = len(self.bins)
             self.nbin = nbin
         else:
-            nbin = int(self.maxrad / self.binsize * 60.)
+            nbin = int(self.maxrad / self.binsize * 60. + 0.5)
             self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
             self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
             self.nbin = nbin
@@ -395,7 +396,7 @@ class Profile:
                 fpsf = fits.open(psffile)
                 psfimage = fpsf[0].data.astype(float)
                 if psfpixsize is not None:
-                    psfpixsize = float(psfimage[0].header['CDELT2'])
+                    psfpixsize = float(fpsf[0].header['CDELT2'])
                     if psfpixsize == 0.0:
                         print('Error: no pixel size is provided for the PSF image and the CDELT2 keyword is not set')
                         return

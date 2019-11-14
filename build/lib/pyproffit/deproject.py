@@ -1,4 +1,4 @@
-from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 import numpy as np
 import pymc3 as pm
 import time
@@ -14,7 +14,42 @@ msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
 
 
+def plot_multi_methods(profs, deps, labels=None):
+    if len(profs) != len(deps):
+        print("ERROR: different numbers of profiles and deprojection elements")
+        return
 
+    print("Showing %d density profiles" % len(deps))
+    if labels is None:
+        labels = [None] * len(deps)
+
+    fig = plt.figure(figsize=(13, 10))
+    ax_size = [0.14, 0.14,
+               0.83, 0.83]
+    ax = fig.add_axes(ax_size)
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+    plt.xlabel('Radius [kpc]', fontsize=40)
+    plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
+    plt.xscale('log')
+    plt.yscale('log')
+    for i in range(len(deps)):
+        dep = deps[i]
+        prof = profs[i]
+
+        kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
+
+        rkpc = prof.bins * kpcp
+        erkpc = prof.ebins * kpcp
+
+        plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt='.',
+                     color='C%d' % i, elinewidth=2,
+                     markersize=7, capsize=3, label=labels[i])
+        plt.fill_between(rkpc, dep.dens_lo, dep.dens_hi, color='C%d' % i, alpha=0.3)
+    plt.legend(loc=0)
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -210,6 +245,9 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     import pystan
     import stan_utility as su
 
+    if not os.path.exists("~/.stan_cache"):
+        os.makedirs("~/.stan_cache")
+
     code = '''
     data {
     int<lower=0> N;
@@ -229,6 +267,10 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     log_norm ~ normal(norm0,10);
     cts_tot ~ poisson(K * norm + cts_back);
     }'''
+
+    if not os.path.exists('~/.stan_cache'):
+        os.mkdir('~/.stan_cache')
+
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
     f.close()
@@ -266,7 +308,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -534,11 +576,13 @@ class Deproject:
         self.mu_e=mu_e
 
 
-    def Multiscale(self,nmcmc=1000,bkglim=None,back=None,samplefile=None):
-        Deproject_Multiscale(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile)
-        
-    def Multiscale_stan(self,nmcmc=1000,bkglim=None,back=None,samplefile=None,depth=10):
-        Deproject_Multiscale_Stan(self, bkglim=bkglim, back=back, nmcmc=nmcmc, samplefile=samplefile, depth=depth)
+    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+        if backend=='pymc3':
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
+        elif backend=='stan':
+            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
+        else:
+            print('Unknown method '+method)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
@@ -570,9 +614,9 @@ class Deproject:
         plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
         plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black')
-        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='blue',alpha=0.5)
+        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
+                     markersize=7, capsize=3)
+        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()
@@ -740,7 +784,7 @@ class Deproject:
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         rkpc = prof.bins * kpcp
         erkpc = prof.ebins * kpcp
-        nhconv =  mh * slef.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
         sourcereg = np.where(rad < self.bkglim)

@@ -169,3 +169,4 @@ def clean_bkg(img,bkg):
     remove=np.where(vals<prob)
     img[y[remove],x[remove]]=0
     return img
+

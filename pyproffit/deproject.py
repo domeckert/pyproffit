@@ -692,6 +692,7 @@ class Deproject:
         ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt='d',
                     color='r', elinewidth=2,
                     markersize=7, capsize=0, label='Tot Data')
+        ax.plot(prof.bins, prof.bkgprof, color='green', label='Background')
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
         ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Reconstruction - PSF not applied')

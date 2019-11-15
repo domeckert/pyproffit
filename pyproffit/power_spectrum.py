@@ -391,8 +391,8 @@ class PowerSpectrum:
                    0.87, 0.87]
         ax = fig.add_axes(ax_size)
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         plt.xlabel('k [kpc$^{-1}$]', fontsize=40)
@@ -422,8 +422,8 @@ class PowerSpectrum:
                    0.87, 0.87]
         ax = fig.add_axes(ax_size)
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         plt.xlabel('k [kpc$^{-1}$]', fontsize=40)

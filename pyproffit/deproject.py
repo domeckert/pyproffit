@@ -54,15 +54,6 @@ def plot_multi_methods(profs, deps, labels=None):
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
-    '''
-    :param rad:
-    :param sourcereg:
-    :param pars:
-    :param area:
-    :param expo:
-    :param psf:
-    :return:
-    '''
     # Select values in the source region
     rfit=rad[sourcereg]
     npt=len(rfit)
@@ -130,6 +121,35 @@ def calc_sb_operator(rad,sourcereg,pars):
     Ktot[0:npt,0:npars]=func_base.T
     Ktot[:,npars]=1.0
     return Ktot
+
+
+def calc_sb_operator_psf(rad, sourcereg, pars, area, expo, psf):
+    # Select values in the source region
+    rfit = rad[sourcereg]
+    npt = len(rfit)
+    npars = len(pars[:, 0])
+
+    areamul = np.tile(area[0:npt], npars).reshape(npars, npt)
+    expomul = np.tile(expo[0:npt], npars).reshape(npars, npt)
+    spsf = psf[0:npt, 0:npt]
+
+    # Compute linear combination of basis functions in the source region
+    beta = np.repeat(pars[:, 0], npt).reshape(npars, npt)
+    rc = np.repeat(pars[:, 1], npt).reshape(npars, npt)
+    base = 1. + np.power(rfit / rc, 2)
+    expon = -3. * beta + 0.5
+    func_base = np.power(base, expon)
+
+    Ktrue = func_base * areamul * expomul
+    Kconv = np.dot(spsf, Ktrue.T)
+
+    # Recast into full matrix and add column for background
+    nptot = len(rad)
+    Ktot = np.zeros((nptot, npars + 1))
+    Ktot[0:npt, 0:npars] = Kconv
+    Ktot[:, npars] = area * expo
+    return Ktot
+
 
 def calc_int_operator(a, b, pars):
     # Select values in the source region
@@ -654,6 +674,7 @@ class Deproject:
         if self.sb is None:
             print('Error: No reconstruction available')
             return
+        prof=self.profile
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
 
@@ -665,41 +686,44 @@ class Deproject:
         ax.set_xscale('log')
         ax.set_yscale('log')
 
+        ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
+                    markersize=7, capsize=0, mec='black', label='Data')
 
-        ax.errorbar(self.profile.bins, self.profile.profile, xerr=self.profile.ebins, yerr=self.profile.eprof, fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black',label='Data')
+        ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt='d',
+                    color='r', elinewidth=2,
+                    markersize=7, capsize=0, label='Tot Data')
 
-        #plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
-        ax.plot(self.profile.bins, self.sb, color='C0', lw=2,label='Reconstruction - PSF not applied')
-        ax.fill_between(self.profile.bins,self.sb_lo,self.sb_hi,color='C0',alpha=0.5)
+        # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
+        ax.plot(prof.bins, dep_m.sb, color='C0', lw=2, label='Reconstruction - PSF not applied')
+        ax.fill_between(prof.bins, dep_m.sb_lo, dep_m.sb_hi, color='C0', alpha=0.5)
 
-
-
-        rad = self.profile.bins
-        sourcereg = np.where(rad < self.bkglim)
-        area = self.profile.area
-        exposure = self.profile.effexp
-
-        if self.profile.psfmat is not None:
-            psfmat = np.transpose(self.profile.psfmat)
-        else:
-            psfmat = np.eye(self.profile.nbin)
-
+        #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
         pars = list_params(rad, sourcereg)
-        K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
-        npars = len(pars[:, 0])
-        K[:, npars] = 0.
-        allnc = np.dot(K, np.exp(self.samples.T))
-        rec_counts_bin = np.median(allnc, axis=1)+self.profile.bkgcounts  #total predicted counts in each bin
-        rec_counts_bin_lo = np.percentile(allnc,(16), axis=1)+self.profile.bkgcounts
-        rec_counts_bin_hi = np.percentile(allnc,(84), axis=1)+self.profile.bkgcounts
+        npt = len(pars)
+        # Compute output deconvolved brightness profile
+        if prof.psfmat is not None:
+            psfmat = np.transpose(prof.psfmat)
+        else:
+            psfmat = np.eye(prof.nbin)
 
-        ax.plot(self.profile.bins, rec_counts_bin/ self.profile.area / self.profile.effexp, color='r', lw=2,label='Reconstruction - PSF applied')
-        ax.fill_between(self.profile.bins,rec_counts_bin_lo/ self.profile.area / self.profile.effexp,rec_counts_bin_hi/ self.profile.area / self.profile.effexp,color='C1',alpha=0.5)
+        Ksb = calc_sb_operator_psf(rad, sourcereg, pars, prof.area, prof.effexp, psfmat)
+        allsb = np.dot(Ksb, np.exp(samples.T))
+        bfit = np.median(np.exp(samples[:, npt]))
+        pmc = np.median(allsb, axis=1) / prof.area / prof.effexp + prof.bkgprof
+        pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
+        pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
+
+        ax.plot(prof.bins, pmc, color='C1', lw=2, label='Reconstruction - PSF applied')
+        ax.fill_between(prof.bins, pmcl, pmch, color='C1', alpha=0.5)
+
+        ax.legend(loc=0)
+
+        res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
+        ax_res.scatter(prof.bins, res, color='r', lw=2)
+        ax_res.axhline(0, color='k')
 
         ax.set_xticklabels([])
-        ax_res.errorbar(self.profile.bins,(rec_counts_bin-self.profile.counts)/np.sqrt(rec_counts_bin))
         ax_res.set_xscale('log')
         ax_res.axhline(1,color='k')
         ax.legend(loc=0)
@@ -713,6 +737,7 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
+        ax.set_ylim([0.1 * np.min(dep_m.sb), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
 
         if outfile is not None:
             plt.savefig(outfile)

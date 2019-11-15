@@ -694,8 +694,8 @@ class Deproject:
                     markersize=7, capsize=0, label='Tot Data')
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
-        ax.plot(prof.bins, dep_m.sb, color='C0', lw=2, label='Reconstruction - PSF not applied')
-        ax.fill_between(prof.bins, dep_m.sb_lo, dep_m.sb_hi, color='C0', alpha=0.5)
+        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Reconstruction - PSF not applied')
+        ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color='C0', alpha=0.5)
 
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
@@ -737,7 +737,7 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
-        ax.set_ylim([0.1 * np.min(dep_m.sb), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
+        ax.set_ylim([0.1 * np.min(self.sb), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
 
         if outfile is not None:
             plt.savefig(outfile)

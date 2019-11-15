@@ -699,7 +699,7 @@ class Deproject:
 
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg)
+        pars = list_params(prof.rad, sourcereg)
         npt = len(pars)
         # Compute output deconvolved brightness profile
         if prof.psfmat is not None:
@@ -707,7 +707,7 @@ class Deproject:
         else:
             psfmat = np.eye(prof.nbin)
 
-        Ksb = calc_sb_operator_psf(rad, sourcereg, pars, prof.area, prof.effexp, psfmat)
+        Ksb = calc_sb_operator_psf(prof.rad, sourcereg, pars, prof.area, prof.effexp, psfmat)
         allsb = np.dot(Ksb, np.exp(samples.T))
         bfit = np.median(np.exp(samples[:, npt]))
         pmc = np.median(allsb, axis=1) / prof.area / prof.effexp + prof.bkgprof

@@ -708,7 +708,7 @@ class Deproject:
             psfmat = np.transpose(prof.psfmat)
         else:
             psfmat = np.eye(prof.nbin)
-
+        samples=self.samples
         Ksb = calc_sb_operator_psf(prof.bins, sourcereg, pars, prof.area, prof.effexp, psfmat)
         allsb = np.dot(Ksb, np.exp(samples.T))
         bfit = np.median(np.exp(samples[:, npt]))

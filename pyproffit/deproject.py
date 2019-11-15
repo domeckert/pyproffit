@@ -728,7 +728,6 @@ class Deproject:
 
         ax.set_xticklabels([])
         ax_res.set_xscale('log')
-        ax_res.axhline(1,color='k')
         ax.legend(loc=0)
 
         ax.minorticks_on()

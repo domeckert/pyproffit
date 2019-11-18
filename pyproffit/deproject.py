@@ -670,7 +670,7 @@ class Deproject:
             self.dens_lo = pmcdl
             self.dens_hi = pmcdh
             self.rout=rout
-            self.erout=2*rout-np.append(0,rout[:-2])
+            self.erout=rout-np.append(0,rout[:-1])
 
         else:
             print('No redshift and/or conversion factor, nothing to do')

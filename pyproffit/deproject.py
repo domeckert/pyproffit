@@ -917,7 +917,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,plot=True,outfile=None):
+    def PlotMgas(self,rout=None,outfile=None):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return

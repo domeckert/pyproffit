@@ -265,8 +265,9 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     import pystan
     import stan_utility as su
 
-    if not os.path.exists("~/.stan_cache"):
-        os.makedirs("~/.stan_cache")
+    stan_dir = os.path.expanduser('~/.stan_cache')
+    if not os.path.exists(stan_dir):
+        os.makedirs(stan_dir)
 
     code = '''
     data {
@@ -288,8 +289,6 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     cts_tot ~ poisson(K * norm + cts_back);
     }'''
 
-    if not os.path.exists('~/.stan_cache'):
-        os.mkdir('~/.stan_cache')
 
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
@@ -727,7 +726,6 @@ class Deproject:
 
         ax.set_xticklabels([])
         ax_res.set_xscale('log')
-        ax_res.axhline(1,color='k')
         ax.legend(loc=0)
 
         ax.minorticks_on()

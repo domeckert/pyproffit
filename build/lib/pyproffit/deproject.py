@@ -119,7 +119,7 @@ def calc_sb_operator(rad,sourcereg,pars):
     nptot=len(rad)
     Ktot=np.zeros((nptot,npars+1))
     Ktot[0:npt,0:npars]=func_base.T
-    Ktot[:,npars]=1.0
+    Ktot[:,npars]=0.0
     return Ktot
 
 
@@ -677,25 +677,27 @@ class Deproject:
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
 
-        ax=fig.add_axes([0.1,0.2,0.8,0.7])
-        ax_res=fig.add_axes([0.1,0.1,0.8,0.1])
+        ax=fig.add_axes([0.12,0.2,0.8,0.7])
+        ax_res=fig.add_axes([0.12,0.1,0.8,0.1])
 
         ax_res.set_xlabel('Radius [arcmin]', fontsize=40)
         ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
         ax.set_xscale('log')
         ax.set_yscale('log')
 
-        ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
-                    markersize=7, capsize=0, mec='black', label='Data')
+        #ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
+        #            markersize=7, capsize=0, mec='black', label='Bkg - subtracted Data')
 
         ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt='d',
                     color='r', elinewidth=2,
-                    markersize=7, capsize=0, label='Tot Data')
-        ax.plot(prof.bins, prof.bkgprof, color='green', label='Background')
+                    markersize=7, capsize=0, label='Data')
+        ax.plot(prof.bins, prof.bkgprof, color='green', label='Particle background')
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
-        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Reconstruction - PSF not applied')
+        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Source model')
         ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color='C0', alpha=0.5)
+
+        ax.axhline(self.bkg,color='k',label='Sky background')
 
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
@@ -715,7 +717,7 @@ class Deproject:
         pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
         pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
 
-        ax.plot(prof.bins, pmc, color='C1', lw=2, label='Reconstruction - PSF applied')
+        ax.plot(prof.bins, pmc, color='C1', lw=2, label='Total model')
         ax.fill_between(prof.bins, pmcl, pmch, color='C1', alpha=0.5)
 
         ax.legend(loc=0)

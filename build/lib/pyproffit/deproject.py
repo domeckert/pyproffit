@@ -723,6 +723,10 @@ class Deproject:
         ax.legend(loc=0)
 
         res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
+        vmin=-0.5
+        veff=np.max(np.abs(res))
+        if veff > vmin:
+            vmin=veff*1.2
         ax_res.scatter(prof.bins, res, color='r', lw=2)
         ax_res.axhline(0, color='k')
 
@@ -739,8 +743,8 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
-        ax.set_ylim([0.1 * np.min(self.sb), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
-
+        ax.set_ylim([0.1 * np.min(self.bkg), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
+        ax_res.set_ylim([-vmin,vmin])
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()

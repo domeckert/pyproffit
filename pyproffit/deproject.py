@@ -194,7 +194,7 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6):
 def calc_density_operator(rad,sourcereg,pars,z):
     # Select values in the source region
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
-    rfit=rad[sourcereg]*kpcp
+    rfit=rad*kpcp
     npt=len(rfit)
     npars=len(pars[:,0])
     
@@ -208,7 +208,7 @@ def calc_density_operator(rad,sourcereg,pars,z):
     fng=func_base*cfact
     
     # Recast into full matrix and add column for background
-    nptot=len(rad)
+    nptot=len(rfit)
     Ktot=np.zeros((nptot,npars+1))
     Ktot[0:npt,0:npars]=fng.T
     Ktot[:,npars]=0.0
@@ -569,6 +569,7 @@ class Deproject:
         self.bkg = None
         self.samples = None
         self.bkglim = None
+        self.rout = None
 
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
@@ -616,8 +617,8 @@ class Deproject:
             return
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
-        rkpc = self.profile.bins * kpcp
-        erkpc = self.profile.ebins * kpcp
+        rkpc = self.rout * kpcp
+        erkpc = self.erout * kpcp
 
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
@@ -642,7 +643,7 @@ class Deproject:
         else:
             plt.show(block=False)
 
-    def Density(self):
+    def Density(self,rout=None):
         z = self.z
         cf = self.cf
         samples = self.samples
@@ -653,7 +654,12 @@ class Deproject:
         if z is not None and cf is not None:
             transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
             pardens = list_params_density(rad, sourcereg, z)
-            Kdens = calc_density_operator(rad, sourcereg, pardens, z)
+            if rout is None:
+                sourcereg_out=sourcereg
+                rout=rad
+            else:
+                sourcereg_out=np.where(rout < self.bkglim)
+            Kdens = calc_density_operator(rout, sourcereg_out, pardens, z)
             alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T)) / cf * transf)  # [0:nptfit, :]
             covmat = np.cov(alldens)
             self.covmat = covmat
@@ -663,6 +669,9 @@ class Deproject:
             self.dens = pmcd
             self.dens_lo = pmcdl
             self.dens_hi = pmcdh
+            self.rout=rout
+            self.erout=2*rout-np.append(0,rout[:-2])
+
         else:
             print('No redshift and/or conversion factor, nothing to do')
 

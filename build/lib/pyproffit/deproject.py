@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 #plt.switch_backend('Agg')
 from scipy.interpolate import interp1d
 import os
+from astropy.io import fits
 
 Mpc = 3.0856776e+24 #cm
 kpc = 3.0856776e+21 #cm
@@ -570,6 +571,12 @@ class Deproject:
         self.samples = None
         self.bkglim = None
         self.rout = None
+        self.pmc = None
+        self.pmcl = None
+        self.pmch = None
+        self.mg = None
+        self.mgl = None
+        self.mgh = None
 
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
@@ -597,6 +604,14 @@ class Deproject:
 
 
     def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+        self.backend=backend
+        self.nmcmc=nmcmc
+        self.bkglim=bkglim
+        self.back=back
+        self.samplefile=samplefile
+        self.nrc=samplefile
+        self.nbetas=nbetas
+        self.depth=depth
         if backend=='pymc3':
             Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
         elif backend=='stan':
@@ -617,8 +632,6 @@ class Deproject:
             return
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
-        if self.rout is None:
-            self.rout=self.profile.bins
 
         rkpc = self.rout * kpcp
         erkpc = self.profile.ebins * kpcp
@@ -734,6 +747,10 @@ class Deproject:
 
         ax.plot(prof.bins, pmc, color='C1', lw=2, label='Total model')
         ax.fill_between(prof.bins, pmcl, pmch, color='C1', alpha=0.5)
+
+        self.pmc=pmc
+        self.pmcl=pmcl
+        self.pmch=pmch
 
         ax.legend(loc=0)
 
@@ -917,7 +934,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,plot=True,outfile=None):
+    def PlotMgas(self,rout=None,outfile=None):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -929,8 +946,8 @@ class Deproject:
             rkpc = prof.bins * kpcp
             erkpc = prof.ebins * kpcp
         else:
-            rkpc = rout* kpcp
-            erkpc = (rout-np.append(0,rout[:-1]))/2* kpcp
+            rkpc = rout * kpcp
+            erkpc = (rout-np.append(0,rout[:-1]))/2 * kpcp
         nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
@@ -952,12 +969,15 @@ class Deproject:
         volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
 
 
-        print(rout.shape,alldens.shape)
         # Compute Mgas profile as cumulative sum over the volume
         mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
 
 
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
+
+        self.mg=mg
+        self.mgl=mgl
+        self.mgh=mgh
 
         fig = plt.figure(figsize=(13, 10))
         ax=fig.add_subplot(111)
@@ -1069,6 +1089,81 @@ class Deproject:
         return  medcsb,csblo,csbhi
 
 
+    def SaveAll(self, outfile=None):
+        #####################################################
+        # Function to save profile into FITS file
+        # First extension is data
+        # Second extension is density
+        # Third extension is Mgas
+        # Forth extension is PSF
+        #####################################################
+        if outfile is None:
+            print('No output file name given')
+            return
+        else:
+            hdul = fits.HDUList([fits.PrimaryHDU()])
+            if self.profile is not None:
+                cols = []
+                cols.append(fits.Column(name='RADIUS', format='E', unit='arcmin', array=self.profile.bins))
+                cols.append(fits.Column(name='WIDTH', format='E', unit='arcmin', array=self.profile.ebins))
+                cols.append(fits.Column(name='SB', format='E', unit='cts s-1 arcmin-2', array=self.profile.profile))
+                cols.append(fits.Column(name='ERR_SB', format='E', unit='cts s-1 arcmin-2', array=self.profile.eprof))
+                if self.profile.counts is not None:
+                    cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.profile.counts))
+                    cols.append(fits.Column(name='AREA', format='E', unit='arcmin2', array=self.profile.area))
+                    cols.append(fits.Column(name='EFFEXP', format='E', unit='s', array=self.profile.effexp))
+                    cols.append(fits.Column(name='BKG', format='E', unit='cts s-1 arcmin-2', array=self.profile.bkgprof))
+                    cols.append(fits.Column(name='BKGCOUNTS', format='E', unit='', array=self.profile.bkgcounts))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='DATA')
+                hdr = tbhdu.header
+                hdr['X_C'] = self.profile.cx + 1
+                hdr['Y_C'] = self.profile.cy + 1
+                hdr.comments['X_C'] = 'X coordinate of center value'
+                hdr.comments['Y_C'] = 'Y coordinate of center value'
+                hdr['RA_C'] = self.profile.cra
+                hdr['DEC_C'] = self.profile.cdec
+                hdr.comments['RA_C'] = 'Right ascension of center value'
+                hdr.comments['DEC_C'] = 'Declination of center value'
+                hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
+                hdul.append(tbhdu)
+            if self.pmc is not None:
+                cols = []
+                cols.append(fits.Column(name='RADIUS', format='E', array=self.profile.bins))
+                cols.append(fits.Column(name='SB_MODEL_TOT', format='E', array=self.pmc))
+                cols.append(fits.Column(name='SB_MODEL_TOT_L', format='E', array=self.pmcl))
+                cols.append(fits.Column(name='SB_MODEL_TOT_H', format='E', array=self.pmch))
+                cols.append(fits.Column(name='SB_MODEL', format='E', array=self.sb))
+                cols.append(fits.Column(name='SB_MODEL_L', format='E', array=self.sb_lo))
+                cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
+                hdr['BACKEND'] = self.backend
+                hdr['N_MCMC'] = self.nmcmc
+                hdr['BKGLIM'] = self.bkglim
+                hdr['BACK'] = self.back
+                hdr['SAMPLEFILE'] = self.samplefile
+                hdr['N_RC'] = self.nrc
+                hdr['N_BETAS'] = self.nbetas
+                hdr['DEPTH'] = self.depth
+                hdul.append(tbhdu)
+            if self.dens is not None:
+                cols = []
+                cols.append(fits.Column(name='RADIUS', format='E', array=self.rout))
+                cols.append(fits.Column(name='DENSITY', format='E', array=self.dens))
+                cols.append(fits.Column(name='DENSITY_L', format='E', array=self.dens_lo))
+                cols.append(fits.Column(name='DENSITY_H', format='E', array=self.dens_hi))
+                if self.mg is not None:
+                    cols.append(fits.Column(name='MGAS', format='E', array=self.mg))
+                    cols.append(fits.Column(name='MGAS_L', format='E', array=self.mgl))
+                    cols.append(fits.Column(name='MGAS_H', format='E', array=self.mgh))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='DENSITY')
+                hdul.append(tbhdu)
+            if self.profile.psfmat is not None:
+                psfhdu = fits.ImageHDU(self.profile.psfmat, name='PSF')
+                hdul.append(psfhdu)
+            hdul.writeto(outfile, overwrite=True)
 
 
 

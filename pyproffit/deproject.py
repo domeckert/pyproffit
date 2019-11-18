@@ -864,18 +864,14 @@ class Deproject:
 
 
     # Compute Mgas within radius in kpc
-    def Mgas(self,rout=None,plot=False,outfile=None):
+    def Mgas(self,radius,plot=True,outfile=None):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
         prof = self.profile
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
-        if rout is None:
-            rkpc = prof.bins * kpcp
-            erkpc = prof.ebins * kpcp
-        else:
-            rkpc = rout
-            erkpc = (rout-np.append(0,rout[:-1]))/2
+        rkpc = prof.bins * kpcp
+        erkpc = prof.ebins * kpcp
         nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
@@ -883,29 +879,21 @@ class Deproject:
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
         pardens = list_params_density(rad, sourcereg, self.z)
-       # Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
-
-        if rout is None:
-            sourcereg_out = sourcereg
-            rout = rad
-        else:
-            sourcereg_out = np.where(rout < self.bkglim)
-        Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
+        Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
 
         # Matrix containing integration volumes
-        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(prof.bins),alldens.shape[1])
 
         # Compute Mgas profile as cumulative sum over the volume
-        mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
+        mgas = np.cumsum(alldens * nhconv * volmat, axis=0)
 
         # Interpolate at the radius of interest
-        #f = interp1d(rkpc, mgas, axis=0)
-        #mgasdist = f(radius)
-        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
-        print(mg.shape)
+        f = interp1d(rkpc, mgas, axis=0)
+        mgasdist = f(radius)
+        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
         if plot:
             plt.clf()
             fig = plt.figure(figsize=(13, 10))
@@ -927,10 +915,79 @@ class Deproject:
             else:
                 plt.show(block=False)
 
+        return mg,mgl,mgh
+
+    def PlotMgas(self,rout=None,plot=True,outfile=None):
+        if self.samples is None or self.z is None or self.cf is None:
+            print('Error: no gas density profile found')
+            return
+
+
+        prof = self.profile
+        kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        if rout is None:
+            rkpc = prof.bins * kpcp
+            erkpc = prof.ebins * kpcp
+        else:
+            rkpc = rout * kpcp
+            erkpc = (rout-np.append(0,rout[:-1]))/2 * kpcp
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
+
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
+        pardens = list_params_density(rad, sourcereg, self.z)
+        if rout is None:
+            sourcereg_out = sourcereg
+            rout = rad
+        else:
+            sourcereg_out = np.where(rout < self.bkglim)
+        Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
+
+        # All gas density profiles
+        alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
+
+        # Matrix containing integration volumes
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
+
+
+        # Compute Mgas profile as cumulative sum over the volume
+        mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
+
+
+        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
+
         self.mg=mg
         self.mgl=mgl
         self.mgh=mgh
-        return mg,mgl,mgh
+
+        fig = plt.figure(figsize=(13, 10))
+        ax=fig.add_subplot(111)
+
+
+        ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
+        ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
+
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=40)
+        ax.set_xlabel('Radius [arcmin]', fontsize=40)
+
+        ax.legend(loc=0)
+
+        ax.minorticks_on()
+        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(18)
+        if outfile is not None:
+            plt.savefig(outfile)
+            plt.close()
+        else:
+            plt.show(block=False)
+
 
     def Reload(self,samplefile,bkglim=None):
         # Reload the output of a previous PyMC3 run

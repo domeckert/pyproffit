@@ -617,8 +617,11 @@ class Deproject:
             return
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        if self.rout is None:
+            self.rout=self.profile.bins
+
         rkpc = self.rout * kpcp
-        erkpc = self.erout * kpcp
+        erkpc = self.profile.ebins * kpcp
 
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
@@ -634,8 +637,12 @@ class Deproject:
         plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
         plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
+
+        if self.rout == self.profile.bins:
+            plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
                      markersize=7, capsize=3)
+        else:
+            plt.plot(rkpc,self.dens,color='C0',lw=2)
         plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
         if outfile is not None:
             plt.savefig(outfile)
@@ -670,7 +677,6 @@ class Deproject:
             self.dens_lo = pmcdl
             self.dens_hi = pmcdh
             self.rout=rout
-            self.erout=rout-np.append(0,rout[:-1])
 
         else:
             print('No redshift and/or conversion factor, nothing to do')

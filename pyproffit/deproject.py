@@ -638,7 +638,7 @@ class Deproject:
         plt.xscale('log')
         plt.yscale('log')
 
-        if self.rout == self.profile.bins:
+        if len(self.rout) == len(self.profile.bins):
             plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
                      markersize=7, capsize=3)
         else:
@@ -864,14 +864,18 @@ class Deproject:
 
 
     # Compute Mgas within radius in kpc
-    def Mgas(self,radius,plot=True,outfile=None):
+    def Mgas(self,rout=None,plot=False,outfile=None):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
         prof = self.profile
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
-        rkpc = prof.bins * kpcp
-        erkpc = prof.ebins * kpcp
+        if rout is None:
+            rkpc = prof.bins * kpcp
+            erkpc = prof.ebins * kpcp
+        else:
+            rkpc = rout
+            erkpc = (rout-np.append(0,rout[:-1]))/2
         nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
 
         rad = prof.bins
@@ -879,21 +883,29 @@ class Deproject:
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
         pardens = list_params_density(rad, sourcereg, self.z)
-        Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
+       # Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
+
+        if rout is None:
+            sourcereg_out = sourcereg
+            rout = rad
+        else:
+            sourcereg_out = np.where(rout < self.bkglim)
+        Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
 
         # Matrix containing integration volumes
-        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(prof.bins),alldens.shape[1])
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
 
         # Compute Mgas profile as cumulative sum over the volume
-        mgas = np.cumsum(alldens * nhconv * volmat, axis=0)
+        mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
 
         # Interpolate at the radius of interest
-        f = interp1d(rkpc, mgas, axis=0)
-        mgasdist = f(radius)
-        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
+        #f = interp1d(rkpc, mgas, axis=0)
+        #mgasdist = f(radius)
+        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
+        print(mg.shape)
         if plot:
             plt.clf()
             fig = plt.figure(figsize=(13, 10))
@@ -915,6 +927,9 @@ class Deproject:
             else:
                 plt.show(block=False)
 
+        self.mg=mg
+        self.mgl=mgl
+        self.mgh=mgh
         return mg,mgl,mgh
 
     def Reload(self,samplefile,bkglim=None):

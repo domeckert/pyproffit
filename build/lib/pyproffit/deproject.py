@@ -622,7 +622,7 @@ class Deproject:
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
 
-    def PlotDensity(self,outfile=None):
+    def PlotDensity(self,outfile=None,xscale='kpc'):
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -634,29 +634,44 @@ class Deproject:
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
         rkpc = self.rout * kpcp
-        erkpc = self.profile.ebins * kpcp
+        #erkpc = self.profile.ebins * kpcp
 
         plt.clf()
-        fig = plt.figure(figsize=(13, 10))
-        ax_size = [0.14, 0.14,
-                   0.83, 0.83]
-        ax = fig.add_axes(ax_size)
+        fig = plt.figure(figsize=(13, 10),tight_layout=True)
+        ax = fig.add_subplot(111)
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
         ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
-        plt.xlabel('Radius [kpc]', fontsize=40)
-        plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
-        plt.xscale('log')
-        plt.yscale('log')
+        ax.set_ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
 
-        if len(self.rout) == len(self.profile.bins):
-            plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
-                     markersize=7, capsize=3)
+        if xscale == 'kpc' or xscale == 'both':
+            ax.plot(rkpc, self.dens, color='C0', lw=2)
+            ax.fill_between(rkpc, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [kpc]', fontsize=40)
         else:
-            plt.plot(rkpc,self.dens,color='C0',lw=2)
-        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
+            ax.plot(self.rout, self.dens, color='C0', lw=2)
+            ax.fill_between(self.rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [arcmin]', fontsize=40)
+
+        if xscale == 'both':
+            limx=ax.get_xlim()
+            ax2 = ax.twiny()
+            print(limx)
+            print(limx[0]/kpcp)
+            ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
+            ax2.set_xscale('log')
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            ax2.set_xlabel('Radius [arcmin]', fontsize=40)
+            for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
+                item.set_fontsize(18)
+
+        #ax.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2, markersize=7, capsize=3)
+
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()
@@ -985,15 +1000,17 @@ class Deproject:
         if xscale == 'kpc' or xscale == 'both':
             ax.plot(rkpc, mg, color='C0', lw=2, label='Gas mass')
             ax.fill_between(rkpc, mgl, mgh, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [kpc]', fontsize=40)
         else:
             ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
             ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [arcmin]', fontsize=40)
 
 
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=40)
-        ax.set_xlabel('Radius [kpc]', fontsize=40)
+
 
         ax.legend(loc=0)
 

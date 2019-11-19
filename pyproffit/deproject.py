@@ -994,7 +994,7 @@ class Deproject:
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=40)
-        ax.set_xlabel('Radius [arcmin]', fontsize=40)
+        ax.set_xlabel('Radius [kpc]', fontsize=40)
 
         ax.legend(loc=0)
 

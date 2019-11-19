@@ -15,7 +15,7 @@ msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
 
 
-def plot_multi_methods(profs, deps, labels=None):
+def plot_multi_methods(profs, deps, labels=None, outfile=None):
     if len(profs) != len(deps):
         print("ERROR: different numbers of profiles and deprojection elements")
         return
@@ -29,8 +29,8 @@ def plot_multi_methods(profs, deps, labels=None):
                0.83, 0.83]
     ax = fig.add_axes(ax_size)
     ax.minorticks_on()
-    ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-    ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(18)
     plt.xlabel('Radius [kpc]', fontsize=40)
@@ -50,7 +50,11 @@ def plot_multi_methods(profs, deps, labels=None):
                      color='C%d' % i, elinewidth=2,
                      markersize=7, capsize=3, label=labels[i])
         plt.fill_between(rkpc, dep.dens_lo, dep.dens_hi, color='C%d' % i, alpha=0.3)
-    plt.legend(loc=0)
+    plt.legend(loc=0,fontsize=22)
+    if outfile is not None:
+        plt.savefig(outfile)
+    else:
+        plt.show(block=False)
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -617,7 +621,7 @@ class Deproject:
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
         else:
-            print('Unknown method '+method)
+            print('Unknown method '+backend)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
@@ -642,8 +646,8 @@ class Deproject:
                    0.83, 0.83]
         ax = fig.add_axes(ax_size)
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         plt.xlabel('Radius [kpc]', fontsize=40)
@@ -663,7 +667,7 @@ class Deproject:
         else:
             plt.show(block=False)
 
-    def Density(self):
+    def Density(self,rout=None):
         z = self.z
         cf = self.cf
         samples = self.samples
@@ -723,7 +727,6 @@ class Deproject:
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
         ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Source model')
-        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Reconstruction')
         ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color='C0', alpha=0.5)
 
         ax.axhline(self.bkg,color='k',label='Sky background')
@@ -753,7 +756,7 @@ class Deproject:
         self.pmcl=pmcl
         self.pmch=pmch
 
-        ax.legend(loc=0)
+        ax.legend(loc=0,fontsize=22)
 
         res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
         vmin=-0.5
@@ -768,11 +771,11 @@ class Deproject:
         ax.legend(loc=0)
 
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         ax_res.minorticks_on()
-        ax_res.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax_res.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax_res.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax_res.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
@@ -813,8 +816,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -864,8 +867,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -919,8 +922,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -996,8 +999,8 @@ class Deproject:
         ax.legend(loc=0)
 
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         if outfile is not None:
@@ -1073,8 +1076,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -1139,6 +1142,7 @@ class Deproject:
                 cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
+                hdr = tbhdu.header
                 hdr['BACKEND'] = self.backend
                 hdr['N_MCMC'] = self.nmcmc
                 hdr['BKGLIM'] = self.bkglim

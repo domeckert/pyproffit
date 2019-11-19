@@ -2,6 +2,7 @@ import pyproffit
 import sys
 import numpy as np
 import os
+from astropy.io import fits
 
 # Data handling tests
 if not os.path.exists('b_37.fits.gz') or not os.path.exists('expose_mask_37.fits.gz') or not os.path.exists('back_37.fits.gz'):
@@ -56,7 +57,9 @@ ellrat=1.205958181442464
 ellang=-173.04667140946398
 prof.SBprofile(ellipse_ratio=ellrat,ellipse_angle=ellang+180.)
 
-dsb=np.loadtxt('reference_sbprof.dat')
+fsb=fits.open('reference_depr.fits')
+datsb=fsb[1].data
+dsb=np.transpose([datsb['RADIUS'],datsb['WIDTH'],datsb['SB'],datsb['ERR_SB'],datsb['AREA'],datsb['EFFEXP']])
 test_sb=np.transpose([prof.bins,prof.ebins,prof.profile,prof.eprof,prof.area,prof.effexp])
 if np.any(np.abs(np.log(dsb/test_sb))>1e-3):
     print('Surface brightness profile test failed')
@@ -116,12 +119,115 @@ else:
 prof2=pyproffit.Profile(dat,center_choice='peak',maxrad=30.,binsize=30.,binning='log')
 prof2.SBprofile()
 prof2.Backsub(fitter=fitobj)
-dback=np.loadtxt('reference_backsub.dat')
+dop=np.loadtxt('reference_OP.dat')
 test_sb=np.transpose([prof2.bins,prof2.ebins,prof2.profile,prof2.eprof,prof2.area,prof2.effexp])
-if np.any(np.abs(np.log(dback/test_sb))>1e-3):
+if np.any(np.abs(np.log(dop[:,:6]/test_sb))>1e-3):
     print('Background subtraction test failed')
     sys.exit()
 else:
     print('Background subtraction test passed')
 
 # Deprojection tests
+cf_a3158 = 44.489999
+z_a3158 = 0.0597
+depr = pyproffit.Deproject(z=z_a3158,cf=cf_a3158,profile=prof)
+
+# Stan test
+print('Running Stan reconstruction')
+depr.Multiscale(backend='stan',nmcmc=1000,bkglim=25.)
+
+dsb=fsb[2].data
+ref_rec=dsb['SB_MODEL']
+check_sb=np.nan_to_num(ref_rec/depr.sb)
+isz=np.where(ref_rec==0)
+check_sb[isz]=1.
+if np.any(np.abs(np.log(check_sb))>1e-2):
+    print('Possible issue with Stan reconstruction, check plots')
+else:
+    print('Stan reconstruction terminated successfully')
+
+if os.path.exists('test_rec_stan.pdf'):
+    os.remove('test_rec_stan.pdf')
+depr.PlotSB(outfile='test_rec_stan.pdf')
+if os.path.exists('test_rec_stan.pdf'):
+    print('Stan reconstruction plotted in test_rec_stan.pdf')
+else:
+    print('Error with plot of Stan reconstruction')
+    sys.exit()
+
+
+# Density and Mgas test
+
+depr.Density()
+if os.path.exists('test_density.pdf'):
+    os.remove('test_density.pdf')
+if os.path.exists('test_mgas.pdf'):
+    os.remove('test_mgas.pdf')
+depr.PlotDensity(outfile='test_density.pdf')
+depr.PlotMgas(outfile='test_mgas.pdf')
+
+dnh=fsb[3].data
+check_dens=dnh['DENSITY']/depr.dens
+check_mgas=dnh['MGAS']/depr.mg
+nonz=np.where(depr.sb>0.)
+if np.any(np.log(check_dens[nonz])>1e-2):
+    print('Possible issue with gas density calculation, check plots')
+else:
+    print('Gas density test passed')
+
+if np.any(np.log(check_mgas[nonz])>1e-2):
+    print('Possible issue with Mgas calculation, check plots')
+else:
+    print('Mgas test passed')
+
+if os.path.exists('test_density.pdf'):
+    print('Density profile outputted to test_density.pdf')
+else:
+    print('Error outputting density profile')
+    sys.exit()
+
+if os.path.exists('test_mgas.pdf'):
+    print('Mgas profile outputted to test_mgas.pdf')
+else:
+    print('Error outputting Mgas profile')
+    sys.exit()
+
+if os.path.exists('test_save_all.fits'):
+    os.remove('test_save_all.fits')
+
+depr.SaveAll(outfile='test_save_all.fits')
+if not os.path.exists('test_save_all.fits'):
+    print('Error: could not save reconstruction results')
+else:
+    print('Reconstruction test passed, results written to file test_save_all.fits')
+
+# PyMC3 test
+
+depr_pymc3 = pyproffit.Deproject(z=z_a3158,cf=cf_a3158,profile=prof)
+
+print('Running PyMC3 reconstruction')
+depr_pymc3.Multiscale(backend='pymc3',nmcmc=1000,bkglim=25.)
+ref_pymc3=np.loadtxt('reference_pymc3.dat')
+check_pymc3_sb=np.nan_to_num(ref_pymc3[:,0]/depr_pymc3.sb)
+check_pymc3_sb[isz]=1.0
+if np.any(np.abs(np.log(check_pymc3_sb))>1e-2):
+    print('Possible issue with PyMC3 reconstruction, check plots')
+else:
+    print('PyMC3 reconstruction terminated successfully')
+
+depr_pymc3.Density()
+
+# Onion peeling test
+print('Running Onion Peeling test')
+deprop=pyproffit.Deproject(profile=prof2,cf=cf_a3158,z=z_a3158)
+deprop.OnionPeeling()
+
+if os.path.exists('comp_rec.pdf'):
+    os.remove('comp_rec.pdf')
+
+pyproffit.plot_multi_methods(deps=(depr,depr_pymc3,deprop),profs=(prof,prof,prof2),labels=('Stan','PyMC3','OP'),outfile='comp_rec.pdf')
+if os.path.exists('comp_rec.pdf'):
+    print('Onion peeling test passed. Comparison of reconstruction methods written in file comp_rec.pdf')
+else:
+    print('Onion Peeling test failed')
+    sys.exit()

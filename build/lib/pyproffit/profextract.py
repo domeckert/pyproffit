@@ -83,7 +83,16 @@ class Profile:
                 regrad = centroid_region / data.pixsize
             else:
                 regrad = np.max(np.array([data.axes[0], data.axes[1]])/ 2.)
-            xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+                centroid_region = regrad * data.pixsize
+            if center_ra is None or center_dec is None:
+                print('No approximate center provided, will search for the centroid within a radius of %g arcmin from the center of the image' % (centroid_region))
+                xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+            else:
+                print('Will search for the centroid within a region of %g arcmin centered on RA=%g, DEC=%g' % (centroid_region,center_ra,center_dec))
+                wc = np.array([[center_ra, center_dec]])
+                x = data.wcs_inp.wcs_world2pix(wc, 1)
+                xc_temp = x[0][0] - 1.
+                yc_temp = x[0][1] - 1.
             if data.exposure is None or data.filth is not None:
                 region = np.where(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0))
                 #print('No exposure map given, proceeding with no weights')
@@ -203,7 +212,7 @@ class Profile:
             nbin = len(self.bins)
             self.nbin = nbin
         else:
-            nbin = int(self.maxrad / self.binsize * 60.)
+            nbin = int(self.maxrad / self.binsize * 60. + 0.5)
             self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
             self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
             self.nbin = nbin
@@ -513,8 +522,8 @@ class Profile:
             gs0.update(left=0.12, right=0.95, wspace=0.0, top=0.95, bottom=0.12)
         ax = plt.subplot(gs0[0])
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         if model is None:
@@ -558,8 +567,8 @@ class Profile:
             plt.plot(xl, np.zeros(len(xl)), color='blue', linestyle='--')
             ax2.yaxis.set_label_coords(-0.07, 0.5)
             ax2.minorticks_on()
-            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)
             ylim = ax2.get_ylim()

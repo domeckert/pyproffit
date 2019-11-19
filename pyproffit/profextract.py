@@ -83,7 +83,16 @@ class Profile:
                 regrad = centroid_region / data.pixsize
             else:
                 regrad = np.max(np.array([data.axes[0], data.axes[1]])/ 2.)
-            xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+                centroid_region = regrad * data.pixsize
+            if center_ra is None or center_dec is None:
+                print('No approximate center provided, will search for the centroid within a radius of %g arcmin from the center of the image' % (centroid_region))
+                xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+            else:
+                print('Will search for the centroid within a region of %g arcmin centered on RA=%g, DEC=%g' % (centroid_region,center_ra,center_dec))
+                wc = np.array([[center_ra, center_dec]])
+                x = data.wcs_inp.wcs_world2pix(wc, 1)
+                xc_temp = x[0][0] - 1.
+                yc_temp = x[0][1] - 1.
             if data.exposure is None or data.filth is not None:
                 region = np.where(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0))
                 #print('No exposure map given, proceeding with no weights')

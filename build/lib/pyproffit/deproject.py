@@ -668,9 +668,9 @@ class Deproject:
             print(limx[0]/kpcp)
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
-            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on', labelpad=10)
-            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on', labelpad=10)
-            ax2.set_xlabel('Radius [arcmin]', fontsize=40)
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            ax2.set_xlabel('Radius [arcmin]', fontsize=40,labelpad=20)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)
 

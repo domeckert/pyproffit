@@ -938,7 +938,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,do_both=False):
+    def PlotMgas(self,rout=None,outfile=None,xscale="arcmin"):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -983,12 +983,15 @@ class Deproject:
         self.mgl=mgl
         self.mgh=mgh
 
-        fig = plt.figure(figsize=(13, 10))
+        fig = plt.figure(figsize=(13, 10),tight_layout=True)
         ax=fig.add_subplot(111)
 
-
-        ax.plot(rkpc, mg, color='C0', lw=2, label='Gas mass')
-        ax.fill_between(rkpc, mgl, mgh, color='C0', alpha=0.5)
+        if xscale == 'kpc' or xscale == 'both':
+            ax.plot(rkpc, mg, color='C0', lw=2, label='Gas mass')
+            ax.fill_between(rkpc, mgl, mgh, color='C0', alpha=0.5)
+        else:
+            ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
+            ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
 
 
         ax.set_xscale('log')
@@ -1004,15 +1007,16 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
 
-        if do_both == True:
-            limx=ax.get_ylim()
+        if xscale == 'both':
+            limx=ax.get_xlim()
             ax2 = ax.twiny()
-
-            ax2.set_xlim(limx / kpcp)
+            print(limx)
+            print(limx[0]/kpcp)
+            ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
             ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
             ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
-            ax2.set_xlabel('Radius [arcmin]', fontsize=15)
+            ax2.set_xlabel('Radius [arcmin]', fontsize=40)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)
 

@@ -1138,6 +1138,7 @@ class Deproject:
                 cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
+                hdr = tbhdu.header
                 hdr['BACKEND'] = self.backend
                 hdr['N_MCMC'] = self.nmcmc
                 hdr['BKGLIM'] = self.bkglim

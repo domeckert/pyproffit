@@ -634,6 +634,8 @@ class Deproject:
         if self.dens is None:
             print('Error: No density profile extracted')
             return
+        if xscale not in ['arcmin','kpc','both']:
+            xscale='kpc'
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
@@ -953,10 +955,13 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="arcmin"):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc"):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
+
+        if xscale not in ['arcmin','kpc','both']:
+            xscale='kpc'
 
 
         prof = self.profile

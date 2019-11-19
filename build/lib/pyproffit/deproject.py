@@ -663,7 +663,7 @@ class Deproject:
         else:
             plt.show(block=False)
 
-    def Density(self,rout=None):
+    def Density(self):
         z = self.z
         cf = self.cf
         samples = self.samples
@@ -723,6 +723,7 @@ class Deproject:
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
         ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Source model')
+        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Reconstruction')
         ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color='C0', alpha=0.5)
 
         ax.axhline(self.bkg,color='k',label='Sky background')

@@ -617,7 +617,7 @@ class Deproject:
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
         else:
-            print('Unknown method '+method)
+            print('Unknown method '+backend)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)

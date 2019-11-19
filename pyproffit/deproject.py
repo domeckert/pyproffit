@@ -666,8 +666,6 @@ class Deproject:
         if xscale == 'both':
             limx=ax.get_xlim()
             ax2 = ax.twiny()
-            print(limx)
-            print(limx[0]/kpcp)
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
             ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
@@ -1032,8 +1030,6 @@ class Deproject:
         if xscale == 'both':
             limx=ax.get_xlim()
             ax2 = ax.twiny()
-            print(limx)
-            print(limx[0]/kpcp)
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
             ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')

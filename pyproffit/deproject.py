@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 #plt.switch_backend('Agg')
 from scipy.interpolate import interp1d
 import os
+from astropy.io import fits
 
 Mpc = 3.0856776e+24 #cm
 kpc = 3.0856776e+21 #cm
@@ -119,7 +120,7 @@ def calc_sb_operator(rad,sourcereg,pars):
     nptot=len(rad)
     Ktot=np.zeros((nptot,npars+1))
     Ktot[0:npt,0:npars]=func_base.T
-    Ktot[:,npars]=1.0
+    Ktot[:,npars]=0.0
     return Ktot
 
 
@@ -194,7 +195,7 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6):
 def calc_density_operator(rad,sourcereg,pars,z):
     # Select values in the source region
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
-    rfit=rad[sourcereg]*kpcp
+    rfit=rad*kpcp
     npt=len(rfit)
     npars=len(pars[:,0])
     
@@ -208,7 +209,7 @@ def calc_density_operator(rad,sourcereg,pars,z):
     fng=func_base*cfact
     
     # Recast into full matrix and add column for background
-    nptot=len(rad)
+    nptot=len(rfit)
     Ktot=np.zeros((nptot,npars+1))
     Ktot[0:npt,0:npars]=fng.T
     Ktot[:,npars]=0.0
@@ -289,8 +290,6 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     cts_tot ~ poisson(K * norm + cts_back);
     }'''
 
-    if not os.path.exists('~/.stan_cache'):
-        os.mkdir('~/.stan_cache')
 
     f = open('mybeta_GP.stan', 'w')
     print(code, file=f)
@@ -571,6 +570,13 @@ class Deproject:
         self.bkg = None
         self.samples = None
         self.bkglim = None
+        self.rout = None
+        self.pmc = None
+        self.pmcl = None
+        self.pmch = None
+        self.mg = None
+        self.mgl = None
+        self.mgh = None
 
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
@@ -598,6 +604,14 @@ class Deproject:
 
 
     def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+        self.backend=backend
+        self.nmcmc=nmcmc
+        self.bkglim=bkglim
+        self.back=back
+        self.samplefile=samplefile
+        self.nrc=samplefile
+        self.nbetas=nbetas
+        self.depth=depth
         if backend=='pymc3':
             Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
         elif backend=='stan':
@@ -618,7 +632,8 @@ class Deproject:
             return
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
-        rkpc = self.profile.bins * kpcp
+
+        rkpc = self.rout * kpcp
         erkpc = self.profile.ebins * kpcp
 
         plt.clf()
@@ -635,8 +650,12 @@ class Deproject:
         plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
         plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
+
+        if len(self.rout) == len(self.profile.bins):
+            plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
                      markersize=7, capsize=3)
+        else:
+            plt.plot(rkpc,self.dens,color='C0',lw=2)
         plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
         if outfile is not None:
             plt.savefig(outfile)
@@ -644,7 +663,7 @@ class Deproject:
         else:
             plt.show(block=False)
 
-    def Density(self):
+    def Density(self,rout=None):
         z = self.z
         cf = self.cf
         samples = self.samples
@@ -655,7 +674,12 @@ class Deproject:
         if z is not None and cf is not None:
             transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
             pardens = list_params_density(rad, sourcereg, z)
-            Kdens = calc_density_operator(rad, sourcereg, pardens, z)
+            if rout is None:
+                sourcereg_out=sourcereg
+                rout=rad
+            else:
+                sourcereg_out=np.where(rout < self.bkglim)
+            Kdens = calc_density_operator(rout, sourcereg_out, pardens, z)
             alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T)) / cf * transf)  # [0:nptfit, :]
             covmat = np.cov(alldens)
             self.covmat = covmat
@@ -665,6 +689,8 @@ class Deproject:
             self.dens = pmcd
             self.dens_lo = pmcdl
             self.dens_hi = pmcdh
+            self.rout=rout
+
         else:
             print('No redshift and/or conversion factor, nothing to do')
 
@@ -679,25 +705,27 @@ class Deproject:
         plt.clf()
         fig = plt.figure(figsize=(13, 10))
 
-        ax=fig.add_axes([0.1,0.2,0.8,0.7])
-        ax_res=fig.add_axes([0.1,0.1,0.8,0.1])
+        ax=fig.add_axes([0.12,0.2,0.8,0.7])
+        ax_res=fig.add_axes([0.12,0.1,0.8,0.1])
 
         ax_res.set_xlabel('Radius [arcmin]', fontsize=40)
         ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
         ax.set_xscale('log')
         ax.set_yscale('log')
 
-        ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
-                    markersize=7, capsize=0, mec='black', label='Data')
+        #ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
+        #            markersize=7, capsize=0, mec='black', label='Bkg - subtracted Data')
 
         ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt='d',
                     color='r', elinewidth=2,
-                    markersize=7, capsize=0, label='Tot Data')
-        ax.plot(prof.bins, prof.bkgprof, color='green', label='Background')
+                    markersize=7, capsize=0, label='Data')
+        ax.plot(prof.bins, prof.bkgprof, color='green', label='Particle background')
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
-        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Reconstruction - PSF not applied')
+        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Source model')
         ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color='C0', alpha=0.5)
+
+        ax.axhline(self.bkg,color='k',label='Sky background')
 
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
@@ -717,18 +745,25 @@ class Deproject:
         pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
         pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
 
-        ax.plot(prof.bins, pmc, color='C1', lw=2, label='Reconstruction - PSF applied')
+        ax.plot(prof.bins, pmc, color='C1', lw=2, label='Total model')
         ax.fill_between(prof.bins, pmcl, pmch, color='C1', alpha=0.5)
+
+        self.pmc=pmc
+        self.pmcl=pmcl
+        self.pmch=pmch
 
         ax.legend(loc=0)
 
         res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
+        vmin=-0.5
+        veff=np.max(np.abs(res))
+        if veff > vmin:
+            vmin=veff*1.2
         ax_res.scatter(prof.bins, res, color='r', lw=2)
         ax_res.axhline(0, color='k')
 
         ax.set_xticklabels([])
         ax_res.set_xscale('log')
-        ax_res.axhline(1,color='k')
         ax.legend(loc=0)
 
         ax.minorticks_on()
@@ -740,8 +775,8 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
-        ax.set_ylim([0.1 * np.min(self.sb), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
-
+        ax.set_ylim([0.1 * np.min(self.bkg), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
+        ax_res.set_ylim([-vmin,vmin])
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()
@@ -899,6 +934,78 @@ class Deproject:
 
         return mg,mgl,mgh
 
+    def PlotMgas(self,rout=None,outfile=None):
+        if self.samples is None or self.z is None or self.cf is None:
+            print('Error: no gas density profile found')
+            return
+
+
+        prof = self.profile
+        kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        if rout is None:
+            rkpc = prof.bins * kpcp
+            erkpc = prof.ebins * kpcp
+        else:
+            rkpc = rout * kpcp
+            erkpc = (rout-np.append(0,rout[:-1]))/2 * kpcp
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
+
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
+        pardens = list_params_density(rad, sourcereg, self.z)
+        if rout is None:
+            sourcereg_out = sourcereg
+            rout = rad
+        else:
+            sourcereg_out = np.where(rout < self.bkglim)
+        Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
+
+        # All gas density profiles
+        alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
+
+        # Matrix containing integration volumes
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
+
+
+        # Compute Mgas profile as cumulative sum over the volume
+        mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
+
+
+        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
+
+        self.mg=mg
+        self.mgl=mgl
+        self.mgh=mgh
+
+        fig = plt.figure(figsize=(13, 10))
+        ax=fig.add_subplot(111)
+
+
+        ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
+        ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
+
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=40)
+        ax.set_xlabel('Radius [arcmin]', fontsize=40)
+
+        ax.legend(loc=0)
+
+        ax.minorticks_on()
+        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(18)
+        if outfile is not None:
+            plt.savefig(outfile)
+            plt.close()
+        else:
+            plt.show(block=False)
+
+
     def Reload(self,samplefile,bkglim=None):
         # Reload the output of a previous PyMC3 run
         samples = np.loadtxt(samplefile)
@@ -982,6 +1089,82 @@ class Deproject:
         return  medcsb,csblo,csbhi
 
 
+    def SaveAll(self, outfile=None):
+        #####################################################
+        # Function to save profile into FITS file
+        # First extension is data
+        # Second extension is density
+        # Third extension is Mgas
+        # Forth extension is PSF
+        #####################################################
+        if outfile is None:
+            print('No output file name given')
+            return
+        else:
+            hdul = fits.HDUList([fits.PrimaryHDU()])
+            if self.profile is not None:
+                cols = []
+                cols.append(fits.Column(name='RADIUS', format='E', unit='arcmin', array=self.profile.bins))
+                cols.append(fits.Column(name='WIDTH', format='E', unit='arcmin', array=self.profile.ebins))
+                cols.append(fits.Column(name='SB', format='E', unit='cts s-1 arcmin-2', array=self.profile.profile))
+                cols.append(fits.Column(name='ERR_SB', format='E', unit='cts s-1 arcmin-2', array=self.profile.eprof))
+                if self.profile.counts is not None:
+                    cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.profile.counts))
+                    cols.append(fits.Column(name='AREA', format='E', unit='arcmin2', array=self.profile.area))
+                    cols.append(fits.Column(name='EFFEXP', format='E', unit='s', array=self.profile.effexp))
+                    cols.append(fits.Column(name='BKG', format='E', unit='cts s-1 arcmin-2', array=self.profile.bkgprof))
+                    cols.append(fits.Column(name='BKGCOUNTS', format='E', unit='', array=self.profile.bkgcounts))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='DATA')
+                hdr = tbhdu.header
+                hdr['X_C'] = self.profile.cx + 1
+                hdr['Y_C'] = self.profile.cy + 1
+                hdr.comments['X_C'] = 'X coordinate of center value'
+                hdr.comments['Y_C'] = 'Y coordinate of center value'
+                hdr['RA_C'] = self.profile.cra
+                hdr['DEC_C'] = self.profile.cdec
+                hdr.comments['RA_C'] = 'Right ascension of center value'
+                hdr.comments['DEC_C'] = 'Declination of center value'
+                hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
+                hdul.append(tbhdu)
+            if self.pmc is not None:
+                cols = []
+                cols.append(fits.Column(name='RADIUS', format='E', array=self.profile.bins))
+                cols.append(fits.Column(name='SB_MODEL_TOT', format='E', array=self.pmc))
+                cols.append(fits.Column(name='SB_MODEL_TOT_L', format='E', array=self.pmcl))
+                cols.append(fits.Column(name='SB_MODEL_TOT_H', format='E', array=self.pmch))
+                cols.append(fits.Column(name='SB_MODEL', format='E', array=self.sb))
+                cols.append(fits.Column(name='SB_MODEL_L', format='E', array=self.sb_lo))
+                cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
+                hdr = tbhdu.header
+                hdr['BACKEND'] = self.backend
+                hdr['N_MCMC'] = self.nmcmc
+                hdr['BKGLIM'] = self.bkglim
+                hdr['BACK'] = self.back
+                hdr['SAMPLEFILE'] = self.samplefile
+                hdr['N_RC'] = self.nrc
+                hdr['N_BETAS'] = self.nbetas
+                hdr['DEPTH'] = self.depth
+                hdul.append(tbhdu)
+            if self.dens is not None:
+                cols = []
+                cols.append(fits.Column(name='RADIUS', format='E', array=self.rout))
+                cols.append(fits.Column(name='DENSITY', format='E', array=self.dens))
+                cols.append(fits.Column(name='DENSITY_L', format='E', array=self.dens_lo))
+                cols.append(fits.Column(name='DENSITY_H', format='E', array=self.dens_hi))
+                if self.mg is not None:
+                    cols.append(fits.Column(name='MGAS', format='E', array=self.mg))
+                    cols.append(fits.Column(name='MGAS_L', format='E', array=self.mgl))
+                    cols.append(fits.Column(name='MGAS_H', format='E', array=self.mgh))
+                cols = fits.ColDefs(cols)
+                tbhdu = fits.BinTableHDU.from_columns(cols, name='DENSITY')
+                hdul.append(tbhdu)
+            if self.profile.psfmat is not None:
+                psfhdu = fits.ImageHDU(self.profile.psfmat, name='PSF')
+                hdul.append(psfhdu)
+            hdul.writeto(outfile, overwrite=True)
 
 
 

@@ -15,7 +15,7 @@ msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
 
 
-def plot_multi_methods(profs, deps, labels=None):
+def plot_multi_methods(profs, deps, labels=None, outfile=None):
     if len(profs) != len(deps):
         print("ERROR: different numbers of profiles and deprojection elements")
         return
@@ -29,8 +29,8 @@ def plot_multi_methods(profs, deps, labels=None):
                0.83, 0.83]
     ax = fig.add_axes(ax_size)
     ax.minorticks_on()
-    ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-    ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(18)
     plt.xlabel('Radius [kpc]', fontsize=40)
@@ -50,7 +50,11 @@ def plot_multi_methods(profs, deps, labels=None):
                      color='C%d' % i, elinewidth=2,
                      markersize=7, capsize=3, label=labels[i])
         plt.fill_between(rkpc, dep.dens_lo, dep.dens_hi, color='C%d' % i, alpha=0.3)
-    plt.legend(loc=0)
+    plt.legend(loc=0,fontsize=22)
+    if outfile is not None:
+        plt.savefig(outfile)
+    else:
+        plt.show(block=False)
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
@@ -617,7 +621,7 @@ class Deproject:
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
         else:
-            print('Unknown method '+method)
+            print('Unknown method '+backend)
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
@@ -642,8 +646,8 @@ class Deproject:
         fig = plt.figure(figsize=(13, 10),tight_layout=True)
         ax = fig.add_subplot(111)
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax.set_ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
@@ -767,7 +771,7 @@ class Deproject:
         self.pmcl=pmcl
         self.pmch=pmch
 
-        ax.legend(loc=0)
+        ax.legend(loc=0,fontsize=22)
 
         res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
         vmin=-0.5
@@ -782,11 +786,11 @@ class Deproject:
         ax.legend(loc=0)
 
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         ax_res.minorticks_on()
-        ax_res.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax_res.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax_res.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax_res.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
@@ -827,8 +831,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -878,8 +882,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -933,8 +937,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')
@@ -1109,8 +1113,8 @@ class Deproject:
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
             ax.minorticks_on()
-            ax.tick_params(length=20, width=1, which='major', direction='in', right='True', top='True')
-            ax.tick_params(length=10, width=1, which='minor', direction='in', right='True', top='True')
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
             # plt.yscale('log')

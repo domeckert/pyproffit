@@ -15,7 +15,7 @@ class Profile:
     # method=3/4: user-given center in image (3) of FK5 (4) coordinates
     ################################
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
-                 binning='linear', centroid_region=None):
+                 binning='linear', centroid_region=None, bins=None):
         '''
 
         :**param** data: the data module in pyproffit
@@ -38,11 +38,16 @@ class Profile:
         if data is None:
             print('No data given')
             return
-        if maxrad is None:
-            print('No maximum radius given, using maximum distance of image from center')
-        if binsize is None:
-            print('No bin size given')
-            return
+        if binning!='custom':
+            if maxrad is None:
+                print('No maximum radius given, using maximum distance of image from center')
+            if binsize is None:
+                print('No bin size given')
+                return
+        else:
+            if bins is None:
+                print('The custom binning option is selected but not bin definition is provided, use the \'bins=\' option')
+                return
         self.data = data
 
         method = center_choice
@@ -83,7 +88,16 @@ class Profile:
                 regrad = centroid_region / data.pixsize
             else:
                 regrad = np.max(np.array([data.axes[0], data.axes[1]])/ 2.)
-            xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+                centroid_region = regrad * data.pixsize
+            if center_ra is None or center_dec is None:
+                print('No approximate center provided, will search for the centroid within a radius of %g arcmin from the center of the image' % (centroid_region))
+                xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
+            else:
+                print('Will search for the centroid within a region of %g arcmin centered on RA=%g, DEC=%g' % (centroid_region,center_ra,center_dec))
+                wc = np.array([[center_ra, center_dec]])
+                x = data.wcs_inp.wcs_world2pix(wc, 1)
+                xc_temp = x[0][0] - 1.
+                yc_temp = x[0][1] - 1.
             if data.exposure is None or data.filth is not None:
                 region = np.where(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0))
                 #print('No exposure map given, proceeding with no weights')
@@ -160,22 +174,17 @@ class Profile:
         rads = np.hypot(xima - self.cx, yima - self.cy)
         ii = np.where(data.exposure > 0)
         mrad = np.max(rads[ii])*pixsize
-        if maxrad is None:
+        if maxrad is None and binning!='custom':
             maxrad=mrad
             print("Maximum radius is %.4f arcmin"%maxrad)
+        elif binning=='custom':
+            maxrad=bins[len(bins)-1]
         else:
             if maxrad > mrad:
                 maxrad=mrad
 
         self.maxrad = maxrad
         self.binsize = binsize
-        if binning=='log':
-            self.islogbin = True
-        elif binning=='linear':
-            self.islogbin = False
-        else:
-            print('Unknown binning option '+binning+', reverting to linear')
-            self.islogbin = False
         self.psfmat = None
         self.nbin = None
         self.bins = None
@@ -187,6 +196,19 @@ class Profile:
         self.effexp = None
         self.bkgprof = None
         self.bkgcounts = None
+        self.custom = False
+        if binning=='log':
+            self.islogbin = True
+        elif binning=='linear':
+            self.islogbin = False
+        elif binning=='custom':
+            self.nbin = len(bins) - 1
+            self.bins = (bins + np.roll(bins, -1))[:self.nbin]/2.
+            self.ebins = (np.roll(bins, -1) - bins)[:self.nbin]/2.
+            self.custom = True
+        else:
+            print('Unknown binning option '+binning+', reverting to linear')
+            self.islogbin = False
 
     def SBprofile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
         #######################################
@@ -198,17 +220,20 @@ class Profile:
         exposure = data.exposure
         bkg = data.bkg
         pixsize = data.pixsize
-        if (self.islogbin):
-            self.bins, self.ebins = logbinning(self.binsize, self.maxrad)
-            nbin = len(self.bins)
-            self.nbin = nbin
+        if not self.custom:
+            if (self.islogbin):
+                self.bins, self.ebins = logbinning(self.binsize, self.maxrad)
+                nbin = len(self.bins)
+                self.nbin = nbin
+            else:
+                nbin = int(self.maxrad / self.binsize * 60. + 0.5)
+                self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
+                self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
+                self.nbin = nbin
         else:
-            nbin = int(self.maxrad / self.binsize * 60. + 0.5)
-            self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
-            self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
-            self.nbin = nbin
+            nbin = self.nbin
         profile, eprof, counts, area, effexp, bkgprof, bkgcounts = np.empty(self.nbin), np.empty(self.nbin), np.empty(
-            self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
+                self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         if ellipse_angle is not None:
             self.ellangle = ellipse_angle

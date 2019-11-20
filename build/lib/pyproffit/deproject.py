@@ -1061,6 +1061,7 @@ class Deproject:
         self.nbetas=int(pars[1])
         self.min_beta=pars[2]
         self.nmcmc=int(pars[3])
+        self.samplefile=samplefile
         self.samples = samples
         f = open(samplefile+'.par', 'r')
         header = f.readline()
@@ -1196,11 +1197,9 @@ class Deproject:
                 hdr['BACKEND'] = self.backend
                 hdr['N_MCMC'] = self.nmcmc
                 hdr['BKGLIM'] = self.bkglim
-                hdr['BACK'] = self.back
                 hdr['SAMPLEFILE'] = self.samplefile
                 hdr['N_RC'] = self.nrc
                 hdr['N_BETAS'] = self.nbetas
-                hdr['DEPTH'] = self.depth
                 hdul.append(tbhdu)
             if self.dens is not None:
                 cols = []

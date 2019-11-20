@@ -1058,7 +1058,7 @@ class Deproject:
         pars=np.loadtxt(samplefile+'.par')
         self.nrc=int(pars[0])
         self.nbetas=int(pars[1])
-        self.min_beta=int(pars[2])
+        self.min_beta=pars[2]
         self.samples = samples
         if self.profile is None:
             print('Error: no profile provided')

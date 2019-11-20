@@ -316,7 +316,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     if samplefile is not  None:
         np.savetxt(samplefile, samples)
-        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta]))
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta]),header='stan')
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -411,7 +411,7 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     samples = np.append(sampc, sampb, axis=1)
     if samplefile is not None:
         np.savetxt(samplefile, samples)
-        np.savetxt(samplefile + '.par', np.array([pars.shape[0] / nbetas, nbetas, min_beta]))
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta]),header='pymc3')
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -1061,6 +1061,9 @@ class Deproject:
         self.nbetas=int(pars[1])
         self.min_beta=pars[2]
         self.samples = samples
+        f = open(samplefile+'.par', 'r')
+        header = f.readline()
+        self.backend=header[2:].split('\n')[0]
         if self.profile is None:
             print('Error: no profile provided')
             return
@@ -1073,9 +1076,8 @@ class Deproject:
         if bkglim is not None:
             self.bkglim = bkglim
         else:
-            if self.bkglim is None:
-                bkglim = np.max(rad + erad)
-                self.bkglim = bkglim
+            bkglim = np.max(rad + erad)
+            self.bkglim = bkglim
 
         # Set source region
         sourcereg = np.where(rad < bkglim)

@@ -1060,6 +1060,7 @@ class Deproject:
         self.nbetas=int(pars[1])
         self.min_beta=pars[2]
         self.nmcmc=int(pars[3])
+        self.samplefile=samplefile
         self.samples = samples
         f = open(samplefile+'.par', 'r')
         header = f.readline()

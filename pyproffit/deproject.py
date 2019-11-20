@@ -88,15 +88,17 @@ def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
 # Function to create the list of parameters for the basis functions
 nsh=4. # number of basis functions to set
 
-def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=None):
+def list_params(rad,sourcereg,nrc=None,nbetas=None,min_beta=None):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     if nrc is None:
         nrc = int(npfit/nsh)
-    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
-    #allbetas=np.linspace(0.4,3.,6)
     if min_beta is None:
         min_beta=0.6
+    if nbetas is None:
+        nbetas=6
+    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
+    #allbetas=np.linspace(0.4,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
     nrc=len(allrc)
     nbetas=len(allbetas)
@@ -178,17 +180,20 @@ def calc_int_operator(a, b, pars):
     return Kint
 
 
-def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
+def list_params_density(rad,sourcereg,z,nrc=None,nbetas=None,min_beta=None):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     if nrc is None:
         nrc = int(npfit/nsh)
-    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
-    #allbetas=np.linspace(0.5,3.,6)
     if min_beta is None:
         min_beta=0.6
+    if nbetas is None:
+        nbetas = 6
+    allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
+    #allbetas=np.linspace(0.5,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
+    nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
     betas=np.tile(allbetas,nrc)
@@ -319,6 +324,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     if samplefile is not  None:
         np.savetxt(samplefile, samples)
+        np.savetext(samplefile+'.par',np.array([nrc,nbetas,min_beta]))
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -336,7 +342,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=None):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -618,16 +624,17 @@ class Deproject:
         self.bkglim=bkglim
         self.back=back
         self.samplefile=samplefile
-        self.nrc=samplefile
+        self.nrc=nrc
         self.nbetas=nbetas
+        self.min_beta = min_beta
         self.depth=depth
-        self.min_beta=min_beta
         if backend=='pymc3':
             Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth,min_beta=min_beta)
         else:
             print('Unknown method '+backend)
+
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
@@ -698,7 +705,7 @@ class Deproject:
 
         if z is not None and cf is not None:
             transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-            pardens = list_params_density(rad, sourcereg, z, self.min_beta)
+            pardens = list_params_density(rad, sourcereg, z, self.nrc, self.nbetas, self.min_beta)
             if rout is None:
                 sourcereg_out=sourcereg
                 rout=rad
@@ -755,7 +762,7 @@ class Deproject:
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
         sourcereg = np.where(prof.bins < self.bkglim)
-        pars = list_params(prof.bins, sourcereg, self.min_beta)
+        pars = list_params(prof.bins, sourcereg, self.nrc, self.nbetas, self.min_beta)
         npt = len(pars)
         # Compute output deconvolved brightness profile
         if prof.psfmat is not None:
@@ -823,7 +830,7 @@ class Deproject:
             a = prof.bins[0]/2.
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg, self.min_beta)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         Kint = calc_int_operator(a, b, pars)
         allint = np.dot(Kint, np.exp(self.samples.T))
         medint = np.median(allint[1, :] - allint[0, :])
@@ -870,7 +877,7 @@ class Deproject:
             psfmat = np.eye(prof.nbin)
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg, self.min_beta)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
         npars = len(pars[:, 0])
         K[:,npars] = 0.
@@ -920,7 +927,7 @@ class Deproject:
         sourcereg = np.where(rad < self.bkglim)
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-        pardens = list_params_density(rad, sourcereg, self.z, self.min_beta)
+        pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
         Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
 
         # All gas density profiles
@@ -982,7 +989,7 @@ class Deproject:
         sourcereg = np.where(rad < self.bkglim)
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-        pardens = list_params_density(rad, sourcereg, self.z, self.min_beta)
+        pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
         if rout is None:
             sourcereg_out = sourcereg
             rout = rad
@@ -1076,7 +1083,7 @@ class Deproject:
         sourcereg = np.where(rad < bkglim)
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg, self.min_beta)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         npt = len(pars)
         # Compute output deconvolved brightness profile
         Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -1101,7 +1108,7 @@ class Deproject:
         sourcereg = np.where(prof.bins < self.bkglim)
 
         # Set vector with list of parameters
-        pars = list_params(prof.bins, sourcereg,self.min_beta)
+        pars = list_params(prof.bins, sourcereg, self.nrc, self.nbetas, self.min_beta)
         Kin = calc_int_operator(prof.bins[0]/2., rin/kpcp, pars)
         allvin = np.dot(Kin, np.exp(self.samples.T))
         Kout = calc_int_operator(prof.bins[0]/2., rout/kpcp, pars)

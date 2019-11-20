@@ -60,7 +60,7 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
 
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
     # Select values in the source region
-    rfit=rad[sourcereg]
+    rfit=rad#[sourcereg]
     npt=len(rfit)
     npars=len(pars[:,0])
     areamul=np.tile(area[0:npt],npars).reshape(npars,npt)
@@ -109,7 +109,7 @@ def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
 
 def calc_sb_operator(rad,sourcereg,pars):
     # Select values in the source region
-    rfit=rad[sourcereg]
+    rfit=rad#[sourcereg]
     npt=len(rfit)
     npars=len(pars[:,0])
     
@@ -130,7 +130,7 @@ def calc_sb_operator(rad,sourcereg,pars):
 
 def calc_sb_operator_psf(rad, sourcereg, pars, area, expo, psf):
     # Select values in the source region
-    rfit = rad[sourcereg]
+    rfit = rad#[sourcereg]
     npt = len(rfit)
     npars = len(pars[:, 0])
 
@@ -177,7 +177,7 @@ def calc_int_operator(a, b, pars):
 
 
 def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
-    rfit=rad[sourcereg]
+    rfit=rad#[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     if nrc is None:

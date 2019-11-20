@@ -88,15 +88,11 @@ def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
 # Function to create the list of parameters for the basis functions
 nsh=4. # number of basis functions to set
 
-def list_params(rad,sourcereg,nrc=None,nbetas=None,min_beta=None):
+def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     if nrc is None:
         nrc = int(npfit/nsh)
-    if min_beta is None:
-        min_beta=0.6
-    if nbetas is None:
-        nbetas=6
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
     #allbetas=np.linspace(0.4,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
@@ -180,16 +176,12 @@ def calc_int_operator(a, b, pars):
     return Kint
 
 
-def list_params_density(rad,sourcereg,z,nrc=None,nbetas=None,min_beta=None):
+def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     if nrc is None:
         nrc = int(npfit/nsh)
-    if min_beta is None:
-        min_beta=0.6
-    if nbetas is None:
-        nbetas = 6
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
     #allbetas=np.linspace(0.5,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
@@ -324,7 +316,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     if samplefile is not  None:
         np.savetxt(samplefile, samples)
-        np.savetxt(samplefile+'.par',np.array([pars.shape[0],pars.shape[1],nbetas,min_beta]))
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta]))
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -342,7 +334,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -417,8 +409,9 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     sampc = trace.get_values('coefs')
     sampb = trace.get_values('bkg')
     samples = np.append(sampc, sampb, axis=1)
-    if samplefile is not  None:
+    if samplefile is not None:
         np.savetxt(samplefile, samples)
+        np.savetxt(samplefile + '.par', np.array([pars.shape[0] / nbetas, nbetas, min_beta]))
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -618,7 +611,7 @@ class Deproject:
         self.mu_e=mu_e
 
 
-    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=None):
+    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
         self.backend=backend
         self.nmcmc=nmcmc
         self.bkglim=bkglim
@@ -626,7 +619,7 @@ class Deproject:
         self.samplefile=samplefile
         self.nrc=nrc
         self.nbetas=nbetas
-        self.min_beta = min_beta
+        self.min_beta=min_beta
         self.depth=depth
         if backend=='pymc3':
             Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)

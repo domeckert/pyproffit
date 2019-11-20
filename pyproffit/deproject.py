@@ -316,7 +316,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     if samplefile is not  None:
         np.savetxt(samplefile, samples)
-        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta]),header='stan')
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='stan')
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -411,7 +411,7 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     samples = np.append(sampc, sampb, axis=1)
     if samplefile is not None:
         np.savetxt(samplefile, samples)
-        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta]),header='pymc3')
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='pymc3')
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -1060,6 +1060,7 @@ class Deproject:
         self.nrc=int(pars[0])
         self.nbetas=int(pars[1])
         self.min_beta=pars[2]
+        self.nmcmc=int(pars[3])
         self.samples = samples
         f = open(samplefile+'.par', 'r')
         header = f.readline()
@@ -1195,11 +1196,9 @@ class Deproject:
                 hdr['BACKEND'] = self.backend
                 hdr['N_MCMC'] = self.nmcmc
                 hdr['BKGLIM'] = self.bkglim
-                hdr['BACK'] = self.back
                 hdr['SAMPLEFILE'] = self.samplefile
                 hdr['N_RC'] = self.nrc
                 hdr['N_BETAS'] = self.nbetas
-                hdr['DEPTH'] = self.depth
                 hdul.append(tbhdu)
             if self.dens is not None:
                 cols = []

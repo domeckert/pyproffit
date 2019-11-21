@@ -800,7 +800,8 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
-        ax.set_ylim([0.01 * np.min(self.sb)), 1.2 * np.max(self.sb)])
+        ii=np.where(self.sb > 0)
+        ax.set_ylim([0.8 * np.min(self.sb[ii]), 1.2 * np.max(self.sb)])
         ax_res.set_ylim([-vmin,vmin])
         if outfile is not None:
             plt.savefig(outfile)

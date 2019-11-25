@@ -1058,7 +1058,7 @@ class Deproject:
         # Reload the output of a previous PyMC3 run
         samples = np.loadtxt(samplefile)
         pars=np.loadtxt(samplefile+'.par')
-        self.nrc=None
+        self.nrc=int(pars[0])
         self.nbetas=int(pars[1])
         self.min_beta=pars[2]
         self.nmcmc=int(pars[3])
@@ -1086,7 +1086,7 @@ class Deproject:
         sourcereg = np.where(rad < bkglim)
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg, None, self.nbetas, self.min_beta)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         npt = len(pars)
         # Compute output deconvolved brightness profile
         Ksb = calc_sb_operator(rad, sourcereg, pars)

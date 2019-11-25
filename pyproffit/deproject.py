@@ -92,7 +92,7 @@ def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     if nrc is None:
-        nrc = int(npfit/nsh)
+        nrc = np.max([int(npfit/nsh),1])
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
     #allbetas=np.linspace(0.4,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
@@ -181,7 +181,7 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     if nrc is None:
-        nrc = int(npfit/nsh)
+        nrc = np.max([int(npfit/nsh),1])
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
     #allbetas=np.linspace(0.5,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)

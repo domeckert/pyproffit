@@ -1044,7 +1044,7 @@ class Deproject:
 
         Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 
-        self.r500, self.r500_l, self.r500_h = np.percentile(rout0[np.argmin(np.abs(Mgasdist / mgasdist - 1), axis=0)], [50., 50. - 68.3 / 2., 50. + 68.3 / 2.])
+        self.r500, self.r500_l, self.r500_h = np.percentile(rkpc[np.argmin(np.abs(Mgasdist / mgasdist - 1), axis=0)], [50., 50. - 68.3 / 2., 50. + 68.3 / 2.])
 
         self.m500, self.m500_l, self.m500_h = 4. / 3. * np.pi * 500 * rho_cz * r500 ** 3, 4. / 3. * np.pi * 500 * rho_cz * r500_l ** 3, 4. / 3. * np.pi * 500 * rho_cz * r500_h ** 3
 

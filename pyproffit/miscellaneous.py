@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.spatial.distance import  cdist
 from scipy.stats import poisson
-from .deproject import cosmo
 
 def logbinning(binsize,maxrad):
     nbin=int(maxrad/binsize*60.+0.5)
@@ -171,28 +170,4 @@ def clean_bkg(img,bkg):
     img[y[remove],x[remove]]=0
     return img
 
-def fbul19(R,z,Runit='kpc'):
-    if Runit == 'arcmin':
-        amin2kpc = cosmo.kpc_proper_per_arcmin(z).value
-        R=R*amin2kpc
-
-    rho_cz = cosmo.critical_density(z).to(u.Msun / u.kpc ** 3).value
-    efunc = np.asarray(cosmo.efunc(z))
-    M = 4. / 3. * np.pi * 500 * rho_cz * R ** 3
-
-    zpiv = 0.45
-    Mpiv = 6.35e14
-    efuncpiv = np.asarray(cosmo.efunc(zpiv))
-
-    A = 7.09
-    B = 1.26
-    C = 0
-    sigma = 0.10
-    gamma = 0.16
-    delta = 0.16
-    Bprime = B + delta * np.log((1 + z) / (1 + zpiv))
-
-    Mgas = 1e13 * A * (M / Mpiv) ** Bprime * (efunc / efuncpiv) ** (2 / 3) * ((1 + z) / (1 + zpiv)) ** gamma
-
-    return Mgas
 

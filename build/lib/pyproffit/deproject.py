@@ -1014,7 +1014,7 @@ class Deproject:
 
         #now compute mtot from mgas-mtot scaling relation
 
-        Mgas = fbul19(rout0,self.z,Runit='kpc')
+        Mgas = fbul19(rkpc,self.z,Runit='kpc')
 
         Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 

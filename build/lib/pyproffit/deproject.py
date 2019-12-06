@@ -1001,6 +1001,7 @@ class Deproject:
 
         prof = self.profile
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        print(kpcp)
         if rout is None:
             rkpc = prof.bins * kpcp
             erkpc = prof.ebins * kpcp
@@ -1026,7 +1027,6 @@ class Deproject:
 
         # Matrix containing integration volumes
         volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
-        print(Kdens)
 
         # Compute Mgas profile as cumulative sum over the volume
         mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)

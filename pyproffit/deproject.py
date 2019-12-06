@@ -1001,7 +1001,6 @@ class Deproject:
 
         prof = self.profile
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
-        print(kpcp)
         if rout is None:
             rkpc = prof.bins * kpcp
             erkpc = prof.ebins * kpcp
@@ -1033,6 +1032,7 @@ class Deproject:
 
 
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
+        print(mg)
 
         self.mg=mg
         self.mgl=mgl

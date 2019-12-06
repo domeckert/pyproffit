@@ -1020,11 +1020,14 @@ class Deproject:
         else:
             sourcereg_out = np.where(rout < self.bkglim)
         Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
+        print(rout)
+        print(bkglim)
+        print(sourcereg_out)
+
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
-        print(Kdens)
-        print(samples.T)
+
 
         # Matrix containing integration volumes
         volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])

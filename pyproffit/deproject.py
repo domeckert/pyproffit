@@ -1039,6 +1039,7 @@ class Deproject:
         self.mgh=mgh
 
         #now compute mtot from mgas-mtot scaling relation
+        rho_cz = cosmo.critical_density(z).to(u.Msun / u.kpc ** 3).value
 
         Mgas = fbul19(rkpc,self.z,Runit='kpc')
 

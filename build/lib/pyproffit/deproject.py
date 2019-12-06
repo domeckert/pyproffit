@@ -1026,7 +1026,7 @@ class Deproject:
 
         # Matrix containing integration volumes
         volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
-
+        print(4. * np.pi * rkpc ** 2 * 2. * erkpc)
 
         # Compute Mgas profile as cumulative sum over the volume
         mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
@@ -1038,7 +1038,6 @@ class Deproject:
         self.mgl=mgl
         self.mgh=mgh
 
-        print(mg, rkpc)
 
         #now compute mtot from mgas-mtot scaling relation
         rho_cz = cosmo.critical_density(self.z).to(u.Msun / u.kpc ** 3).value

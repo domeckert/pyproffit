@@ -963,7 +963,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="kpc"):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=fbul19):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -998,7 +998,7 @@ class Deproject:
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
 
         # Matrix containing integration volumes
-        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 
 
         # Compute Mgas profile as cumulative sum over the volume
@@ -1010,6 +1010,18 @@ class Deproject:
         self.mg=mg
         self.mgl=mgl
         self.mgh=mgh
+
+        #now compute mtot from mgas-mtot scaling relation
+
+        Mgas = scaling_relation(rout0,self.z,Runit='kpc')
+
+        Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
+
+        self.r500, self.r500_l, self.r500_h = np.percentile(rout0[np.argmin(np.abs(Mgasdist / mgasdist - 1), axis=0)], [50., 50. - 68.3 / 2., 50. + 68.3 / 2.])
+
+        self.m500, self.m500_l, self.m500_h = 4. / 3. * np.pi * 500 * rho_cz * r500 ** 3, 4. / 3. * np.pi * 500 * rho_cz * r500_l ** 3, 4. / 3. * np.pi * 500 * rho_cz * r500_h ** 3
+
+        self.t500, self.t500_l, self.t500_h = r500/kpcp, r500_l/kpcp, r500_h/kpcp
 
         fig = plt.figure(figsize=(13, 10),tight_layout=True)
         ax=fig.add_subplot(111)

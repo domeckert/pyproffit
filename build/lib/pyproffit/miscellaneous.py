@@ -194,3 +194,5 @@ def fbul19(R,z,Runit='kpc'):
 
     Mgas = 1e13 * A * (M / Mpiv) ** Bprime * (efunc / efuncpiv) ** (2 / 3) * ((1 + z) / (1 + zpiv)) ** gamma
 
+    return Mgas
+

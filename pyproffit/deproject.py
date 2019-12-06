@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import os
 from astropy.io import fits
-from .miscellaneous import *
 
 Mpc = 3.0856776e+24 #cm
 kpc = 3.0856776e+21 #cm
@@ -58,6 +57,32 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
         plt.show(block=False)
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
+
+def fbul19(R,z,Runit='kpc'):
+    if Runit == 'arcmin':
+        amin2kpc = cosmo.kpc_proper_per_arcmin(z).value
+        R=R*amin2kpc
+
+    rho_cz = cosmo.critical_density(z).to(u.Msun / u.kpc ** 3).value
+    efunc = np.asarray(cosmo.efunc(z))
+    M = 4. / 3. * np.pi * 500 * rho_cz * R ** 3
+
+    zpiv = 0.45
+    Mpiv = 6.35e14
+    efuncpiv = np.asarray(cosmo.efunc(zpiv))
+
+    A = 7.09
+    B = 1.26
+    C = 0
+    sigma = 0.10
+    gamma = 0.16
+    delta = 0.16
+    Bprime = B + delta * np.log((1 + z) / (1 + zpiv))
+
+    Mgas = 1e13 * A * (M / Mpiv) ** Bprime * (efunc / efuncpiv) ** (2 / 3) * ((1 + z) / (1 + zpiv)) ** gamma
+
+    return Mgas
+
 
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
     # Select values in the source region

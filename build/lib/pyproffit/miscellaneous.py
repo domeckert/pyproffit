@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import  cdist
 from scipy.stats import poisson
+import pyproffit.cosmo as cosmo
 
 def logbinning(binsize,maxrad):
     nbin=int(maxrad/binsize*60.+0.5)

@@ -1032,7 +1032,7 @@ class Deproject:
 
 
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
-        print(mg)
+        print(rkpc,mg)
 
         self.mg=mg
         self.mgl=mgl

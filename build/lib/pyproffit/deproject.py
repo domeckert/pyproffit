@@ -92,7 +92,7 @@ def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     if nrc is None:
-        nrc = int(npfit/nsh)
+        nrc = np.max([int(npfit/nsh),1])
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
     #allbetas=np.linspace(0.4,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
@@ -181,7 +181,7 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     if nrc is None:
-        nrc = int(npfit/nsh)
+        nrc = np.max([int(npfit/nsh),1])
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
     #allbetas=np.linspace(0.5,3.,6)
     allbetas = np.linspace(min_beta, 3., nbetas)
@@ -585,6 +585,9 @@ class Deproject:
         self.mg = None
         self.mgl = None
         self.mgh = None
+        self.rec_counts=None
+        self.rec_counts_lo=None
+        self.rec_counts_hi=None
 
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
@@ -876,7 +879,7 @@ class Deproject:
         npars = len(pars[:, 0])
         K[:,npars] = 0.
         allnc = np.dot(K, np.exp(self.samples.T))
-        self.rec_counts=np.median(allnc,axis=1)
+        self.rec_counts,self.rec_counts_lo,self.rec_counts_hi=np.percentile(allnc,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
         ncv = np.sum(allnc, axis=0)
         pnc = np.median(ncv)
         pncl = np.percentile(ncv, 50. - 68.3 / 2.)
@@ -960,7 +963,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="kpc"):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=fbul19):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -995,7 +998,7 @@ class Deproject:
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
 
         # Matrix containing integration volumes
-        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 
 
         # Compute Mgas profile as cumulative sum over the volume
@@ -1007,6 +1010,18 @@ class Deproject:
         self.mg=mg
         self.mgl=mgl
         self.mgh=mgh
+
+        #now compute mtot from mgas-mtot scaling relation
+
+        Mgas = scaling_relation(rout0,self.z,Runit='kpc')
+
+        Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
+
+        self.r500, self.r500_l, self.r500_h = np.percentile(rout0[np.argmin(np.abs(Mgasdist / mgasdist - 1), axis=0)], [50., 50. - 68.3 / 2., 50. + 68.3 / 2.])
+
+        self.m500, self.m500_l, self.m500_h = 4. / 3. * np.pi * 500 * rho_cz * r500 ** 3, 4. / 3. * np.pi * 500 * rho_cz * r500_l ** 3, 4. / 3. * np.pi * 500 * rho_cz * r500_h ** 3
+
+        self.t500, self.t500_l, self.t500_h = r500/kpcp, r500_l/kpcp, r500_h/kpcp
 
         fig = plt.figure(figsize=(13, 10),tight_layout=True)
         ax=fig.add_subplot(111)
@@ -1192,6 +1207,10 @@ class Deproject:
                 cols.append(fits.Column(name='SB_MODEL', format='E', array=self.sb))
                 cols.append(fits.Column(name='SB_MODEL_L', format='E', array=self.sb_lo))
                 cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
+                if self.rec_counts is not None:
+                    cols.append(fits.Column(name='COUNTS_MODEL', format='E', array=self.rec_counts))
+                    cols.append(fits.Column(name='COUNTS_MODEL_L', format='E', array=self.rec_counts_lo))
+                    cols.append(fits.Column(name='COUNTS_MODEL_H', format='E', array=self.rec_counts_hi))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
                 hdr = tbhdu.header

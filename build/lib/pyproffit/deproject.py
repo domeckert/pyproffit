@@ -1021,10 +1021,9 @@ class Deproject:
             sourcereg_out = np.where(rout < self.bkglim)
         Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
         print(rout)
+        print(self.bkglim)
         print(sourcereg_out)
-        print(pardens)
-        print(self.z)
-        print(Kdens)
+
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]

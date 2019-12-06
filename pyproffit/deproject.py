@@ -585,6 +585,9 @@ class Deproject:
         self.mg = None
         self.mgl = None
         self.mgh = None
+        self.rec_counts=None
+        self.rec_counts_lo=None
+        self.rec_counts_hi=None
 
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
@@ -876,7 +879,7 @@ class Deproject:
         npars = len(pars[:, 0])
         K[:,npars] = 0.
         allnc = np.dot(K, np.exp(self.samples.T))
-        self.rec_counts=np.median(allnc,axis=1)
+        self.rec_counts,self.rec_counts_lo,self.rec_counts_hi=np.percentile(allnc,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
         ncv = np.sum(allnc, axis=0)
         pnc = np.median(ncv)
         pncl = np.percentile(ncv, 50. - 68.3 / 2.)
@@ -1192,6 +1195,10 @@ class Deproject:
                 cols.append(fits.Column(name='SB_MODEL', format='E', array=self.sb))
                 cols.append(fits.Column(name='SB_MODEL_L', format='E', array=self.sb_lo))
                 cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
+                if self.rec_counts is not None:
+                    cols.append(fits.Column(name='COUNTS_MODEL', format='E', array=self.rec_counts))
+                    cols.append(fits.Column(name='COUNTS_MODEL_L', format='E', array=self.rec_counts_lo))
+                    cols.append(fits.Column(name='COUNTS_MODEL_H', format='E', array=self.rec_counts_hi))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
                 hdr = tbhdu.header

@@ -963,7 +963,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=fbul19):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=pyproffit.fbul19):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return

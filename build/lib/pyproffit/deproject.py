@@ -963,7 +963,7 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=pyproffit.fbul19):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=None):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -1013,7 +1013,7 @@ class Deproject:
 
         #now compute mtot from mgas-mtot scaling relation
 
-        Mgas = scaling_relation(rout0,self.z,Runit='kpc')
+        Mgas = fbul19(rout0,self.z,Runit='kpc')
 
         Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 

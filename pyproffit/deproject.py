@@ -1023,6 +1023,8 @@ class Deproject:
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
+        print(Kdens)
+        print(samples.T)
 
         # Matrix containing integration volumes
         volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
@@ -1032,8 +1034,6 @@ class Deproject:
 
 
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
-        print(alldens)
-        print(volmat)
 
         self.mg=mg
         self.mgl=mgl

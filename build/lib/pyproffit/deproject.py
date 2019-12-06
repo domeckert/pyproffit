@@ -1026,7 +1026,7 @@ class Deproject:
 
         # Matrix containing integration volumes
         volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
-        print(4. * np.pi * rkpc ** 2 * 2. * erkpc)
+        print(Kdens)
 
         # Compute Mgas profile as cumulative sum over the volume
         mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)

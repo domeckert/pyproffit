@@ -1076,6 +1076,7 @@ class Deproject:
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
         ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
 

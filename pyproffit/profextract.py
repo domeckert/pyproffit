@@ -30,9 +30,11 @@ class Profile:
 
         :param center_dec:user defined center, to be consistent with center_choice
 
-        :param binning: 'linear' or 'log'
+        :param binning: 'linear', 'log' or 'custom'
 
         :param centroid_region: option to define region within which calculate the centroid
+
+        :param bins: in case binning is set to 'custom', a numpy array containing the binning definition
 
         '''
         if data is None:
@@ -46,7 +48,7 @@ class Profile:
                 return
         else:
             if bins is None:
-                print('The custom binning option is selected but not bin definition is provided, use the \'bins=\' option')
+                print('The custom binning option is selected but no bin definition is provided, use the \'bins=\' option')
                 return
         self.data = data
 
@@ -79,6 +81,7 @@ class Profile:
             print('Corresponding pixels coordinates: ', self.cx + 1, self.cy + 1)
         elif method == 'centroid':
             print('Computing centroid and ellipse parameters using principal component analysis')
+            # In case a filled image exists, use it; otherwise use the raw image
             if data.filth is not None:
                 img = np.copy(data.filth).astype(int)
             else:
@@ -135,38 +138,73 @@ class Profile:
             self.ellangle = ellangle
             self.ellratio = sig_x / sig_y
         elif method == 'peak':
+
             print('Determining X-ray peak')
+
+            smc = 5  # 5-pixel smoothing to get the peak
+
             if data.filth is not None:
-                img = np.copy(data.filth).astype(int)
+
+                gsb = gaussian_filter(data.filth, smc)
+
             else:
-                img = np.copy(data.img).astype(int)
-            smc = 5 # 5-pixel smoothing to get the peak
-            gsb = gaussian_filter(img, smc)
+
+                gsb = gaussian_filter(data.img, smc)
+
             if data.exposure is None:
+
                 maxval = np.max(gsb)
+
                 ismax = np.where(gsb == maxval)
+
             else:
-                expo = data.exposure
+
+                expo = np.copy(data.exposure)
+
+                # smooth the image with a Gaussian of "smc" pixels and select only regions with more than 10% effective exposure
+                lowexp = np.where(expo  < 0.1 * np.max(expo))
+
+                expo[lowexp] = 0.
+
                 nonzero = np.where(expo > 0.1 * np.max(expo))
+
                 gexpo = gaussian_filter(expo, smc)
+
                 sm_sbmap = np.nan_to_num(gsb / gexpo)
+
                 maxval = np.max(sm_sbmap[nonzero])
+
                 ismax = np.where(sm_sbmap == maxval)
+
             yp, xp = np.indices(data.img.shape)
-            cdec = yp[ismax]
-            cra = xp[ismax]
-            self.cx = np.mean(cra)
-            self.cy = np.mean(cdec)
+
+            y_peak = yp[ismax]
+
+            x_peak = xp[ismax]
+
+            self.cy = np.mean(y_peak)
+
+            self.cx = np.mean(x_peak)
+
             self.ellangle = None
+
             self.ellratio = None
+
             print('Coordinates of surface-brightness peak:', self.cx + 1, self.cy + 1)
+
             pixcrd = np.array([[self.cx, self.cy]], np.float_)
+
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
+
             self.cra = world[0][0]
+
             self.cdec = world[0][1]
+
             print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
+
         else:
             print('Unknown method', method)
+            print('Available methods: "centroid", "peak", "custom_fk5", "custom_ima" ')
             return
 
         pixsize = data.header['CDELT2'] * 60  # 1 pix = pixsize arcmin
@@ -349,7 +387,7 @@ class Profile:
             id = np.where(np.logical_and(
                 np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
                 errmap > 0.0))  # left-inclusive
-            profile[i], eprof[i] = medianval(img[id], errmap[id], int(1e3))
+            profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
         self.profile = profile
         self.eprof = eprof
 

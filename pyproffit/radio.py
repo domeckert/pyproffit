@@ -7,7 +7,7 @@ import matplotlib.gridspec as gridspec
 from scipy.optimize import brentq
 
 
-class Profile:
+class Radio:
     ################################
     # Class defining brightness profiles
     # method=1: compute centroid and ellipse parameters
@@ -15,12 +15,12 @@ class Profile:
     # method=3/4: user-given center in image (3) of FK5 (4) coordinates
     ################################
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
-                 binning='linear', centroid_region=None, bins=None):
+                 binning='linear', bins=None):
         '''
 
         :**param** data: the data module in pyproffit
 
-        :param center_choice: the center choosed by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
+        :param center_choice: the center chosen by the user: "peak", "custom_ima" and "custom_fk5"
 
         :param maxrad: the maximum radius (in arcmin) within which compute the surface brightness profile
 
@@ -31,8 +31,6 @@ class Profile:
         :param center_dec:user defined center, to be consistent with center_choice
 
         :param binning: 'linear', 'log' or 'custom'
-
-        :param centroid_region: option to define region within which calculate the centroid
 
         :param bins: in case binning is set to 'custom', a numpy array containing the binning definition
 
@@ -79,129 +77,38 @@ class Profile:
             self.ellangle = None
             self.ellratio = None
             print('Corresponding pixels coordinates: ', self.cx + 1, self.cy + 1)
-        elif method == 'centroid':
-            print('Computing centroid and ellipse parameters using principal component analysis')
-            # In case a filled image exists, use it; otherwise use the raw image
+        elif method == 'peak':
+            print('Determining brightness peak')
             if data.filth is not None:
                 img = np.copy(data.filth).astype(int)
             else:
                 img = np.copy(data.img).astype(int)
-            yp, xp = np.indices(img.shape)
-            if centroid_region is not None:
-                regrad = centroid_region / data.pixsize
-            else:
-                regrad = np.max(np.array([data.axes[0], data.axes[1]])/ 2.)
-                centroid_region = regrad * data.pixsize
-            if center_ra is None or center_dec is None:
-                print('No approximate center provided, will search for the centroid within a radius of %g arcmin from the center of the image' % (centroid_region))
-                xc_temp, yc_temp = data.axes[1] / 2., data.axes[0] / 2.  # Assume by default the cluster is at the center
-            else:
-                print('Will search for the centroid within a region of %g arcmin centered on RA=%g, DEC=%g' % (centroid_region,center_ra,center_dec))
-                wc = np.array([[center_ra, center_dec]])
-                x = data.wcs_inp.wcs_world2pix(wc, 1)
-                xc_temp = x[0][0] - 1.
-                yc_temp = x[0][1] - 1.
-            if data.exposure is None or data.filth is not None:
-                region = np.where(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0))
-                #print('No exposure map given, proceeding with no weights')
-                print('Denoising image...')
-                if data.exposure is None:
-                    bkg = np.mean(img)
-                else:
-                    nonzero = np.where(data.exposure > 0.0)
-                    bkg = np.mean(img[nonzero])
-                imgc = clean_bkg(img, bkg)
-                x = np.repeat(xp[region], imgc[region])
-                y = np.repeat(yp[region], imgc[region])
-                print('Running PCA...')
-                x_c, y_c, sig_x, sig_y, r_cluster, ellangle, pos_err = get_bary(x, y)
-            else:
-                region = np.where(np.logical_and(np.logical_and(np.hypot(xc_temp - xp, yc_temp - yp) < regrad, img > 0),data.exposure>0.))
-                nonzero = np.where(data.exposure > 0.0)
-                print('Denoising image...')
-                bkg = np.mean(img[nonzero])
-                imgc = clean_bkg(img, bkg)
-                x = np.repeat(xp[region], imgc[region])
-                y = np.repeat(yp[region], imgc[region])
-                weights = np.repeat(1. / data.exposure[region], img[region])
-                print('Running PCA...')
-                x_c, y_c, sig_x, sig_y, r_cluster, ellangle, pos_err = get_bary(x, y, weight=weights, wdist=True)
-            print('Centroid position:', x_c + 1, y_c + 1)
-            self.cx = x_c
-            self.cy = y_c
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
-            world = data.wcs_inp.all_pix2world(pixcrd, 0)
-            self.cra = world[0][0]
-            self.cdec = world[0][1]
-            print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
-            print('Ellipse axis ratio and position angle:', sig_x / sig_y, ellangle)
-            self.ellangle = ellangle
-            self.ellratio = sig_x / sig_y
-        elif method == 'peak':
-
-            print('Determining X-ray peak')
-
-            smc = 5  # 5-pixel smoothing to get the peak
-
-            if data.filth is not None:
-
-                gsb = gaussian_filter(data.filth, smc)
-
-            else:
-
-                gsb = gaussian_filter(data.img, smc)
-
+            smc = 5 # 5-pixel smoothing to get the peak
+            gsb = gaussian_filter(img, smc)
             if data.exposure is None:
-
                 maxval = np.max(gsb)
-
                 ismax = np.where(gsb == maxval)
-
             else:
-
-                expo = np.copy(data.exposure)
-
+                expo = data.exposure
                 # smooth the image with a Gaussian of "smc" pixels and select only regions with more than 10% effective exposure
-                lowexp = np.where(expo  < 0.1 * np.max(expo))
-
-                expo[lowexp] = 0.
-
                 nonzero = np.where(expo > 0.1 * np.max(expo))
-
                 gexpo = gaussian_filter(expo, smc)
-
                 sm_sbmap = np.nan_to_num(gsb / gexpo)
-
                 maxval = np.max(sm_sbmap[nonzero])
-
                 ismax = np.where(sm_sbmap == maxval)
-
             yp, xp = np.indices(data.img.shape)
-
-            y_peak = yp[ismax]
-
-            x_peak = xp[ismax]
-
-            self.cy = np.mean(y_peak)
-
-            self.cx = np.mean(x_peak)
-
+            cdec = yp[ismax]
+            cra = xp[ismax]
+            self.cx = np.mean(cra)
+            self.cy = np.mean(cdec)
             self.ellangle = None
-
             self.ellratio = None
-
             print('Coordinates of surface-brightness peak:', self.cx + 1, self.cy + 1)
-
             pixcrd = np.array([[self.cx, self.cy]], np.float_)
-
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
-
             self.cra = world[0][0]
-
             self.cdec = world[0][1]
-
             print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
-            
         else:
             print('Unknown method', method)
             print('Available methods: "centroid", "peak", "custom_fk5", "custom_ima" ')
@@ -251,10 +158,16 @@ class Profile:
     def SBprofile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
         #######################################
         # Function to extract surface-brightness profiles
-        # Currently ellipse is not yet implemented
         ######################################
         data = self.data
+        if self.data.img is None:
+            print('Error: no image found in the input data structure')
+            return
         img = data.img
+        if self.data.rmsmap is None:
+            print('Error: no RMS map found in the input data structure')
+            return
+        rmsmap = data.rmsmap
         exposure = data.exposure
         bkg = data.bkg
         pixsize = data.pixsize
@@ -270,8 +183,8 @@ class Profile:
                 self.nbin = nbin
         else:
             nbin = self.nbin
-        profile, eprof, counts, area, effexp, bkgprof, bkgcounts = np.empty(self.nbin), np.empty(self.nbin), np.empty(
-                self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
+        profile, eprof, area, effexp, bkgprof = np.empty(self.nbin), np.empty(self.nbin), np.empty(
+                self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         if ellipse_angle is not None:
             self.ellangle = ellipse_angle
@@ -337,30 +250,24 @@ class Profile:
                 eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
             else:
                 if nv > 0:
-                    bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
-                    profile[i] = np.sum(img[id] / exposure[id]) / nv / pixsize ** 2 - bkgprof[i]
-                    eprof[i] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / pixsize ** 2
-                    counts[i] = np.sum(img[id])
-                    bkgcounts[i] = np.sum(bkg[id])
+                    bkgprof[i] = np.average(bkg[id]) / pixsize ** 2
+                    profile[i] = np.average(img[id], weights=1. / rmsmap[id] **2 )  / pixsize ** 2 - bkgprof[i]
+                    eprof[i] = np.sqrt(1. / np.sum(1. / rmsmap[id] ** 2 )) / pixsize ** 2
                     area[i] = nv * pixsize ** 2
                     effexp[i] = np.sum(exposure[id]) / nv
                 else:
                     bkgprof[i] = 0.
                     profile[i] = 0.
                     eprof[i] = 0.
-                    counts[i] = 0.
-                    bkgcounts[i] = 0.
                     area[i] = 0.
                     effexp[i] = 0.
         self.profile = profile
         self.eprof = eprof
 
         if not voronoi:
-            self.counts = counts
             self.area = area
             self.effexp = effexp
             self.bkgprof = bkgprof
-            self.bkgcounts = bkgcounts
 
     def MedianSB(self):
         # Function to compute median profile from Voronoi map
@@ -409,12 +316,10 @@ class Profile:
                 cols.append(fits.Column(name='WIDTH', format='E', unit='arcmin', array=self.ebins))
                 cols.append(fits.Column(name='SB', format='E', unit='cts s-1 arcmin-2', array=self.profile))
                 cols.append(fits.Column(name='ERR_SB', format='E', unit='cts s-1 arcmin-2', array=self.eprof))
-                if self.counts is not None:
-                    cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.counts))
+                if self.area is not None:
                     cols.append(fits.Column(name='AREA', format='E', unit='arcmin2', array=self.area))
                     cols.append(fits.Column(name='EFFEXP', format='E', unit='s', array=self.effexp))
                     cols.append(fits.Column(name='BKG', format='E', unit='cts s-1 arcmin-2', array=self.bkgprof))
-                    cols.append(fits.Column(name='BKGCOUNTS', format='E', unit='', array=self.bkgcounts))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='DATA')
                 hdr = tbhdu.header
@@ -426,7 +331,7 @@ class Profile:
                 hdr['DEC_C'] = self.cdec
                 hdr.comments['RA_C'] = 'Right ascension of center value'
                 hdr.comments['DEC_C'] = 'Declination of center value'
-                hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
+                hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2020)'
                 hdul.append(tbhdu)
             if model is not None:
                 cols = []

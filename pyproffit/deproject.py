@@ -582,6 +582,7 @@ def OP(deproj,nmc=1000):
     deproj.sb = bsm
     deproj.sb_lo = bsm - ev0
     deproj.sb_hi = bsm + ev0
+    deproj.rout = routam
 
     deproj.dens = medsmooth(np.sign(bsm)*np.sqrt(np.abs(bsm)))
     edens = 0.5/np.sqrt(np.abs(bsm))*ev0
@@ -1083,8 +1084,8 @@ class Deproject:
             ax2 = ax.twiny()
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
-            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             ax2.set_xlabel('Radius [arcmin]', fontsize=40, labelpad=20)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)

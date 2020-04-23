@@ -151,30 +151,9 @@ class Profile:
 
                 gsb = gaussian_filter(data.img, smc)
 
-            if data.exposure is None:
+            maxval = np.max(gsb)
 
-                maxval = np.max(gsb)
-
-                ismax = np.where(gsb == maxval)
-
-            else:
-
-                expo = np.copy(data.exposure)
-
-                # smooth the image with a Gaussian of "smc" pixels and select only regions with more than 10% effective exposure
-                lowexp = np.where(expo  < 0.1 * np.max(expo))
-
-                expo[lowexp] = 0.
-
-                nonzero = np.where(expo > 0.1 * np.max(expo))
-
-                gexpo = gaussian_filter(expo, smc)
-
-                sm_sbmap = np.nan_to_num(gsb / gexpo)
-
-                maxval = np.max(sm_sbmap[nonzero])
-
-                ismax = np.where(sm_sbmap == maxval)
+            ismax = np.where(gsb == maxval)
 
             yp, xp = np.indices(data.img.shape)
 
@@ -201,7 +180,7 @@ class Profile:
             self.cdec = world[0][1]
 
             print('Corresponding FK5 coordinates: ',self.cra,self.cdec)
-            
+
         else:
             print('Unknown method', method)
             print('Available methods: "centroid", "peak", "custom_fk5", "custom_ima" ')

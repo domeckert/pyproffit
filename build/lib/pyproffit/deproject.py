@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 import os
 from astropy.io import fits
+from astropy import units as u
 
 Mpc = 3.0856776e+24 #cm
 kpc = 3.0856776e+21 #cm
@@ -58,6 +59,32 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
 
 # Function to calculate a linear operator transforming parameter vector into predicted model counts
 
+def fbul19(R,z,Runit='kpc'):
+    if Runit == 'arcmin':
+        amin2kpc = cosmo.kpc_proper_per_arcmin(z).value
+        R=R*amin2kpc
+
+    rho_cz = cosmo.critical_density(z).to(u.Msun / u.kpc ** 3).value
+    efunc = np.asarray(cosmo.efunc(z))
+    M = 4. / 3. * np.pi * 500 * rho_cz * R ** 3
+
+    zpiv = 0.45
+    Mpiv = 6.35e14
+    efuncpiv = np.asarray(cosmo.efunc(zpiv))
+
+    A = 7.09
+    B = 1.26
+    C = 0
+    sigma = 0.10
+    gamma = 0.16
+    delta = 0.16
+    Bprime = B + delta * np.log((1 + z) / (1 + zpiv))
+
+    Mgas = 1e13 * A * (M / Mpiv) ** Bprime * (efunc / efuncpiv) ** (2 / 3) * ((1 + z) / (1 + zpiv)) ** gamma
+
+    return Mgas
+
+
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
     # Select values in the source region
     rfit=rad[sourcereg]
@@ -88,14 +115,14 @@ def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
 # Function to create the list of parameters for the basis functions
 nsh=4. # number of basis functions to set
 
-def list_params(rad,sourcereg,nrc=None,nbetas=6):
+def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     if nrc is None:
-        nrc = int(npfit/nsh)
+        nrc = np.max([int(npfit/nsh),1])
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)
     #allbetas=np.linspace(0.4,3.,6)
-    allbetas = np.linspace(0.6, 3., nbetas)
+    allbetas = np.linspace(min_beta, 3., nbetas)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -176,15 +203,15 @@ def calc_int_operator(a, b, pars):
     return Kint
 
 
-def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6):
+def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     if nrc is None:
-        nrc = int(npfit/nsh)
+        nrc = np.max([int(npfit/nsh),1])
     allrc=np.logspace(np.log10(rfit[2]),np.log10(rfit[npfit-1]/2.),nrc)*kpcp
     #allbetas=np.linspace(0.5,3.,6)
-    allbetas = np.linspace(0.6, 3., nbetas)
+    allbetas = np.linspace(min_beta, 3., nbetas)
     nrc=len(allrc)
     nbetas=len(allbetas)
     rc=allrc.repeat(nbetas)
@@ -219,7 +246,7 @@ def calc_density_operator(rad,sourcereg,pars,z):
     Ktot[:,npars]=0.0
     return Ktot
 
-def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -246,7 +273,8 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     nptfit = len(sb[sourcereg])
 
     # Set vector with list of parameters
-    pars = list_params(rad, sourcereg, nrc, nbetas)
+    pars = list_params(rad, sourcereg, nrc, nbetas, min_beta)
+
     npt = len(pars)
 
     if prof.psfmat is not None:
@@ -315,6 +343,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     if samplefile is not  None:
         np.savetxt(samplefile, samples)
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='stan')
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -332,7 +361,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -359,7 +388,8 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     nptfit = len(sb[sourcereg])
 
     # Set vector with list of parameters
-    pars = list_params(rad, sourcereg, nrc, nbetas)
+    pars = list_params(rad, sourcereg, nrc, nbetas, min_beta)
+
     npt = len(pars)
 
     if prof.psfmat is not None:
@@ -406,8 +436,9 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     sampc = trace.get_values('coefs')
     sampb = trace.get_values('bkg')
     samples = np.append(sampc, sampb, axis=1)
-    if samplefile is not  None:
+    if samplefile is not None:
         np.savetxt(samplefile, samples)
+        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='pymc3')
 
     # Compute output deconvolved brightness profile
     Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -551,6 +582,7 @@ def OP(deproj,nmc=1000):
     deproj.sb = bsm
     deproj.sb_lo = bsm - ev0
     deproj.sb_hi = bsm + ev0
+    deproj.rout = routam
 
     deproj.dens = medsmooth(np.sign(bsm)*np.sqrt(np.abs(bsm)))
     edens = 0.5/np.sqrt(np.abs(bsm))*ev0
@@ -581,6 +613,9 @@ class Deproject:
         self.mg = None
         self.mgl = None
         self.mgh = None
+        self.rec_counts=None
+        self.rec_counts_lo=None
+        self.rec_counts_hi=None
 
         # mu_e: mean molecular weight per electron in pristine fully ionized gas with given abundance table
         # mup: mean molecular weight per particle  in pristine fully ionized gas with given abundance table
@@ -607,26 +642,28 @@ class Deproject:
         self.mu_e=mu_e
 
 
-    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10):
+    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
         self.backend=backend
         self.nmcmc=nmcmc
         self.bkglim=bkglim
         self.back=back
         self.samplefile=samplefile
-        self.nrc=samplefile
+        self.nrc=nrc
         self.nbetas=nbetas
+        self.min_beta=min_beta
         self.depth=depth
         if backend=='pymc3':
-            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas)
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
         elif backend=='stan':
-            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth)
+            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth,min_beta=min_beta)
         else:
             print('Unknown method '+backend)
+
 
     def OnionPeeling(self,nmc=1000):
         OP(self,nmc)
 
-    def PlotDensity(self,outfile=None):
+    def PlotDensity(self,outfile=None,xscale='kpc'):
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -634,33 +671,48 @@ class Deproject:
         if self.dens is None:
             print('Error: No density profile extracted')
             return
+        if xscale not in ['arcmin','kpc','both']:
+            xscale='kpc'
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
         rkpc = self.rout * kpcp
-        erkpc = self.profile.ebins * kpcp
+        #erkpc = self.profile.ebins * kpcp
 
         plt.clf()
-        fig = plt.figure(figsize=(13, 10))
-        ax_size = [0.14, 0.14,
-                   0.83, 0.83]
-        ax = fig.add_axes(ax_size)
+        fig = plt.figure(figsize=(13, 10),tight_layout=True)
+        ax = fig.add_subplot(111)
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
         ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
-        plt.xlabel('Radius [kpc]', fontsize=40)
-        plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
-        plt.xscale('log')
-        plt.yscale('log')
+        ax.set_ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
 
-        if len(self.rout) == len(self.profile.bins):
-            plt.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2,
-                     markersize=7, capsize=3)
+        if xscale == 'kpc' or xscale == 'both':
+            ax.plot(rkpc, self.dens, color='C0', lw=2)
+            ax.fill_between(rkpc, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [kpc]', fontsize=40)
         else:
-            plt.plot(rkpc,self.dens,color='C0',lw=2)
-        plt.fill_between(rkpc,self.dens_lo,self.dens_hi,color='C0',alpha=0.3)
+            ax.plot(self.rout, self.dens, color='C0', lw=2)
+            ax.fill_between(self.rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [arcmin]', fontsize=40)
+
+        if xscale == 'both':
+            limx=ax.get_xlim()
+            ax2 = ax.twiny()
+            ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
+            ax2.set_xscale('log')
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            ax2.set_xlabel('Radius [arcmin]', fontsize=40,labelpad=20)
+            for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
+                item.set_fontsize(18)
+
+        #ax.errorbar(rkpc, self.dens, xerr=erkpc, yerr=[self.dens-self.dens_lo,self.dens_hi-self.dens], fmt='.', color='C0', elinewidth=2, markersize=7, capsize=3)
+
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()
@@ -677,7 +729,7 @@ class Deproject:
 
         if z is not None and cf is not None:
             transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-            pardens = list_params_density(rad, sourcereg, z)
+            pardens = list_params_density(rad, sourcereg, z, self.nrc, self.nbetas, self.min_beta)
             if rout is None:
                 sourcereg_out=sourcereg
                 rout=rad
@@ -734,7 +786,7 @@ class Deproject:
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
         sourcereg = np.where(prof.bins < self.bkglim)
-        pars = list_params(prof.bins, sourcereg)
+        pars = list_params(prof.bins, sourcereg, self.nrc, self.nbetas, self.min_beta)
         npt = len(pars)
         # Compute output deconvolved brightness profile
         if prof.psfmat is not None:
@@ -779,7 +831,8 @@ class Deproject:
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         ax_res.set_xlim(ax.get_xlim())
-        ax.set_ylim([0.1 * np.min(self.bkg), 1.5 * np.max(prof.counts / prof.area / prof.effexp)])
+        ii=np.where(self.sb > 0)
+        ax.set_ylim([0.8 * np.min(self.sb[ii]), 1.2 * np.max(self.sb)])
         ax_res.set_ylim([-vmin,vmin])
         if outfile is not None:
             plt.savefig(outfile)
@@ -802,7 +855,7 @@ class Deproject:
             a = prof.bins[0]/2.
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         Kint = calc_int_operator(a, b, pars)
         allint = np.dot(Kint, np.exp(self.samples.T))
         medint = np.median(allint[1, :] - allint[0, :])
@@ -849,12 +902,12 @@ class Deproject:
             psfmat = np.eye(prof.nbin)
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         K = calc_linear_operator(rad, sourcereg, pars, area, exposure, psfmat)
         npars = len(pars[:, 0])
         K[:,npars] = 0.
         allnc = np.dot(K, np.exp(self.samples.T))
-        self.rec_counts=np.median(allnc,axis=1)
+        self.rec_counts,self.rec_counts_lo,self.rec_counts_hi=np.percentile(allnc,[50.,50.-68.3/2.,50.+68.3/2.],axis=1)
         ncv = np.sum(allnc, axis=0)
         pnc = np.median(ncv)
         pncl = np.percentile(ncv, 50. - 68.3 / 2.)
@@ -899,7 +952,7 @@ class Deproject:
         sourcereg = np.where(rad < self.bkglim)
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-        pardens = list_params_density(rad, sourcereg, self.z)
+        pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
         Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
 
         # All gas density profiles
@@ -938,10 +991,13 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=None):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
+
+        if xscale not in ['arcmin','kpc','both']:
+            xscale='kpc'
 
 
         prof = self.profile
@@ -958,7 +1014,7 @@ class Deproject:
         sourcereg = np.where(rad < self.bkglim)
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-        pardens = list_params_density(rad, sourcereg, self.z)
+        pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
         if rout is None:
             sourcereg_out = sourcereg
             rout = rad
@@ -969,9 +1025,9 @@ class Deproject:
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
 
-        # Matrix containing integration volumes
-        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout),alldens.shape[1])
 
+        # Matrix containing integration volumes
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 
         # Compute Mgas profile as cumulative sum over the volume
         mgasdist = np.cumsum(alldens * nhconv * volmat, axis=0)
@@ -983,26 +1039,59 @@ class Deproject:
         self.mgl=mgl
         self.mgh=mgh
 
-        fig = plt.figure(figsize=(13, 10))
+
+        #now compute mtot from mgas-mtot scaling relation
+        rho_cz = cosmo.critical_density(self.z).to(u.Msun / u.kpc ** 3).value
+
+        Mgas = fbul19(rkpc,self.z,Runit='kpc')
+
+        Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
+
+        self.r500, self.r500_l, self.r500_h = np.percentile(rkpc[np.argmin(np.abs(Mgasdist / mgasdist - 1), axis=0)], [50., 50. - 68.3 / 2., 50. + 68.3 / 2.])
+
+        self.m500, self.m500_l, self.m500_h = 4. / 3. * np.pi * 500 * rho_cz * self.r500 ** 3, 4. / 3. * np.pi * 500 * rho_cz * self.r500_l ** 3, 4. / 3. * np.pi * 500 * rho_cz * self.r500_h ** 3
+
+        self.t500, self.t500_l, self.t500_h = self.r500/kpcp, self.r500_l/kpcp, self.r500_h/kpcp
+
+        fig = plt.figure(figsize=(13, 10),tight_layout=True)
         ax=fig.add_subplot(111)
 
-
-        ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
-        ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
+        if xscale == 'kpc' or xscale == 'both':
+            ax.plot(rkpc, mg, color='C0', lw=2, label='Gas mass')
+            ax.fill_between(rkpc, mgl, mgh, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [kpc]', fontsize=40)
+        else:
+            ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
+            ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
+            ax.set_xlabel('Radius [arcmin]', fontsize=40)
 
 
         ax.set_xscale('log')
         ax.set_yscale('log')
         ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=40)
-        ax.set_xlabel('Radius [arcmin]', fontsize=40)
+
 
         ax.legend(loc=0)
 
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
         ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
+
+        if xscale == 'both':
+            limx=ax.get_xlim()
+            ax2 = ax.twiny()
+            ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
+            ax2.set_xscale('log')
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+            ax2.set_xlabel('Radius [arcmin]', fontsize=40, labelpad=20)
+            for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
+                item.set_fontsize(18)
+
+
         if outfile is not None:
             plt.savefig(outfile)
             plt.close()
@@ -1013,7 +1102,16 @@ class Deproject:
     def Reload(self,samplefile,bkglim=None):
         # Reload the output of a previous PyMC3 run
         samples = np.loadtxt(samplefile)
+        pars=np.loadtxt(samplefile+'.par')
+        self.nrc=int(pars[0])
+        self.nbetas=int(pars[1])
+        self.min_beta=pars[2]
+        self.nmcmc=int(pars[3])
+        self.samplefile=samplefile
         self.samples = samples
+        f = open(samplefile+'.par', 'r')
+        header = f.readline()
+        self.backend=header[2:].split('\n')[0]
         if self.profile is None:
             print('Error: no profile provided')
             return
@@ -1026,15 +1124,14 @@ class Deproject:
         if bkglim is not None:
             self.bkglim = bkglim
         else:
-            if self.bkglim is None:
-                bkglim = np.max(rad + erad)
-                self.bkglim = bkglim
+            bkglim = np.max(rad + erad)
+            self.bkglim = bkglim
 
         # Set source region
         sourcereg = np.where(rad < bkglim)
 
         # Set vector with list of parameters
-        pars = list_params(rad, sourcereg)
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
         npt = len(pars)
         # Compute output deconvolved brightness profile
         Ksb = calc_sb_operator(rad, sourcereg, pars)
@@ -1059,7 +1156,7 @@ class Deproject:
         sourcereg = np.where(prof.bins < self.bkglim)
 
         # Set vector with list of parameters
-        pars = list_params(prof.bins, sourcereg)
+        pars = list_params(prof.bins, sourcereg, self.nrc, self.nbetas, self.min_beta)
         Kin = calc_int_operator(prof.bins[0]/2., rin/kpcp, pars)
         allvin = np.dot(Kin, np.exp(self.samples.T))
         Kout = calc_int_operator(prof.bins[0]/2., rout/kpcp, pars)
@@ -1140,17 +1237,19 @@ class Deproject:
                 cols.append(fits.Column(name='SB_MODEL', format='E', array=self.sb))
                 cols.append(fits.Column(name='SB_MODEL_L', format='E', array=self.sb_lo))
                 cols.append(fits.Column(name='SB_MODEL_H', format='E', array=self.sb_hi))
+                if self.rec_counts is not None:
+                    cols.append(fits.Column(name='COUNTS_MODEL', format='E', array=self.rec_counts))
+                    cols.append(fits.Column(name='COUNTS_MODEL_L', format='E', array=self.rec_counts_lo))
+                    cols.append(fits.Column(name='COUNTS_MODEL_H', format='E', array=self.rec_counts_hi))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='SB_MODEL')
                 hdr = tbhdu.header
                 hdr['BACKEND'] = self.backend
                 hdr['N_MCMC'] = self.nmcmc
                 hdr['BKGLIM'] = self.bkglim
-                hdr['BACK'] = self.back
                 hdr['SAMPLEFILE'] = self.samplefile
                 hdr['N_RC'] = self.nrc
                 hdr['N_BETAS'] = self.nbetas
-                hdr['DEPTH'] = self.depth
                 hdul.append(tbhdu)
             if self.dens is not None:
                 cols = []

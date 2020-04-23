@@ -30,7 +30,7 @@ def get_extnum(fitsfile):
 
 
 class Data:
-    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False):
+    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None):
         if imglink is None:
             print('Error: Image file not provided')
             return
@@ -73,6 +73,17 @@ class Data:
                 return
             self.bkg = bkg
             fbkg.close()
+        if rmsmap is not None:
+            frms = fits.open(rmsmap)
+            next = get_extnum(frms)
+            rms = frms[next].data.astype(float)
+            if rms.shape != self.axes:
+                print('Error: Image and RMS map sizes do not match')
+                return
+            self.rmsmap = rms
+            frms.close()
+        else:
+            self.rmsmap = None
         self.filth = None
 
     def region(self, regfile):

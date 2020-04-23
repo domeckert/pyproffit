@@ -582,6 +582,7 @@ def OP(deproj,nmc=1000):
     deproj.sb = bsm
     deproj.sb_lo = bsm - ev0
     deproj.sb_hi = bsm + ev0
+    deproj.rout = routam
 
     deproj.dens = medsmooth(np.sign(bsm)*np.sqrt(np.abs(bsm)))
     edens = 0.5/np.sqrt(np.abs(bsm))*ev0
@@ -1020,10 +1021,6 @@ class Deproject:
         else:
             sourcereg_out = np.where(rout < self.bkglim)
         Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
-        print(rout)
-        print(self.bkglim)
-        print(sourcereg_out)
-
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
@@ -1077,8 +1074,8 @@ class Deproject:
         ax.legend(loc=0)
 
         ax.minorticks_on()
-        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
 
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
@@ -1088,8 +1085,8 @@ class Deproject:
             ax2 = ax.twiny()
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
-            ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
-            ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+            ax2.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax2.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             ax2.set_xlabel('Radius [arcmin]', fontsize=40, labelpad=20)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)

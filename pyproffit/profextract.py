@@ -5,7 +5,8 @@ from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from scipy.optimize import brentq
-
+from .emissivity import *
+from astropy.cosmology import Planck15 as cosmo
 
 class Profile:
     ################################
@@ -18,9 +19,9 @@ class Profile:
                  binning='linear', centroid_region=None, bins=None):
         '''
 
-        :**param** data: the data module in pyproffit
+        :param data: the data module in pyproffit
 
-        :param center_choice: the center choosed by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
+        :param center_choice: the center chosen by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
 
         :param maxrad: the maximum radius (in arcmin) within which compute the surface brightness profile
 
@@ -314,6 +315,8 @@ class Profile:
                 errmap = data.errmap
                 profile[i] = np.average(img[id], weights=1. / errmap[id] ** 2)
                 eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
+                area[i] = nv * pixsize ** 2
+                effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
             else:
                 if nv > 0:
                     bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
@@ -333,11 +336,11 @@ class Profile:
                     effexp[i] = 0.
         self.profile = profile
         self.eprof = eprof
+        self.area = area
+        self.effexp = effexp
 
         if not voronoi:
             self.counts = counts
-            self.area = area
-            self.effexp = effexp
             self.bkgprof = bkgprof
             self.bkgcounts = bkgcounts
 
@@ -359,7 +362,7 @@ class Profile:
             self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
             self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
             self.nbin = nbin
-        profile, eprof = np.empty(self.nbin), np.empty(self.nbin)
+        profile, eprof, area, effexp = np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
         for i in range(self.nbin):
@@ -367,8 +370,12 @@ class Profile:
                 np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
                 errmap > 0.0))  # left-inclusive
             profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
+            area[i] = len(img[id]) * pixsize ** 2
+            effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
         self.profile = profile
         self.eprof = eprof
+        self.area = area
+        self.effexp = effexp
 
     def Save(self, outfile=None, model=None):
         #####################################################
@@ -630,3 +637,17 @@ class Profile:
         eval=val*np.log(10.)*fitter.minuit.errors['bkg']
         self.profile = self.profile - val
         self.eprof = np.sqrt(self.eprof**2 + eval**2)
+
+
+    def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr'):
+
+        self.ccf = calc_emissivity(cosmo=cosmo,
+                                        z=z,
+                                        nh=nh,
+                                        kt=kt,
+                                        rmf=rmf,
+                                        Z=Z,
+                                        elow=elow,
+                                        ehigh=ehigh,
+                                        arf=arf,
+                                        type=type)

@@ -223,7 +223,7 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
 
 # Linear operator to transform parameters into density
 
-def calc_density_operator(rad,sourcereg,pars,z):
+def calc_density_operator(rad,pars,z):
     # Select values in the source region
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     rfit=rad*kpcp

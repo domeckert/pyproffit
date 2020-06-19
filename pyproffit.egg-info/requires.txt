@@ -1,8 +1,8 @@
-numpy
-scipy
 astropy
-matplotlib
 iminuit
+matplotlib
+numpy
 pymc3
 pystan
+scipy
 stan_utility

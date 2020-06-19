@@ -18,9 +18,9 @@ class Profile:
                  binning='linear', centroid_region=None, bins=None):
         '''
 
-        :**param** data: the data module in pyproffit
+        :param data: the data module in pyproffit
 
-        :param center_choice: the center choosed by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
+        :param center_choice: the center chosen by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
 
         :param maxrad: the maximum radius (in arcmin) within which compute the surface brightness profile
 
@@ -314,6 +314,8 @@ class Profile:
                 errmap = data.errmap
                 profile[i] = np.average(img[id], weights=1. / errmap[id] ** 2)
                 eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
+                area[i] = nv * pixsize ** 2
+                effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
             else:
                 if nv > 0:
                     bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
@@ -333,11 +335,11 @@ class Profile:
                     effexp[i] = 0.
         self.profile = profile
         self.eprof = eprof
+        self.area = area
+        self.effexp = effexp
 
         if not voronoi:
             self.counts = counts
-            self.area = area
-            self.effexp = effexp
             self.bkgprof = bkgprof
             self.bkgcounts = bkgcounts
 
@@ -359,7 +361,7 @@ class Profile:
             self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
             self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
             self.nbin = nbin
-        profile, eprof = np.empty(self.nbin), np.empty(self.nbin)
+        profile, eprof, area, effexp = np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
         for i in range(self.nbin):
@@ -367,8 +369,12 @@ class Profile:
                 np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
                 errmap > 0.0))  # left-inclusive
             profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
+            area[i] = len(img[id]) * pixsize ** 2
+            effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
         self.profile = profile
         self.eprof = eprof
+        self.area = area
+        self.effexp = effexp
 
     def Save(self, outfile=None, model=None):
         #####################################################

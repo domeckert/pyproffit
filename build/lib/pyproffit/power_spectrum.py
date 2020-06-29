@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from astropy.io import fits
-from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck15 as cosmo
 from scipy.signal import convolve
 from scipy.special import gamma
 import matplotlib.pyplot as plt

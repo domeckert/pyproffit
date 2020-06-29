@@ -3,6 +3,7 @@ setup.py
 pyproffit/__init__.py
 pyproffit/data.py
 pyproffit/deproject.py
+pyproffit/emissivity.py
 pyproffit/fitting.py
 pyproffit/miscellaneous.py
 pyproffit/models.py

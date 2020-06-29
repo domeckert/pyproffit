@@ -735,7 +735,9 @@ class Deproject:
                 rout=rad
             else:
                 sourcereg_out=np.where(rout < self.bkglim)
-            Kdens = calc_density_operator(rout, sourcereg_out, pardens, z)
+
+            rd = rout[sourcereg_out]
+            Kdens = calc_density_operator(rd, pardens, z)
             alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T)) / cf * transf)  # [0:nptfit, :]
             covmat = np.cov(alldens)
             self.covmat = covmat

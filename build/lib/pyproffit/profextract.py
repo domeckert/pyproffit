@@ -5,7 +5,8 @@ from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from scipy.optimize import brentq
-
+from .emissivity import *
+from astropy.cosmology import Planck15 as cosmo
 
 class Profile:
     ################################
@@ -636,3 +637,17 @@ class Profile:
         eval=val*np.log(10.)*fitter.minuit.errors['bkg']
         self.profile = self.profile - val
         self.eprof = np.sqrt(self.eprof**2 + eval**2)
+
+
+    def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr'):
+
+        self.ccf = calc_emissivity(cosmo=cosmo,
+                                        z=z,
+                                        nh=nh,
+                                        kt=kt,
+                                        rmf=rmf,
+                                        Z=Z,
+                                        elow=elow,
+                                        ehigh=ehigh,
+                                        arf=arf,
+                                        type=type)

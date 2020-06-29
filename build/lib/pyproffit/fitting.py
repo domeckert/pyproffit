@@ -107,6 +107,8 @@ class Fitter:
             print('Unknown method ',method)
             return
         fmin, param=minuit.migrad()
+        print(fmin)
+        print(param)
         npar = len(minuit.values)
         outval = np.empty(npar)
         outerr = np.empty(npar)

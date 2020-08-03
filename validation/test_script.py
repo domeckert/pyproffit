@@ -44,8 +44,8 @@ if np.abs(prof_cen.cra - cra) < 2e-3 and np.abs(prof_cen.cdec - cdec) < 2e-3 :
 else:
     print('Centroid calculation test failed, difference RA=%g , difference DEC=%g'%(np.abs(prof_cen.cra - cra),np.abs(prof_cen.cdec - cdec)))
 
-peak_ra=55.714475887357544
-peak_dec=-53.628219760960754
+peak_ra=55.72147733144434
+peak_dec=-53.628226297404545
 prof_peak=pyproffit.Profile(dat,center_choice='peak',maxrad=50.,binsize=30.)
 if np.abs(prof_peak.cra - peak_ra) < 1e-3 and np.abs(prof_peak.cdec - peak_dec) < 1e-3 :
     print('SB peak test passed')
@@ -132,29 +132,25 @@ cf_a3158 = 44.489999
 z_a3158 = 0.0597
 depr = pyproffit.Deproject(z=z_a3158,cf=cf_a3158,profile=prof)
 
-# Stan test
-print('Running Stan reconstruction')
-depr.Multiscale(backend='stan',nmcmc=1000,bkglim=25.)
 
-dsb=fsb[2].data
-ref_rec=dsb['SB_MODEL']
-check_sb=np.nan_to_num(ref_rec/depr.sb)
-isz=np.where(ref_rec==0)
-check_sb[isz]=1.
-if np.any(np.abs(np.log(check_sb))>1e-2):
-    print('Possible issue with Stan reconstruction, check plots')
+# PyMC3 test
+
+print('Running PyMC3 reconstruction')
+depr.Multiscale(backend='pymc3',nmcmc=1000,bkglim=25.)
+
+dsb = fsb[2].data
+ref_rec = dsb['SB_MODEL']
+ref_pymc3=np.loadtxt('reference_pymc3.dat')
+isz = np.where(ref_rec == 0)
+
+check_pymc3_sb=np.nan_to_num(ref_pymc3[:,0]/depr.sb)
+check_pymc3_sb[isz]=1.0
+if np.any(np.abs(np.log(check_pymc3_sb))>1e-2):
+    print('Possible issue with PyMC3 reconstruction, check plots')
 else:
-    print('Stan reconstruction terminated successfully')
+    print('PyMC3 reconstruction terminated successfully')
 
-if os.path.exists('test_rec_stan.pdf'):
-    os.remove('test_rec_stan.pdf')
-depr.PlotSB(outfile='test_rec_stan.pdf')
-if os.path.exists('test_rec_stan.pdf'):
-    print('Stan reconstruction plotted in test_rec_stan.pdf')
-else:
-    print('Error with plot of Stan reconstruction')
-    sys.exit()
-
+depr.Density()
 
 # Density and Mgas test
 
@@ -201,22 +197,6 @@ if not os.path.exists('test_save_all.fits'):
 else:
     print('Reconstruction test passed, results written to file test_save_all.fits')
 
-# PyMC3 test
-
-depr_pymc3 = pyproffit.Deproject(z=z_a3158,cf=cf_a3158,profile=prof)
-
-print('Running PyMC3 reconstruction')
-depr_pymc3.Multiscale(backend='pymc3',nmcmc=1000,bkglim=25.)
-ref_pymc3=np.loadtxt('reference_pymc3.dat')
-check_pymc3_sb=np.nan_to_num(ref_pymc3[:,0]/depr_pymc3.sb)
-check_pymc3_sb[isz]=1.0
-if np.any(np.abs(np.log(check_pymc3_sb))>1e-2):
-    print('Possible issue with PyMC3 reconstruction, check plots')
-else:
-    print('PyMC3 reconstruction terminated successfully')
-
-depr_pymc3.Density()
-
 # Onion peeling test
 print('Running Onion Peeling test')
 deprop=pyproffit.Deproject(profile=prof2,cf=cf_a3158,z=z_a3158)
@@ -225,9 +205,51 @@ deprop.OnionPeeling()
 if os.path.exists('comp_rec.pdf'):
     os.remove('comp_rec.pdf')
 
-pyproffit.plot_multi_methods(deps=(depr,depr_pymc3,deprop),profs=(prof,prof,prof2),labels=('Stan','PyMC3','OP'),outfile='comp_rec.pdf')
-if os.path.exists('comp_rec.pdf'):
-    print('Onion peeling test passed. Comparison of reconstruction methods written in file comp_rec.pdf')
+# Stan test
+try:
+    import pystan
+
+except ImportError as e:
+    print('pystan package not found, skipping')  # module doesn't exist, deal with it.
+
+    pyproffit.plot_multi_methods(deps=(depr, deprop), profs=(prof, prof2),
+                                 labels=('PyMC3', 'OP'), outfile='comp_rec.pdf')
+    if os.path.exists('comp_rec.pdf'):
+        print('Onion peeling test passed. Comparison of reconstruction methods written in file comp_rec.pdf')
+    else:
+        print('Onion Peeling test failed')
+        sys.exit()
+
+    pass
+
 else:
-    print('Onion Peeling test failed')
-    sys.exit()
+    print('Running Stan reconstruction')
+    depr_stan = pyproffit.Deproject(z=z_a3158, cf=cf_a3158, profile=prof)
+
+    depr_stan.Multiscale(backend='stan', nmcmc=1000, bkglim=25.)
+
+    check_sb = np.nan_to_num(ref_rec / depr_stan.sb)
+    check_sb[isz] = 1.
+    if np.any(np.abs(np.log(check_sb)) > 1e-2):
+        print('Possible issue with Stan reconstruction, check plots')
+    else:
+        print('Stan reconstruction terminated successfully')
+
+    if os.path.exists('test_rec_stan.pdf'):
+        os.remove('test_rec_stan.pdf')
+    depr_stan.PlotSB(outfile='test_rec_stan.pdf')
+    if os.path.exists('test_rec_stan.pdf'):
+        print('Stan reconstruction plotted in test_rec_stan.pdf')
+    else:
+        print('Error with plot of Stan reconstruction')
+        sys.exit()
+
+    pyproffit.plot_multi_methods(deps=(depr, depr_stan, deprop), profs=(prof, prof, prof2),
+                                 labels=('PyMC3', 'Stan', 'OP'), outfile='comp_rec.pdf')
+    if os.path.exists('comp_rec.pdf'):
+        print('Onion peeling test passed. Comparison of reconstruction methods written in file comp_rec.pdf')
+    else:
+        print('Onion Peeling test failed')
+        sys.exit()
+
+

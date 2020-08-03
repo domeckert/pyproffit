@@ -425,9 +425,9 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     tinit = time.time()
     print('Running MCMC...')
     with basic_model:
-        #tm = pm.find_MAP()
-        #trace = pm.sample(nmcmc, start=tm)
-        trace = pm.sample(nmcmc)
+        tm = pm.find_MAP()
+        trace = pm.sample(nmcmc, start=tm)
+        #trace = pm.sample(nmcmc)
     print('Done.')
     tend = time.time()
     print(' Total computing time is: ', (tend - tinit) / 60., ' minutes')

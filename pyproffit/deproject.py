@@ -44,8 +44,9 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
 
         kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
 
-        rkpc = prof.bins * kpcp
-        erkpc = prof.ebins * kpcp
+        sourcereg = np.where(prof.bins < dep.bkglim)
+        rkpc = prof.bins[sourcereg] * kpcp
+        erkpc = prof.ebins[sourcereg] * kpcp
 
         plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt='.',
                      color='C%d' % i, elinewidth=2,
@@ -589,6 +590,8 @@ def OP(deproj,nmc=1000):
     deproj.dens_lo = deproj.dens - edens
     deproj.dens_hi = deproj.dens + edens
 
+    deproj.bkglim = np.max(routam)
+
 
 class Deproject:
     def __init__(self,z=None,profile=None,cf=None,f_abund='aspl'):
@@ -674,9 +677,13 @@ class Deproject:
         if xscale not in ['arcmin','kpc','both']:
             xscale='kpc'
 
+        sourcereg_out = np.where(self.rout < self.bkglim)
+
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
-        rkpc = self.rout * kpcp
+        rkpc = self.rout[sourcereg_out] * kpcp
+
+        rout = self.rout[sourcereg_out]
         #erkpc = self.profile.ebins * kpcp
 
         plt.clf()
@@ -696,8 +703,8 @@ class Deproject:
             ax.fill_between(rkpc, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
             ax.set_xlabel('Radius [kpc]', fontsize=40)
         else:
-            ax.plot(self.rout, self.dens, color='C0', lw=2)
-            ax.fill_between(self.rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
+            ax.plot(rout, self.dens, color='C0', lw=2)
+            ax.fill_between(rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
             ax.set_xlabel('Radius [arcmin]', fontsize=40)
 
         if xscale == 'both':
@@ -955,7 +962,7 @@ class Deproject:
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
         pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
-        Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
+        Kdens = calc_density_operator(rad, pardens, self.z)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
@@ -1022,7 +1029,8 @@ class Deproject:
             rout = rad
         else:
             sourcereg_out = np.where(rout < self.bkglim)
-        Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
+
+        Kdens = calc_density_operator(rout, pardens, self.z)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]

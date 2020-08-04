@@ -136,7 +136,7 @@ depr = pyproffit.Deproject(z=z_a3158,cf=cf_a3158,profile=prof)
 # PyMC3 test
 
 print('Running PyMC3 reconstruction')
-depr.Multiscale(backend='pymc3',nmcmc=1000,bkglim=25.)
+depr.Multiscale(backend='pymc3',nmcmc=100,bkglim=25.)
 
 dsb = fsb[2].data
 ref_rec = dsb['SB_MODEL']
@@ -162,8 +162,10 @@ if os.path.exists('test_mgas.pdf'):
 depr.PlotDensity(outfile='test_density.pdf')
 depr.PlotMgas(outfile='test_mgas.pdf')
 
+sourcereg = np.where(prof.bins < depr.bkglim)
+
 dnh=fsb[3].data
-check_dens=dnh['DENSITY']/depr.dens
+check_dens=dnh['DENSITY'][sourcereg]/depr.dens
 check_mgas=dnh['MGAS']/depr.mg
 nonz=np.where(depr.sb>0.)
 if np.any(np.log(check_dens[nonz])>1e-2):

@@ -11,8 +11,8 @@ def is_tool(name):
 def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr'):
     """
 
-    Function calc_emissivity, computes scaling factor between count rate and APEC/MEKAL norm using XSPEC.
-    Requires that XSPEC be in path
+    Function calc_emissivity. The function computes the scaling factor between count rate and APEC/MEKAL norm using XSPEC, which is needed to extract density profiles.
+    Requires XSPEC to be in PATH
 
     :param cosmo: Astropy cosmology object
     :type cosmo: class: astropy.cosmology
@@ -33,7 +33,7 @@ def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None,
     :param arf: Path to on-axis ARF (optional, in case response file is RMF)
     :type arf: str
     :param type: Specify whether the exposure map is in units of sec (type='cr') or photon flux (type='photon'). By default type='cr'.
-    :type str
+    :type type: str
     :return: Conversion factor
     :rtype: float
     """

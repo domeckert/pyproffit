@@ -25,7 +25,7 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     :param deps: List of Deproject objects to be plotted
     :type deps: tuple
     :param labels: List of labels for the legend (default=None)
-    :type tuple
+    :type labels: tuple
     :param outfile: If outfile is not None, path to file name to output the plot
     :type outfile: str
     :return: matplotlib figure object
@@ -810,23 +810,23 @@ def OP(deproj,nmc=1000):
     deproj.bkglim = np.max(routam)
 
 
-class Deproject:
+class Deproject(object):
     """
     pyproffit.Deproject class to perform all calculations of deprojection, density profile, gas mass, count rate, and luminosity
-    """
+
+    :param z: Source redshift. If z=None, only the surface brightness reconstruction can be done.
+    :type z: float
+    :param profile: Surface brightness profile data
+    :type profile: class:`pyproffit.Profile`
+    :param cf: Conversion factor from count rate to emissivity. If cf=None, only the surface brightness reconstruction can be done.
+    :type cf: float
+    :param f_abund: Solar abundance table to compute the electron-to-proton ratio and mean molecular weight. Available tables are 'aspl' (Aspling+09, default), 'angr' (Anders & Grevesse 89), and 'grsa' (Grevesse & Sauval 98)
+    :type f_abund: str
+     """
     def __init__(self,z=None,profile=None,cf=None,f_abund='aspl'):
         """
         Constructor for class pyproffit.Deproject
-
-        :param z: Source redshift. If z=None, only the surface brightness reconstruction can be done.
-        :type z: float
-        :param profile: Surface brightness profile data
-        :type profile: pyproffit.Profile
-        :param cf: Conversion factor from count rate to emissivity. If cf=None, only the surface brightness reconstruction can be done.
-        :type cf: float
-        :param f_abund: Solar abundance table to compute the electron-to-proton ratio and mean molecular weight. Available tables are 'aspl' (Aspling+09, default), 'angr' (Anders & Grevesse 89), and 'grsa' (Grevesse & Sauval 98)
-        :type f_abund: str
-        """
+       """
         self.profile = profile
         self.z = z
         self.samples = None
@@ -1561,7 +1561,7 @@ class Deproject:
         First extension is data
         Second extension is density
         Third extension is Mgas
-        Forth extension is PSF
+        Fourth extension is PSF
 
         :param outfile: Output file name
         :type outfile: str

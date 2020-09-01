@@ -8,36 +8,43 @@ from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import Planck15 as cosmo
 
-class Profile:
-    ################################
-    # Class defining brightness profiles
-    # method=1: compute centroid and ellipse parameters
-    # method=2: find X-ray peak
-    # method=3/4: user-given center in image (3) of FK5 (4) coordinates
-    ################################
+class Profile(object):
+    """
+    pyproffit.Profile class. The class allows the user to extract surface brightness profiles and use them to fit models, extract density profiles, etc.
+
+    :param data: Class containing the data to be used
+    :type data: class: pyproffit.Data
+    :param center_choice: Choice of the center of the surface brightness profile. Available options are "centroid", "peak", "custom_ima" and "custom_fk5".
+        Args:
+            - 'centroid': Compute image centroid and ellipticity. This is done by performing principle component analysis on the count image. If a dmfilth image exists, it will be used instead of the original count image.
+            - 'peak': Compute the surface brightness peak, The peak is computed as the maximum of the count image after a light smoothing. If a dmfilth image exists, it will be used instead of the original count image.
+            - 'custom_fk5': Use any custom center in FK5 coordinates, provided by the "center_ra" and "center_dec" arguments
+            - 'custom_ima': Similar to 'custom_fk5' but with input coordinates in image pixels
+    :type center_choice: str
+    :param maxrad: The maximum radius (in arcmin) out to which the surface brightness profile will be computed
+    :type maxrad: float
+    :param binsize: Minumum bin size (in arcsec).
+    :type binsize: float
+    :param center_ra: User defined center R.A. If center_choice='custom_fk5' this is the right ascension in degrees. If center_choice='custom_ima' this is the image pixel on the X axis. If center_choice='peak' or 'centroid' this is not used.
+    :type center_ra: float
+    :param center_dec: User defined center declination. If center_choice='custom_fk5' this is the declination in degrees. If center_choice='custom_ima' this is the image pixel on the Y axis. If center_choice='peak' or 'centroid' this is not used.
+    :type center_dec: float
+    :param binning: Binning type. Available types are 'linear', 'log' or 'custom'. Defaults to 'linear'.
+        Args:
+            - 'linear': Use a linear radial binning with bin size equal to 'binsize'
+            - 'log': Use logarithmic binning, i.e. bin size increasing logarithmically with radius with a minimum bin size given by 'binsize'
+            - 'custom': Any user-defined binning in the form of an input numpy array provided through the 'bins' option
+    :type binning: str
+    :param centroid_region: If center_choice='centroid', this option defines the radius of the region (in arcmin), centered on the center of the image, within which the centroid will be calculated. If centroid_region=None the entire image is used. Defaults to None.
+    :type centroid_region: float
+    :param bins: in case binning is set to 'custom', a numpy array containing the binning definition. For an input array of length N, the binning will contain N-1 bins with boundaries set as the values of the input array.
+    :type bins: class: numpy.ndarray
+    """
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
                  binning='linear', centroid_region=None, bins=None):
-        '''
-
-        :param data: the data module in pyproffit
-
-        :param center_choice: the center chosen by the user: "centroid", "peak", "custom_ima" and "custom_fk5"
-
-        :param maxrad: the maximum radius (in arcmin) within which compute the surface brightness profile
-
-        :param binsize: the minumum size of the bin (in arcsec)
-
-        :param center_ra: user defined center, to be consistent with center_choice
-
-        :param center_dec:user defined center, to be consistent with center_choice
-
-        :param binning: 'linear', 'log' or 'custom'
-
-        :param centroid_region: option to define region within which calculate the centroid
-
-        :param bins: in case binning is set to 'custom', a numpy array containing the binning definition
-
-        '''
+        """
+        Constructor of class Profile
+        """
         if data is None:
             print('No data given')
             return
@@ -229,10 +236,21 @@ class Profile:
             self.islogbin = False
 
     def SBprofile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
-        #######################################
-        # Function to extract surface-brightness profiles
-        # Currently ellipse is not yet implemented
-        ######################################
+        """
+        Extract a surface brightness profile and store the results in the input Profile object
+
+        :param ellipse_ratio: Ratio a/b of major to minor axis in the case of an elliptical annulus definition. Defaults to 1.0, i.e. circular annuli.
+        :type ellipse_ratio: float
+        :param ellipse_angle: Position angle of the elliptical annulus respective to the R.A. axis. Defaults 0.
+        :type ellipse_angle: float
+        :param angle_low: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, lower position angle of the sector respective to the R.A. axis. Defaults to 0
+        :type angle_low: float
+        :param angle_high: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, upper position angle of the sector respective to the R.A. axis. Defaults to 360
+        :type angle_high: float
+        :param voronoi: Set whether the input data is a Voronoi binned image (True) or a standard raw count image (False). Defaults to False.
+        :type voronoi: bool
+        :return: None
+        """
         data = self.data
         img = data.img
         exposure = data.exposure
@@ -345,7 +363,11 @@ class Profile:
             self.bkgcounts = bkgcounts
 
     def MedianSB(self):
-        # Function to compute median profile from Voronoi map
+        """
+        Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
+
+        :return: None
+        """
         data = self.data
         img = data.img
         errmap = data.errmap
@@ -378,12 +400,15 @@ class Profile:
         self.effexp = effexp
 
     def Save(self, outfile=None, model=None):
-        #####################################################
-        # Function to save profile into FITS file
-        # First extension is data
-        # Second extension is model
-        # Third extension is PSF
-        #####################################################
+        """
+        Save the data loaded in the Profile class into an output FITS file.
+
+        :param outfile: Output file name
+        :type outfile: str
+        :param model: If model is not None, Model object including the fitted model. Defaults to None
+        :type model: class: pyproffit.Model
+        :return: None
+        """
         if outfile is None:
             print('No output file name given')
             return
@@ -431,10 +456,24 @@ class Profile:
             hdul.writeto(outfile, overwrite=True)
 
     def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None):
+        """
+        Function to calculate a PSF convolution matrix given an input PSF image or function.
+        To compute the PSF mixing matrix, images of each annuli are convolved with the PSF image using FFT and determine the fraction of photons leaking into neighbouring annuli. FFT-convolved images are then used to determine a mixing matrix. See Eckert et al. 2020 for more details.
+
+        :param psffunc: Function describing the radial shape of the PSF, with the radius in arcmin
+        :type psffunc: function
+        :param psffile: Path to file containing an image of the PSF. The pixel size must be equal to the pixel size of the image.
+        :type psffile: str
+        :param psfimage: Array containing an image of the PSF. The pixel size must be equal to the pixel size of the image.
+        :type psfimage: class: numpy.ndarray
+        :param psfpixsize: (currently inactive) Pixel size of the PSF image in arcsec. Currently not implemented.
+        :type psfpixsize: float
+        :param sourcemodel: Surface brightness model to account for surface brightness gradients across the bins. If sourcemodel=None a flat distribution is assumed across each bin. Defaults to None
+        :type sourcemodel: class: pyproffit.Model
+        :return: None
+        """
         #####################################################
-        # Function to calculate a PSF convolution matrix given an input PSF image or function
-        # Images of each annuli are convolved with the PSF image using FFT
-        # FFT-convolved images are then used to determine PSF mixing
+        #
         #####################################################
         if psffile is None and psfimage is None and psffunc is None:
             print('No PSF image given')
@@ -520,7 +559,17 @@ class Profile:
             self.psfmat = psfout
 
     def SaveModelImage(self, model, outfile, vignetting=True):
-        # Save model image to output FITS file
+        """
+        Compute a model image and output it to a FITS file
+
+        :param model: Surface brightness model
+        :type model: class: pyproffit.Model
+        :param outfile: Name of output file
+        :type outfile: str
+        :param vignetting: Choose whether the model will be convolved with the vignetting model (i.e. multiplied by the exposure map) or if the actual surface brightness will be extracted (False). Defaults to True
+        :type vignetting: bool
+        :return: None
+        """
         head = self.data.header
         pixsize = self.data.pixsize
         y, x = np.indices(self.data.axes)
@@ -549,6 +598,17 @@ class Profile:
         hdu.writeto(outfile, overwrite=True)
 
     def Plot(self,model=None,outfile=None,axes=None):
+        """
+        Plot the loaded surface brightness profile
+
+        :param model: If model is not None, plot the provided model together with the data. Defaults to None
+        :type model: class: pyproffit.Model
+        :param outfile: If outfile is not None, name of output file to save the plot. Defaults to None
+        :type outfile: str
+        :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
+        :type axes: list
+        :return: None
+        """
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -627,6 +687,13 @@ class Profile:
             plt.show()
 
     def Backsub(self,fitter):
+        """
+        Subtract a fitted background value from the loaded surface brightness profile. Each pyproffit model contains a 'bkg' parameter, which will be fitted and loaded in a Fitter object. The routine reads the value of 'bkg', subtracts it from the data, and adds its error in quadrature to the error profile.
+
+        :param fitter: Fitter object containing a model and optimization results
+        :type fitter: class: pyproffit.Fitter
+        :return: None
+        """
         if fitter.minuit is None:
             print('Error: no adequate fit found')
             return
@@ -640,7 +707,30 @@ class Profile:
 
 
     def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr'):
+        """
+        Use XSPEC to compute the conversion from count rate to emissivity using the pyproffit.calc_emissivity routine (see its description)
 
+        :param z: Source redshift
+        :type z: float
+        :param nh: Source NH in units of 1e22 cm**(-2)
+        :type nh: float
+        :param kt: Source temperature in keV. Default to 6.0
+        :type kt: float
+        :param rmf: Path to response file (RMF/RSP)
+        :type rmf: str
+        :param Z: Metallicity with respect to solar. Defaults to 0.3
+        :type Z: float
+        :param elow: Low-energy bound of the input image in keV. Defaults to 0.5
+        :type elow: float
+        :param ehigh: High-energy bound of the input image in keV. Defaults to 2.0
+        :type ehigh: float
+        :param arf: Path to on-axis ARF (optional, in case response file type is RMF)
+        :type arf: str
+        :param type: Specify whether the exposure map is in units of sec (type='cr') or photon flux (type='photon'). Defaults to 'cr'
+        :type type: str
+        :return: Conversion factor
+        :rtype: float
+        """
         self.ccf = calc_emissivity(cosmo=cosmo,
                                         z=z,
                                         nh=nh,
@@ -651,3 +741,5 @@ class Profile:
                                         ehigh=ehigh,
                                         arf=arf,
                                         type=type)
+
+        return self.ccf

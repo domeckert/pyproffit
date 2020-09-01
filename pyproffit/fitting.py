@@ -3,9 +3,34 @@ import iminuit
 
 # Generic class to fit data with chi-square
 class ChiSquared:
-    def __init__(self, model, x , y, dy, psfmat=None, fitlow=None, fithigh=None):
+    """
+    Class defining chi-square likelihood. This class is called by the Fitter object when using the method='chi2' option.
+
+    :param model: Model definition. A class:pyproffit.Model object defining the model to be used.
+    :type model: class:pyproffit.Model
+    :param x: x axis data
+    :type x: class:numpy.ndarray
+    :param dx: x bin size data. dx is defined as half of the total bin size.
+    :type dx: class:numpy.ndarray
+    :param y: y axis data
+    :type y: class:numpy.ndarray
+    :param dy: y error data
+    :type dy: class:numpy.ndarray
+    :param psfmat: PSF convolution matrix
+    :type psfmat: class:numpy.ndarray , optional
+    :param fitlow: Lower fitting boundary in arcmin. If fitlow=None the entire radial range is used, default to None
+    :type fitlow: float , optional
+    :param fithigh: Upper fitting boundary in arcmin. If fithigh=None the entire radial range is used, default to None
+    :type fithigh: float , optional
+    """
+    def __init__(self, model, x , dx, y, dy, psfmat=None, fitlow=None, fithigh=None):
+        """
+        Constructor of class ChiSquared
+
+        """
         self.model = model  # model predicts y for given x
         self.x = x
+        self.dx = dx
         self.y = y
         self.dy = dy
         fitl = 0.
@@ -23,9 +48,23 @@ class ChiSquared:
         self.func_code = iminuit.util.make_func_code(iminuit.util.describe(self.model)[1:])
 
     def __call__(self, *par):  # par are a variable number of model parameters
+        """
+        Caller of class ChiSquared
+
+        :param par: Parameter set to be passed to the model
+        :return: chi-squared value
+        :rtype: float
+        """
         ym = self.model(self.x, *par)
         if self.psfmat is not None:
-            ym = np.dot(self.psfmat,ym)
+            rminus = self.x - self.dx
+
+            rplus = self.x + self.dx
+
+            area = np.pi * (rplus ** 2 - rminus ** 2)
+
+            ym = np.dot(self.psfmat,ym * area) / area
+
         reg = self.region
         nonz = self.nonz
         chi2 = np.sum((self.y[reg][nonz] - ym[reg][nonz])**2/self.dy[reg][nonz]**2)
@@ -33,7 +72,33 @@ class ChiSquared:
 
 # Generic class to fit data with C-stat
 class Cstat:
+    """
+    Class defining C-stat likelihood. This class is called by the Fitter object when using the method='cstat' option.
+
+    :param model: Model definition
+    :type model: pyproffit.Model
+    :param x: x axis data
+    :type x: numpy.ndarray
+    :param counts: counts per bin data
+    :type counts: numpy.ndarray
+    :param area: bin are in arcmin^2
+    :type area: numpy.ndarray
+    :param effexp: bin effective exposure in s
+    :type effexp: numpy.ndarray
+    :param bkgc: number of background counts per bin
+    :type bkgc: numpy.ndarray
+    :param psfmat: PSF convolution matrix
+    :type psfmat: numpy.ndarray
+    :param fitlow: Lower fitting boundary in arcmin. If fitlow=None (default) the entire radial range is used
+    :type fitlow: float
+    :param fithigh: Upper fitting boundary in arcmin. If fithigh=None (default) the entire radial range is used
+    :type fithigh: float
+    """
     def __init__(self, model, x, counts, area, effexp, bkgc, psfmat=None, fitlow=None, fithigh=None):
+        """
+        Constructor of class Cstat
+
+        """
         self.model = model  # model predicts y for given x
         self.x = x
         self.c = counts
@@ -56,6 +121,13 @@ class Cstat:
         self.func_code = iminuit.util.make_func_code(iminuit.util.describe(self.model)[1:])
 
     def __call__(self, *par):
+        """
+        Caller for class Cstat
+
+        :param par: Parameter set to be passed to the model
+        :return: C-stat value
+        :rtype: float
+        """
         ym = self.model(self.x, *par)
         modcounts = ym*self.area*self.effexp
         if self.psfmat is not None:
@@ -71,7 +143,18 @@ class Cstat:
 
 # Class including fitting tool
 class Fitter:
+    """
+    Class containing the tools to fit surface brightness profiles with a model. Sets up the likelihood and optimizes for the parameters.
+
+    :param model: Surface brightness model definition
+    :type model: class: pyproffit.Model
+    :param profile: Surface brightness profile to be fitted
+    :type profile: class: pyproffit.Profile
+    """
     def __init__(self, model, profile):
+        """
+        Constructor of class Fitter
+        """
         self.mod=model
         self.profile=profile
         self.mlike=None
@@ -81,6 +164,19 @@ class Fitter:
         self.out=None
 
     def Migrad(self, method='chi2', fitlow=None, fithigh=None, **kwargs):
+        """
+        Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.
+
+        :param method: Likelihood function to be optimized. Available likelihoods are 'chi2' (chi-squared) and 'cstat' (C statistic). Defaults to 'chi2'.
+        :type method: str
+        :param fitlow: Lower boundary of the active fitting radial range. If fitlow=None the entire range is used. Defaults to None
+        :type fitlow: float
+        :param fithigh: Upper boundary of the active fitting radial range. If fithigh=None the entire range is used. Defaults to None
+        :type fithigh: float
+        :param kwargs: List of arguments to be passed to the iminuit library. For instance, setting parameter boundaries, optimization options or fixing parameters.
+            See the iminuit documentation: https://iminuit.readthedocs.io/en/stable/index.html
+        :return: None
+        """
         prof=self.profile
         if prof.profile is None:
             print('Error: No valid profile exists in provided object')
@@ -92,7 +188,7 @@ class Fitter:
             psfmat = None
         if method=='chi2':
              # Define the fitting algorithm
-            chi2=ChiSquared(model,prof.bins,prof.profile,prof.eprof,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
+            chi2=ChiSquared(model,prof.bins,prof.ebins,prof.profile,prof.eprof,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
             # Construct iminuit object
             minuit=iminuit.Minuit(chi2,**kwargs)
         elif method=='cstat':

@@ -5,14 +5,14 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.interpolate import griddata
 
 def get_extnum(fitsfile):
-    '''
+    """
     Find the extension number of the first IMAGE extension in an input FITS file
 
     :param fitsfile: Input FITS file to be read
     :type fitsfile: str
     :return: extension number
-    :rtype int
-    '''
+    :rtype: int
+    """
     next = 0
     if fitsfile[0].header['NAXIS'] == 2:
         return 0
@@ -37,21 +37,24 @@ def get_extnum(fitsfile):
         return next
 
 
-class Data:
+class Data(object):
+    '''Class containing the data to be loaded and used by other pyproffit routines
+
+    :param imglink: Path to input image
+    :type imglink: str
+    :param explink: Path to exposure map. If none, assume a flat exposure of 1s or an input error map provided through rmsmap
+    :type explink: str
+    :param bkglink: Path to background map. If none, assume zero background
+    :type bkglink: str
+    :param voronoi: Define whether the input image is a Voronoi image or not (default=False)
+    :type voronoi: bool
+    :param rmsmap: Path to error map if the data is not Poisson distributed
+    :type rmsmap: str
+    '''
     def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None):
         '''
         Constructor of class Data
 
-        :param imglink: Path to input image
-        :type imglink: str
-        :param explink: Path to exposure map. If none, assume a flat exposure of 1s or an input error map provided through rmsmap
-        :type explink: str
-        :param bkglink: Path to background map. If none, assume zero background
-        :type bkglink: str
-        :param voronoi: Define whether the input image is a Voronoi image or not (default=False)
-        :type voronoi: bool
-        :param rmsmap: Path to error map if the data is not Poisson distributed
-        :type rmsmap: str
         '''
         if imglink is None:
             print('Error: Image file not provided')
@@ -220,7 +223,7 @@ class Data:
 
     def dmfilth(self,outfile=None):
         '''
-        Mask the regions provided in a region file and fill in the holes by interpolating the smoothed image into the gaps
+        Mask the regions provided in a region file and fill in the holes by interpolating the smoothed image into the gaps and generating a Poisson realization
 
         :param outfile: If outfile is not None, file name to output the dmfilth image into a FITS file
         :type outfile: str

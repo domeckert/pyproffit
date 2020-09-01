@@ -3,6 +3,16 @@ from scipy.spatial.distance import  cdist
 from scipy.stats import poisson
 
 def logbinning(binsize,maxrad):
+    """
+    Set up a logarithmic binning scheme with a minimum bin size
+
+    :param binsize: Minimum bin size in arcsec
+    :type binsize: float
+    :param maxrad: Maximum extraction radius in arcmin
+    :type maxrad: float
+    :return: Bins and bin width
+    :rtype: class: numpy.ndarray
+    """
     nbin=int(maxrad/binsize*60.+0.5)
     bins=np.arange(binsize/60./2.,(nbin+1.5)*binsize/60.,binsize/60.)
     ebins=np.ones(nbin)*binsize/60./2.
@@ -40,6 +50,18 @@ def logbinning(binsize,maxrad):
     return bn,ebn
 
 def medianval(vals,errs,nsim):
+    """
+    Compute the median value of a sample of values and compute its uncertainty using Monte Carlo simulations
+
+    :param vals: Array containing the set of values in the sample
+    :type vals: class: numpy.ndarray
+    :param errs: Array contatining the error on each value
+    :type errs: class: numpy.ndarray
+    :param nsim: Number of Monte Carlo simulations to be performed
+    :type nsim: int
+    :return: Median value and error
+    :rtype: float x2
+    """
     allmeds=np.empty(nsim)
     npt=len(vals)
 #    erep=np.repeat(errs,nsim).reshape(npt,nsim)
@@ -53,9 +75,19 @@ def medianval(vals,errs,nsim):
 
 def dist_eval(coords2d,index=None,x_c=None,y_c=None,metric='euclidean',selected=None):
     """
+
+    :param coords2d: 2d numpy array with shape(N,2), N is the number of points
+    :param index:
+    :param x_c:
+    :param y_c:
+    :param metric:
+    :param selected:
+    :return:
+    """
+    """
         Parameters
         ----------
-        coords2d : 2d numpy array with shape(N,2), N is the number of points,
+        coords2d : 
         
         
         Returns

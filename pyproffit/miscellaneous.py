@@ -11,7 +11,7 @@ def logbinning(binsize,maxrad):
     :param maxrad: Maximum extraction radius in arcmin
     :type maxrad: float
     :return: Bins and bin width
-    :rtype: class: numpy.ndarray
+    :rtype: class:`numpy.ndarray`
     """
     nbin=int(maxrad/binsize*60.+0.5)
     bins=np.arange(binsize/60./2.,(nbin+1.5)*binsize/60.,binsize/60.)
@@ -54,13 +54,14 @@ def medianval(vals,errs,nsim):
     Compute the median value of a sample of values and compute its uncertainty using Monte Carlo simulations
 
     :param vals: Array containing the set of values in the sample
-    :type vals: class: numpy.ndarray
+    :type vals: class:`numpy.ndarray`
     :param errs: Array contatining the error on each value
-    :type errs: class: numpy.ndarray
+    :type errs: class:`numpy.ndarray`
     :param nsim: Number of Monte Carlo simulations to be performed
     :type nsim: int
-    :return: Median value and error
-    :rtype: float x2
+    :return:
+            - med (float): Median of sample
+            - err (float): Error on median
     """
     allmeds=np.empty(nsim)
     npt=len(vals)
@@ -75,26 +76,24 @@ def medianval(vals,errs,nsim):
 
 def dist_eval(coords2d,index=None,x_c=None,y_c=None,metric='euclidean',selected=None):
     """
+    Computed distance of a set of points to a centroid
 
-    :param coords2d: 2d numpy array with shape(N,2), N is the number of points
-    :param index:
-    :param x_c:
-    :param y_c:
-    :param metric:
-    :param selected:
-    :return:
+    :param coords2d: 2D array with shape (N,2), N is the number of points
+    :type coords2d: class:`numpy.ndarray`
+    :param index: index defining input value for the centroid
+    :type index: class:`numpy.ndarray`
+    :param x_c: input centroid X axis coordinate
+    :type x_c: float
+    :param y_c: input centroid Y axis coordinate
+    :type y_c: float
+    :param metric: metric system (defaults to 'euclidean')
+    :type metric: str , optional
+    :param selected: index defining a selected subset of points to be used
+    :type selected: class:`numpy.ndarray` , optional
+    :return: distance
+    :rtype: class:`numpy.ndarray`
     """
-    """
-        Parameters
-        ----------
-        coords2d : 
-        
-        
-        Returns
-        -------
-        d : array of distances with shape (N)
-        """
-    
+
     if index is None and x_c is  None and  y_c is  None:
         raise RuntimeError("you must provide either index or x_c,y_c")
     
@@ -116,6 +115,30 @@ def dist_eval(coords2d,index=None,x_c=None,y_c=None,metric='euclidean',selected=
     return d
 
 def get_bary(x,y,x_c=None,y_c=None,weight=None, wdist=False):
+    """
+    Compute centroid position and ellipse parameters from a set of points using principle component analysis
+
+    :param x: Array of positions on the X axis
+    :type x: class:`numpy.ndarray`
+    :param y: Array of positions on the Y axis
+    :type y: class:`numpy.ndarray`
+    :param x_c: Initial guess for the centroid X axis value
+    :type x_c: float , optional
+    :param y_c: Initial guess for the centroid X axis value
+    :type y_c: float , optional
+    :param weight: Weights to be applied to the points when computing the average
+    :type weight: class:`numpy.ndarray` , optional
+    :param wdist: Switch to apply the weights. Defaults to False
+    :type wdist: bool
+    :return:
+            - x_c_w (float): Centroid X coordinate
+            - y_c_w (float): Centroid Y coordinate
+            - sig_x (float): X axis standard deviation
+            - sig_y (float): Y axis standard deviation
+            - r_cluster (float): characteristic size of cluster
+            - semi_major_angle (float): rotation angle of ellipse
+            - pos_err (float): positional error on the centroid
+    """
     xy=np.column_stack((x,y))
     _w_tot=None
     if weight is None:
@@ -167,6 +190,14 @@ def get_bary(x,y,x_c=None,y_c=None,weight=None, wdist=False):
     return x_c_w,y_c_w,sig_x,sig_y,r_cluster,semi_major_angle,pos_err
 
 def heaviside(x):
+    """
+    Heavyside theta function
+
+    :param x: 2D array
+    :type x: class:`numpy.ndarray`
+    :return: filter
+    :rtype: class:`numpy.ndarray`
+    """
     nsmooth = 10
     a = x.reshape((nsmooth,nsmooth))
     weights = np.ones([nsmooth,nsmooth])
@@ -177,6 +208,16 @@ def heaviside(x):
 from scipy.ndimage.filters import gaussian_filter
 
 def bkg_smooth(data,smoothing_scale=25):
+    """
+    Smooth an input background image using a broad Gaussian
+
+    :param data: 2D array
+    :type data: class:`numpy.ndarray`
+    :param smoothing_scale: Size of Gaussian smoothing kernel in pixel. Defaults to 25
+    :type smoothing_scale: float
+    :return: smoothed image
+    :rtype: class:`numpy.ndarray`
+    """
     bkg = data.bkg
     expo = data.exposure
     gsb = gaussian_filter(bkg,smoothing_scale)
@@ -187,6 +228,16 @@ def bkg_smooth(data,smoothing_scale=25):
 from scipy.ndimage import generic_filter
 
 def clean_bkg(img,bkg):
+    """
+    Subtract statistically the background from a Poisson image
+
+    :param img: Input image
+    :type img: class:`numpy.ndarray`
+    :param bkg: Background map
+    :type bkg: class:`numpy.ndarray`
+    :return: Background subtracted Poisson image
+    :rtype: class:`numpy.ndarray`
+    """
     id=np.where(img>0.0)
     yp, xp = np.indices(img.shape)
     y=yp[id]

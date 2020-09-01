@@ -1,0 +1,466 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyproffit.data &mdash; pyproffit 0.5 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> pyproffit
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyproffit.html">pyproffit</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyproffit</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>pyproffit.data</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pyproffit.data</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="k">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">astropy</span> <span class="k">import</span> <span class="n">wcs</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage.filters</span> <span class="k">import</span> <span class="n">gaussian_filter</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">griddata</span>
+
+<div class="viewcode-block" id="get_extnum"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.data.get_extnum">[docs]</a><span class="k">def</span> <span class="nf">get_extnum</span><span class="p">(</span><span class="n">fitsfile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find the extension number of the first IMAGE extension in an input FITS file</span>
+
+<span class="sd">    :param fitsfile: Input FITS file to be read</span>
+<span class="sd">    :type fitsfile: str</span>
+<span class="sd">    :return: extension number</span>
+<span class="sd">    :rtype: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">next</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="n">fitsfile</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;NAXIS&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Primary HDU is not an image, moving on&#39;</span><span class="p">)</span>
+        <span class="n">nhdu</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">fitsfile</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nhdu</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: No IMAGE extension found in input file&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">cont</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="nb">next</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">cont</span> <span class="ow">and</span> <span class="nb">next</span> <span class="o">&lt;</span> <span class="n">nhdu</span><span class="p">):</span>
+            <span class="n">extension</span> <span class="o">=</span> <span class="n">fitsfile</span><span class="p">[</span><span class="nb">next</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;XTENSION&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">extension</span> <span class="o">==</span> <span class="s1">&#39;IMAGE&#39;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;IMAGE HDU found in extension &#39;</span><span class="p">,</span> <span class="nb">next</span><span class="p">)</span>
+                <span class="n">cont</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">next</span> <span class="o">=</span> <span class="nb">next</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">cont</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: No IMAGE extension found in input file&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">return</span> <span class="nb">next</span></div>
+
+
+<div class="viewcode-block" id="Data"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.data.Data">[docs]</a><span class="k">class</span> <span class="nc">Data</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Class containing the data to be loaded and used by other pyproffit routines</span>
+
+<span class="sd">    :param imglink: Path to input image</span>
+<span class="sd">    :type imglink: str</span>
+<span class="sd">    :param explink: Path to exposure map. If none, assume a flat exposure of 1s or an input error map provided through rmsmap</span>
+<span class="sd">    :type explink: str , optional</span>
+<span class="sd">    :param bkglink: Path to background map. If none, assume zero background</span>
+<span class="sd">    :type bkglink: str , optional</span>
+<span class="sd">    :param voronoi: Define whether the input image is a Voronoi image or not (default=False)</span>
+<span class="sd">    :type voronoi: bool , optional</span>
+<span class="sd">    :param rmsmap: Path to error map if the data is not Poisson distributed</span>
+<span class="sd">    :type rmsmap: str , optional</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">imglink</span><span class="p">,</span> <span class="n">explink</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bkglink</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">voronoi</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">rmsmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Constructor of class Data</span>
+
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">imglink</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Image file not provided&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">fimg</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">imglink</span><span class="p">)</span>
+        <span class="nb">next</span> <span class="o">=</span> <span class="n">get_extnum</span><span class="p">(</span><span class="n">fimg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">img</span> <span class="o">=</span> <span class="n">fimg</span><span class="p">[</span><span class="nb">next</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="n">fimg</span><span class="p">[</span><span class="nb">next</span><span class="p">]</span><span class="o">.</span><span class="n">header</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="n">head</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wcs_inp</span> <span class="o">=</span> <span class="n">wcs</span><span class="o">.</span><span class="n">WCS</span><span class="p">(</span><span class="n">head</span><span class="p">,</span> <span class="n">relax</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;CDELT2&#39;</span> <span class="ow">in</span> <span class="n">head</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">=</span> <span class="n">head</span><span class="p">[</span><span class="s1">&#39;CDELT2&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">60.</span>  <span class="c1"># arcmin</span>
+        <span class="k">elif</span> <span class="s1">&#39;CD2_2&#39;</span> <span class="ow">in</span> <span class="n">head</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">=</span> <span class="n">head</span><span class="p">[</span><span class="s1">&#39;CD2_2&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">60.</span>  <span class="c1"># arcmin</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No pixel size could be found in header, will assume a pixel size of 2.5 arcsec&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">=</span> <span class="mf">2.5</span> <span class="o">/</span> <span class="mf">60.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">axes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span>
+        <span class="k">if</span> <span class="n">voronoi</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errmap</span> <span class="o">=</span> <span class="n">fimg</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">fimg</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">explink</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fexp</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">explink</span><span class="p">)</span>
+            <span class="nb">next</span> <span class="o">=</span> <span class="n">get_extnum</span><span class="p">(</span><span class="n">fexp</span><span class="p">)</span>
+            <span class="n">expo</span> <span class="o">=</span> <span class="n">fexp</span><span class="p">[</span><span class="nb">next</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">expo</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Image and exposure map sizes do not match&#39;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="o">=</span> <span class="n">expo</span>
+            <span class="n">fexp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">bkglink</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bkg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fbkg</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">bkglink</span><span class="p">)</span>
+            <span class="nb">next</span> <span class="o">=</span> <span class="n">get_extnum</span><span class="p">(</span><span class="n">fbkg</span><span class="p">)</span>
+            <span class="n">bkg</span> <span class="o">=</span> <span class="n">fbkg</span><span class="p">[</span><span class="nb">next</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">bkg</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Image and background map sizes do not match&#39;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bkg</span> <span class="o">=</span> <span class="n">bkg</span>
+            <span class="n">fbkg</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">rmsmap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frms</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">rmsmap</span><span class="p">)</span>
+            <span class="nb">next</span> <span class="o">=</span> <span class="n">get_extnum</span><span class="p">(</span><span class="n">frms</span><span class="p">)</span>
+            <span class="n">rms</span> <span class="o">=</span> <span class="n">frms</span><span class="p">[</span><span class="nb">next</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">rms</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Image and RMS map sizes do not match&#39;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rmsmap</span> <span class="o">=</span> <span class="n">rms</span>
+            <span class="n">frms</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rmsmap</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filth</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="Data.region"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.data.Data.region">[docs]</a>    <span class="k">def</span> <span class="nf">region</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regfile</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Filter out regions provided in an input DS9 region file</span>
+
+<span class="sd">        :param regfile: Path to region file. Accepted region file formats are fk5 and image.</span>
+<span class="sd">        :type regfile: str</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">freg</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">regfile</span><span class="p">)</span>
+        <span class="n">lreg</span> <span class="o">=</span> <span class="n">freg</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="n">freg</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">nsrc</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">nreg</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lreg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No exposure given&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">expo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exposure</span><span class="p">)</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+        <span class="n">regtype</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nreg</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;fk5&#39;</span> <span class="ow">in</span> <span class="n">lreg</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">regtype</span> <span class="o">=</span> <span class="s1">&#39;fk5&#39;</span>
+            <span class="k">elif</span> <span class="s1">&#39;image&#39;</span> <span class="ow">in</span> <span class="n">lreg</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">regtype</span> <span class="o">=</span> <span class="s1">&#39;image&#39;</span>
+        <span class="k">if</span> <span class="n">regtype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: invalid format&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nreg</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;circle&#39;</span> <span class="ow">in</span> <span class="n">lreg</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">lreg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">regtype</span> <span class="o">==</span> <span class="s1">&#39;fk5&#39;</span><span class="p">:</span>
+                    <span class="n">xsrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">ysrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">rad</span> <span class="o">=</span> <span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="s1">&#39;&quot;&#39;</span> <span class="ow">in</span> <span class="n">rad</span><span class="p">:</span>
+                        <span class="n">rad</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">/</span> <span class="mf">60.</span>
+                    <span class="k">elif</span> <span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">rad</span><span class="p">:</span>
+                        <span class="n">rad</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">rad</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">*</span> <span class="mf">60.</span>
+                    <span class="n">wc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">xsrc</span><span class="p">,</span> <span class="n">ysrc</span><span class="p">]])</span>
+                    <span class="n">pixcrd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wcs_inp</span><span class="o">.</span><span class="n">wcs_world2pix</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">xsrc</span> <span class="o">=</span> <span class="n">pixcrd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1.</span>
+                    <span class="n">ysrc</span> <span class="o">=</span> <span class="n">pixcrd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1.</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">xsrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">ysrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">rad</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])</span>
+
+                <span class="c1"># Define box around source to spped up calculation</span>
+                <span class="n">boxsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">rad</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">intcx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">xsrc</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">intcy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">ysrc</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">xmin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">intcx</span><span class="o">-</span><span class="n">boxsize</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+                <span class="n">xmax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">intcx</span><span class="o">+</span><span class="n">boxsize</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+                <span class="n">ymin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">intcy</span><span class="o">-</span><span class="n">boxsize</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+                <span class="n">ymax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">intcy</span><span class="o">+</span><span class="n">boxsize</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+                <span class="n">rbox</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">]</span> <span class="o">-</span> <span class="n">xsrc</span><span class="p">,</span><span class="n">y</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">]</span> <span class="o">-</span> <span class="n">ysrc</span><span class="p">)</span>
+                <span class="c1"># Mask source</span>
+                <span class="n">src</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rbox</span> <span class="o">&lt;</span> <span class="n">rad</span><span class="p">)</span>
+                <span class="n">expo</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">][</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="n">nsrc</span> <span class="o">=</span> <span class="n">nsrc</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="s1">&#39;ellipse&#39;</span> <span class="ow">in</span> <span class="n">lreg</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">lreg</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">regtype</span> <span class="o">==</span> <span class="s1">&#39;fk5&#39;</span><span class="p">:</span>
+                    <span class="n">xsrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">ysrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">rad1</span> <span class="o">=</span> <span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">rad2</span> <span class="o">=</span> <span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">3</span><span class="p">]</span>
+                    <span class="n">angle</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">4</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="s1">&#39;&quot;&#39;</span> <span class="ow">in</span> <span class="n">rad1</span><span class="p">:</span>
+                        <span class="n">rad1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad1</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">/</span> <span class="mf">60.</span>
+                        <span class="n">rad2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad2</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">/</span> <span class="mf">60.</span>
+                    <span class="k">elif</span> <span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="n">rad1</span><span class="p">:</span>
+                        <span class="n">rad1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad1</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span>
+                        <span class="n">rad2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad2</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\&#39;</span><span class="s1">&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">rad1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad1</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">*</span> <span class="mf">60.</span>
+                        <span class="n">rad2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rad2</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">pixsize</span> <span class="o">*</span> <span class="mf">60.</span>
+                    <span class="n">wc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">xsrc</span><span class="p">,</span> <span class="n">ysrc</span><span class="p">]])</span>
+                    <span class="n">pixcrd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wcs_inp</span><span class="o">.</span><span class="n">wcs_world2pix</span><span class="p">(</span><span class="n">wc</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">xsrc</span> <span class="o">=</span> <span class="n">pixcrd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1.</span>
+                    <span class="n">ysrc</span> <span class="o">=</span> <span class="n">pixcrd</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1.</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">xsrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">ysrc</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">rad1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="n">rad2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">3</span><span class="p">])</span>
+                    <span class="n">angle</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">ellang</span> <span class="o">=</span> <span class="n">angle</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">2.</span>
+                <span class="n">aoverb</span> <span class="o">=</span> <span class="n">rad1</span><span class="o">/</span><span class="n">rad2</span>
+                <span class="c1"># Define box around source to spped up calculation</span>
+                <span class="n">boxsize</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">rad1</span><span class="p">,</span> <span class="n">rad2</span><span class="p">])</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">intcx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">xsrc</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">intcy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">ysrc</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+                <span class="n">xmin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">intcx</span><span class="o">-</span><span class="n">boxsize</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+                <span class="n">xmax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">intcx</span><span class="o">+</span><span class="n">boxsize</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+                <span class="n">ymin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">([</span><span class="n">intcy</span><span class="o">-</span><span class="n">boxsize</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+                <span class="n">ymax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="n">intcy</span><span class="o">+</span><span class="n">boxsize</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+                <span class="n">xtil</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">ellang</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">]</span><span class="o">-</span><span class="n">xsrc</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">ellang</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">]</span><span class="o">-</span><span class="n">ysrc</span><span class="p">)</span>
+                <span class="n">ytil</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">ellang</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">]</span><span class="o">-</span><span class="n">xsrc</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">ellang</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">]</span><span class="o">-</span><span class="n">ysrc</span><span class="p">)</span>
+                <span class="n">rbox</span> <span class="o">=</span> <span class="n">aoverb</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">xtil</span><span class="p">,</span> <span class="n">ytil</span> <span class="o">/</span> <span class="n">aoverb</span><span class="p">)</span>
+                <span class="c1"># Mask source</span>
+                <span class="n">src</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rbox</span> <span class="o">&lt;</span> <span class="n">rad1</span><span class="p">)</span>
+                <span class="n">expo</span><span class="p">[</span><span class="n">ymin</span><span class="p">:</span><span class="n">ymax</span><span class="p">,</span><span class="n">xmin</span><span class="p">:</span><span class="n">xmax</span><span class="p">][</span><span class="n">src</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="n">nsrc</span> <span class="o">=</span> <span class="n">nsrc</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Excluded </span><span class="si">%d</span><span class="s1"> sources&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">nsrc</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="o">=</span> <span class="n">expo</span></div>
+
+<div class="viewcode-block" id="Data.dmfilth"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.data.Data.dmfilth">[docs]</a>    <span class="k">def</span> <span class="nf">dmfilth</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Mask the regions provided in a region file and fill in the holes by interpolating the smoothed image into the gaps and generating a Poisson realization</span>
+
+<span class="sd">        :param outfile: If outfile is not None, file name to output the dmfilth image into a FITS file</span>
+<span class="sd">        :type outfile: str , optional</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">img</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No data given&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="c1"># Apply source mask on image</span>
+        <span class="n">chimg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">imgc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">img</span><span class="p">)</span>
+        <span class="n">imgc</span><span class="p">[</span><span class="n">chimg</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="c1"># High-pass filter</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Applying high-pass filter&#39;</span><span class="p">)</span>
+        <span class="n">smoothing_scale</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="n">gsb</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="n">imgc</span><span class="p">,</span> <span class="n">smoothing_scale</span><span class="p">)</span>
+        <span class="n">gsexp</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">exposure</span><span class="p">,</span> <span class="n">smoothing_scale</span><span class="p">)</span>
+        <span class="n">img_smoothed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">gsb</span><span class="p">,</span> <span class="n">gsexp</span><span class="p">))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span>
+
+        <span class="c1"># Interpolate</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Interpolating in the masked regions&#39;</span><span class="p">)</span>
+        <span class="n">y</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">indices</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">axes</span><span class="p">)</span>
+        <span class="n">nonz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">img_smoothed</span> <span class="o">&gt;</span> <span class="mf">0.</span><span class="p">)</span>
+        <span class="n">p_ok</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="n">nonz</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">nonz</span><span class="p">]])</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">vals</span> <span class="o">=</span> <span class="n">img_smoothed</span><span class="p">[</span><span class="n">nonz</span><span class="p">]</span>
+        <span class="n">int_vals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">griddata</span><span class="p">(</span><span class="n">p_ok</span><span class="p">,</span> <span class="n">vals</span><span class="p">,</span> <span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;cubic&#39;</span><span class="p">))</span>
+
+        <span class="c1"># Fill holes</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Filling holes&#39;</span><span class="p">)</span>
+        <span class="n">area_to_fill</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">int_vals</span> <span class="o">&gt;</span> <span class="mf">0.</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">exposure</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">dmfilth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">img</span><span class="p">)</span>
+        <span class="n">dmfilth</span><span class="p">[</span><span class="n">area_to_fill</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">poisson</span><span class="p">(</span><span class="n">int_vals</span><span class="p">[</span><span class="n">area_to_fill</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">filth</span> <span class="o">=</span> <span class="n">dmfilth</span>
+
+        <span class="k">if</span> <span class="n">outfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">hdu</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(</span><span class="n">dmfilth</span><span class="p">)</span>
+            <span class="n">hdu</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">header</span>
+            <span class="n">hdu</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Dmfilth image written to file &#39;</span><span class="o">+</span><span class="n">outfile</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, D. Eckert
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

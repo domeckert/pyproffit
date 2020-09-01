@@ -12,8 +12,8 @@ class Profile(object):
     """
     pyproffit.Profile class. The class allows the user to extract surface brightness profiles and use them to fit models, extract density profiles, etc.
 
-    :param data: Class containing the data to be used
-    :type data: class: pyproffit.Data
+    :param data: Object of type :class:`pyproffit.data.Data` containing the data to be used
+    :type data: class:`pyproffit.Data`
     :param center_choice: Choice of the center of the surface brightness profile. Available options are "centroid", "peak", "custom_ima" and "custom_fk5".
         Args:
             - 'centroid': Compute image centroid and ellipticity. This is done by performing principle component analysis on the count image. If a dmfilth image exists, it will be used instead of the original count image.
@@ -38,7 +38,7 @@ class Profile(object):
     :param centroid_region: If center_choice='centroid', this option defines the radius of the region (in arcmin), centered on the center of the image, within which the centroid will be calculated. If centroid_region=None the entire image is used. Defaults to None.
     :type centroid_region: float
     :param bins: in case binning is set to 'custom', a numpy array containing the binning definition. For an input array of length N, the binning will contain N-1 bins with boundaries set as the values of the input array.
-    :type bins: class: numpy.ndarray
+    :type bins: class:`numpy.ndarray`
     """
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
                  binning='linear', centroid_region=None, bins=None):
@@ -249,7 +249,6 @@ class Profile(object):
         :type angle_high: float
         :param voronoi: Set whether the input data is a Voronoi binned image (True) or a standard raw count image (False). Defaults to False.
         :type voronoi: bool
-        :return: None
         """
         data = self.data
         img = data.img
@@ -366,7 +365,6 @@ class Profile(object):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
-        :return: None
         """
         data = self.data
         img = data.img
@@ -405,9 +403,8 @@ class Profile(object):
 
         :param outfile: Output file name
         :type outfile: str
-        :param model: If model is not None, Model object including the fitted model. Defaults to None
-        :type model: class: pyproffit.Model
-        :return: None
+        :param model: If model is not None, Object of type :class:`pyproffit.models.Model` including the fitted model. Defaults to None
+        :type model: class:`pyproffit.models.Model`  , optional
         """
         if outfile is None:
             print('No output file name given')
@@ -465,16 +462,12 @@ class Profile(object):
         :param psffile: Path to file containing an image of the PSF. The pixel size must be equal to the pixel size of the image.
         :type psffile: str
         :param psfimage: Array containing an image of the PSF. The pixel size must be equal to the pixel size of the image.
-        :type psfimage: class: numpy.ndarray
+        :type psfimage: class:`numpy.ndarray`
         :param psfpixsize: (currently inactive) Pixel size of the PSF image in arcsec. Currently not implemented.
         :type psfpixsize: float
-        :param sourcemodel: Surface brightness model to account for surface brightness gradients across the bins. If sourcemodel=None a flat distribution is assumed across each bin. Defaults to None
-        :type sourcemodel: class: pyproffit.Model
-        :return: None
+        :param sourcemodel: Object of type :class:`pyproffit.models.Model` including a surface brightness model to account for surface brightness gradients across the bins. If sourcemodel=None a flat distribution is assumed across each bin. Defaults to None
+        :type sourcemodel: class:`pyproffit.models.Model`
         """
-        #####################################################
-        #
-        #####################################################
         if psffile is None and psfimage is None and psffunc is None:
             print('No PSF image given')
             return
@@ -562,13 +555,12 @@ class Profile(object):
         """
         Compute a model image and output it to a FITS file
 
-        :param model: Surface brightness model
-        :type model: class: pyproffit.Model
+        :param model: Object of type :class:`pyproffit.models.Model` including the surface brightness model
+        :type model: class:`pyproffit.models.Model`
         :param outfile: Name of output file
         :type outfile: str
         :param vignetting: Choose whether the model will be convolved with the vignetting model (i.e. multiplied by the exposure map) or if the actual surface brightness will be extracted (False). Defaults to True
         :type vignetting: bool
-        :return: None
         """
         head = self.data.header
         pixsize = self.data.pixsize
@@ -601,13 +593,12 @@ class Profile(object):
         """
         Plot the loaded surface brightness profile
 
-        :param model: If model is not None, plot the provided model together with the data. Defaults to None
-        :type model: class: pyproffit.Model
+        :param model: If model is not None, plot the provided model of type :class:`pyproffit.models.Model` together with the data. Defaults to None
+        :type model: class:`pyproffit.models.Model` , optional
         :param outfile: If outfile is not None, name of output file to save the plot. Defaults to None
-        :type outfile: str
+        :type outfile: str , optional
         :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
-        :type axes: list
-        :return: None
+        :type axes: list , optional
         """
         # Plot extracted profile
         if self.profile is None:
@@ -690,9 +681,8 @@ class Profile(object):
         """
         Subtract a fitted background value from the loaded surface brightness profile. Each pyproffit model contains a 'bkg' parameter, which will be fitted and loaded in a Fitter object. The routine reads the value of 'bkg', subtracts it from the data, and adds its error in quadrature to the error profile.
 
-        :param fitter: Fitter object containing a model and optimization results
-        :type fitter: class: pyproffit.Fitter
-        :return: None
+        :param fitter: Object of type :class:`pyproffit.fitting.Fitter` containing a model and optimization results
+        :type fitter: class:`pyproffit.fitting.Fitter`
         """
         if fitter.minuit is None:
             print('Error: no adequate fit found')
@@ -724,8 +714,8 @@ class Profile(object):
         :type elow: float
         :param ehigh: High-energy bound of the input image in keV. Defaults to 2.0
         :type ehigh: float
-        :param arf: Path to on-axis ARF (optional, in case response file type is RMF)
-        :type arf: str
+        :param arf: Path to on-axis ARF in case response file type is RMF)
+        :type arf: str , optional
         :param type: Specify whether the exposure map is in units of sec (type='cr') or photon flux (type='photon'). Defaults to 'cr'
         :type type: str
         :return: Conversion factor

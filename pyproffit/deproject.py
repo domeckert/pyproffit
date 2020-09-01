@@ -29,7 +29,7 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     :param outfile: If outfile is not None, path to file name to output the plot
     :type outfile: str
     :return: matplotlib figure object
-    :rtype: matplotlib.figure
+    :rtype: class:`matplotlib.figure`
     """
     if len(profs) != len(deps):
         print("ERROR: different numbers of profiles and deprojection elements")
@@ -637,16 +637,16 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
 class MyDeprojVol:
     """
     Class to compute the projection volumes
+
+    :param radin: Array of inner radii of the bins
+    :type radin: class:`numpy.ndarray`
+    :param radout: Array of outer radii of the bins
+    :type radout: class:`numpy.ndarray`
     """
     def __init__(self, radin, radout):
         """
         Constructor for class MyDeprojVol
 
-        :param radin: Array of inner radii of the bins
-        :type radin: numpy.ndarray
-        :param radout: Array of outer radii of the bins
-        :type radout: numpy.ndarray
-        :return: none
         """
         self.radin=radin
         self.radot=radout
@@ -816,8 +816,8 @@ class Deproject(object):
 
     :param z: Source redshift. If z=None, only the surface brightness reconstruction can be done.
     :type z: float
-    :param profile: Surface brightness profile data
-    :type profile: class:`pyproffit.Profile`
+    :param profile: Object of type :class:`pyproffit.profextract.Profile` containing the surface brightness profile data
+    :type profile: class:`pyproffit.profextract.Profile`
     :param cf: Conversion factor from count rate to emissivity. If cf=None, only the surface brightness reconstruction can be done.
     :type cf: float
     :param f_abund: Solar abundance table to compute the electron-to-proton ratio and mean molecular weight. Available tables are 'aspl' (Aspling+09, default), 'angr' (Anders & Grevesse 89), and 'grsa' (Grevesse & Sauval 98)
@@ -899,7 +899,6 @@ class Deproject(object):
         :type depth: int
         :param min_beta: Minimum value of beta. Default=0.6
         :type min_beta: float
-        :return: None
         """
         self.backend=backend
         self.nmcmc=nmcmc
@@ -924,7 +923,6 @@ class Deproject(object):
 
         :param nmc: Number of Monte Carlo realizations of the profile to compute the uncertainties (default=1000)
         :type nmc: int
-        :return: None
         """
         OP(self,nmc)
 
@@ -936,7 +934,6 @@ class Deproject(object):
         :type outfile: str
         :param xscale: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
         :type xscale: str
-        :return: None
         """
         # Plot extracted profile
         if self.profile is None:
@@ -1003,7 +1000,6 @@ class Deproject(object):
 
         :param rout: Radial binning of the density profile. If rout=None, the original binning of the surface brightness profile is used
         :type rout: numpy.ndarray
-        :return: None
         """
         z = self.z
         cf = self.cf
@@ -1043,7 +1039,6 @@ class Deproject(object):
 
         :param outfile: File name of saving the output figure. If outfile=None (default), plot only to stdout
         :type outfile: str
-        :return: None
         """
         if self.profile is None:
             print('Error: No profile extracted')
@@ -1148,7 +1143,7 @@ class Deproject(object):
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
         :return: Median count rate, 16th and 84th percentiles
-        :rtype: float, float, float
+        :rtype: float
         """
         if self.samples is None:
             print('Error: no MCMC samples found')
@@ -1202,7 +1197,7 @@ class Deproject(object):
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
         :return: Median count rate, 16th and 84th percentiles
-        :rtype: float, float, float
+        :rtype: float
         """
         if self.samples is None:
             print('Error: no MCMC samples found')
@@ -1267,7 +1262,7 @@ class Deproject(object):
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
         :return: Median count rate, 16th and 84th percentiles
-        :rtype: float, float, float
+        :rtype: float
         """
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
@@ -1331,7 +1326,6 @@ class Deproject(object):
         :type outfile: str
         :param xscale: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
         :type xscale: str
-        :return: None
         """
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
@@ -1449,7 +1443,6 @@ class Deproject(object):
         :type samplefile: str
         :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. This parameter needs to be the same as the value used to run the reconstruction. If bkglim=None (default), the entire radial range is used
         :type bkglim: float
-        :return: None
         """
         # Reload the output of a previous PyMC3 run
         samples = np.loadtxt(samplefile)
@@ -1510,7 +1503,7 @@ class Deproject(object):
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
         :return: Median count rate, 16th and 84th percentiles
-        :rtype: float, float, float
+        :rtype: float
         """
         if self.samples is None or self.z is None:
             print('Error: no profile reconstruction found')
@@ -1565,7 +1558,6 @@ class Deproject(object):
 
         :param outfile: Output file name
         :type outfile: str
-        :return: None
         """
         if outfile is None:
             print('No output file name given')

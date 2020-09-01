@@ -4,20 +4,20 @@ import iminuit
 # Generic class to fit data with chi-square
 class ChiSquared:
     """
-    Class defining chi-square likelihood. This class is called by the Fitter object when using the method='chi2' option.
+    Class defining a chi-square likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method='chi2' option.
 
-    :param model: Model definition. A class:pyproffit.Model object defining the model to be used.
-    :type model: class:pyproffit.Model
+    :param model: Model definition. A :class:`pyproffit.models.Model` object defining the model to be used.
+    :type model: class:`pyproffit.models.Model`
     :param x: x axis data
-    :type x: class:numpy.ndarray
+    :type x: class:`numpy.ndarray`
     :param dx: x bin size data. dx is defined as half of the total bin size.
-    :type dx: class:numpy.ndarray
+    :type dx: class:`numpy.ndarray`
     :param y: y axis data
-    :type y: class:numpy.ndarray
+    :type y: class:`numpy.ndarray`
     :param dy: y error data
-    :type dy: class:numpy.ndarray
+    :type dy: class:`numpy.ndarray`
     :param psfmat: PSF convolution matrix
-    :type psfmat: class:numpy.ndarray , optional
+    :type psfmat: class:`numpy.ndarray` , optional
     :param fitlow: Lower fitting boundary in arcmin. If fitlow=None the entire radial range is used, default to None
     :type fitlow: float , optional
     :param fithigh: Upper fitting boundary in arcmin. If fithigh=None the entire radial range is used, default to None
@@ -73,10 +73,10 @@ class ChiSquared:
 # Generic class to fit data with C-stat
 class Cstat:
     """
-    Class defining C-stat likelihood. This class is called by the Fitter object when using the method='cstat' option.
+    Class defining a C-stat likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method='cstat' option.
 
-    :param model: Model definition
-    :type model: pyproffit.Model
+    :param model: Model definition. A :class:`pyproffit.models.Model` object defining the model to be used.
+    :type model: class:`pyproffit.models.Model`
     :param x: x axis data
     :type x: numpy.ndarray
     :param counts: counts per bin data
@@ -146,10 +146,10 @@ class Fitter:
     """
     Class containing the tools to fit surface brightness profiles with a model. Sets up the likelihood and optimizes for the parameters.
 
-    :param model: Surface brightness model definition
-    :type model: class: pyproffit.Model
-    :param profile: Surface brightness profile to be fitted
-    :type profile: class: pyproffit.Profile
+    :param model: Object of type :class:`pyproffit.models.Model` defining the model to be used.
+    :type model: class:`pyproffit.models.Model`
+    :param profile: Object of type :class:`pyproffit.profextract.Profile` containing the surface brightness profile to be fitted
+    :type profile: class:`pyproffit.profextract.Profile`
     """
     def __init__(self, model, profile):
         """
@@ -175,7 +175,6 @@ class Fitter:
         :type fithigh: float
         :param kwargs: List of arguments to be passed to the iminuit library. For instance, setting parameter boundaries, optimization options or fixing parameters.
             See the iminuit documentation: https://iminuit.readthedocs.io/en/stable/index.html
-        :return: None
         """
         prof=self.profile
         if prof.profile is None:

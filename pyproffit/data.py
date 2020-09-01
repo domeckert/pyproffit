@@ -43,13 +43,13 @@ class Data(object):
     :param imglink: Path to input image
     :type imglink: str
     :param explink: Path to exposure map. If none, assume a flat exposure of 1s or an input error map provided through rmsmap
-    :type explink: str
+    :type explink: str , optional
     :param bkglink: Path to background map. If none, assume zero background
-    :type bkglink: str
+    :type bkglink: str , optional
     :param voronoi: Define whether the input image is a Voronoi image or not (default=False)
-    :type voronoi: bool
+    :type voronoi: bool , optional
     :param rmsmap: Path to error map if the data is not Poisson distributed
-    :type rmsmap: str
+    :type rmsmap: str , optional
     '''
     def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None):
         '''
@@ -117,7 +117,6 @@ class Data(object):
 
         :param regfile: Path to region file. Accepted region file formats are fk5 and image.
         :type regfile: str
-        :return: none
         '''
         freg = open(regfile)
         lreg = freg.readlines()
@@ -226,8 +225,7 @@ class Data(object):
         Mask the regions provided in a region file and fill in the holes by interpolating the smoothed image into the gaps and generating a Poisson realization
 
         :param outfile: If outfile is not None, file name to output the dmfilth image into a FITS file
-        :type outfile: str
-        :return: none
+        :type outfile: str , optional
         '''
         if self.img is None:
             print('No data given')

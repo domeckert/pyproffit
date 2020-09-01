@@ -1,0 +1,453 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyproffit.models &mdash; pyproffit 0.5 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> pyproffit
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyproffit.html">pyproffit</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyproffit</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>pyproffit.models</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pyproffit.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="BetaModel"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.BetaModel">[docs]</a><span class="k">def</span> <span class="nf">BetaModel</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">rc</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">bkg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Single Beta model</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I(r) = I_0 \\left(1 + (x/r_c)^2\\right) ^ {-3 \\beta + 0.5} + B</span>
+
+<span class="sd">    :param x: Radius in arcmin</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param beta: :math:`\\beta` parameter</span>
+<span class="sd">    :type beta: float</span>
+<span class="sd">    :param rc: rc parameter</span>
+<span class="sd">    :type rc: float</span>
+<span class="sd">    :param norm: log of I0 parameter</span>
+<span class="sd">    :type norm: float</span>
+<span class="sd">    :param bkg: log of B parameter</span>
+<span class="sd">    :type bkg: float</span>
+<span class="sd">    :return: Calculated model</span>
+<span class="sd">    :rtype: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">norm</span><span class="p">)</span>
+    <span class="n">c2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">bkg</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">n2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">rc</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.</span> <span class="o">*</span> <span class="n">beta</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="DoubleBeta"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.DoubleBeta">[docs]</a><span class="k">def</span> <span class="nf">DoubleBeta</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">beta</span><span class="p">,</span> <span class="n">rc1</span><span class="p">,</span> <span class="n">rc2</span><span class="p">,</span> <span class="n">ratio</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">bkg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Double beta model</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I(r) = I_0 \\left[ (1 + (x/r_{c,1}) ^ 2)^{-3 \\beta + 0.5} + R ( 1 + (x/r_{c,2}) ^ 2 )^{-3 \\beta+0.5} \\right] + B</span>
+
+<span class="sd">    :param x: Radius in arcmin</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param beta: :math:`\\beta` parameter</span>
+<span class="sd">    :type beta: float</span>
+<span class="sd">    :param rc1: rc1 parameter</span>
+<span class="sd">    :type rc1: float</span>
+<span class="sd">    :param rc2: rc2 parameters</span>
+<span class="sd">    :type rc2: float</span>
+<span class="sd">    :param ratio: R parameter</span>
+<span class="sd">    :type ratio: float</span>
+<span class="sd">    :param norm: log of I0 parameter</span>
+<span class="sd">    :type norm: float</span>
+<span class="sd">    :param bkg: log of B parameter</span>
+<span class="sd">    :type bkg: float</span>
+<span class="sd">    :return: Calculated model</span>
+<span class="sd">    :rtype: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">comp1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">rc1</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.</span> <span class="o">*</span> <span class="n">beta</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">comp2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">rc2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.</span> <span class="o">*</span> <span class="n">beta</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">n2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">norm</span><span class="p">)</span>
+    <span class="n">c2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">bkg</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">n2</span> <span class="o">*</span> <span class="p">(</span><span class="n">comp1</span> <span class="o">+</span> <span class="n">ratio</span> <span class="o">*</span> <span class="n">comp2</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="PowerLaw"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.PowerLaw">[docs]</a><span class="k">def</span> <span class="nf">PowerLaw</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">pivot</span><span class="p">,</span> <span class="n">bkg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Single power law model in projected space</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I(r)=I_0\\left( \\frac{x}{x_p} \\right)^{-\\alpha} + B</span>
+
+<span class="sd">    :param x: Radius in arcmin</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param alpha: :math:`\\alpha` parameter</span>
+<span class="sd">    :type alpha: float</span>
+<span class="sd">    :param norm: log of I0 parameter</span>
+<span class="sd">    :type norm: float</span>
+<span class="sd">    :param pivot: :math:`x_p` parameter</span>
+<span class="sd">    :type pivot: float</span>
+<span class="sd">    :param bkg: log of B parameter</span>
+<span class="sd">    :type bkg: float</span>
+<span class="sd">    :return: Calculated model</span>
+<span class="sd">    :rtype: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">norm</span><span class="p">)</span>
+    <span class="n">c2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">bkg</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">n2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">pivot</span><span class="p">,</span> <span class="o">-</span><span class="n">alpha</span><span class="p">)</span> <span class="o">+</span> <span class="n">c2</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="Const"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.Const">[docs]</a><span class="k">def</span> <span class="nf">Const</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">bkg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Constal model for background fitting</span>
+
+<span class="sd">    :param x: Radius in arcmin</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param bkg: log of B parameter</span>
+<span class="sd">    :type bkg: float</span>
+<span class="sd">    :return: Calculated model</span>
+<span class="sd">    :rtype: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">bkg</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+
+<div class="viewcode-block" id="Vikhlinin"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.Vikhlinin">[docs]</a><span class="k">def</span> <span class="nf">Vikhlinin</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">beta</span><span class="p">,</span><span class="n">rc</span><span class="p">,</span><span class="n">alpha</span><span class="p">,</span><span class="n">rs</span><span class="p">,</span><span class="n">epsilon</span><span class="p">,</span><span class="n">gamma</span><span class="p">,</span><span class="n">norm</span><span class="p">,</span><span class="n">bkg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Simplified Vikhlinin+06 surface brightness model used in Ghirardini+19</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I(r) = I_0\\left( \\frac{x}{r_c}\\right)^{-\\alpha} \\left(1+(x/r_c)^2 \\right)^{-3\\beta + \\alpha/2} \\left( 1 + (x/r_s)^{\\gamma} \\right)^{-\\epsilon/\\gamma}</span>
+
+<span class="sd">    :param x: Radius in arcmin</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param beta: :math:`\\beta` parameter</span>
+<span class="sd">    :type beta: float</span>
+<span class="sd">    :param rc: rc parameter</span>
+<span class="sd">    :type rc: float</span>
+<span class="sd">    :param norm: log of I0 parameter</span>
+<span class="sd">    :type norm: float</span>
+<span class="sd">    :param alpha: :math:`\\alpha` parameter</span>
+<span class="sd">    :type alpha: float</span>
+<span class="sd">    :param rs: rs parameter</span>
+<span class="sd">    :type rs: float</span>
+<span class="sd">    :param epsilon: :math:`\\epsilon` parameter</span>
+<span class="sd">    :type epsilon: float</span>
+<span class="sd">    :param gamma: :math:`\\gamma` parameter</span>
+<span class="sd">    :type gamma: float</span>
+<span class="sd">    :param bkg: log of B parameter</span>
+<span class="sd">    :type bkg: float</span>
+<span class="sd">    :return: Calculated model</span>
+<span class="sd">    :rtype: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">term1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">rc</span><span class="p">,</span> <span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span><span class="o">/</span><span class="n">rc</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">3</span> <span class="o">*</span> <span class="n">beta</span> <span class="o">+</span> <span class="n">alpha</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">term2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">rs</span><span class="p">)</span> <span class="o">**</span> <span class="n">gamma</span><span class="p">,</span> <span class="o">-</span><span class="n">epsilon</span> <span class="o">/</span> <span class="n">gamma</span><span class="p">)</span>
+    <span class="n">n2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">norm</span><span class="p">)</span>
+    <span class="n">b2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">bkg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">n2</span> <span class="o">*</span> <span class="n">term1</span> <span class="o">*</span> <span class="n">term2</span> <span class="o">+</span> <span class="n">b2</span></div>
+
+<div class="viewcode-block" id="IntFunc"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.IntFunc">[docs]</a><span class="k">def</span> <span class="nf">IntFunc</span><span class="p">(</span><span class="n">omega</span><span class="p">,</span><span class="n">rf</span><span class="p">,</span><span class="n">alpha</span><span class="p">,</span><span class="n">xmin</span><span class="p">,</span><span class="n">xmax</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Numerical integration of a power law along the line of sight</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        \\int_{x_{min}}^{x_{max}} \\left(\\frac{\\omega^2 + \\ell^2}{r_f^2}\\right)^{-\\alpha} d\\ell</span>
+
+<span class="sd">    :param omega: Projected radius</span>
+<span class="sd">    :type omega: float</span>
+<span class="sd">    :param rf: rf parameter</span>
+<span class="sd">    :type rf: float</span>
+<span class="sd">    :param alpha: :math:`\\alpha` parameter</span>
+<span class="sd">    :type alpha: float</span>
+<span class="sd">    :param xmin: xmin parameter</span>
+<span class="sd">    :type xmin: float</span>
+<span class="sd">    :param xmax: xmax parameter</span>
+<span class="sd">    :type xmax: float</span>
+<span class="sd">    :return: Line-of-sight integral</span>
+<span class="sd">    :rtype: float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nb</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">logmin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">xmin</span><span class="p">)</span>
+    <span class="n">logmax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">xmax</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">logmin</span><span class="p">,</span><span class="n">logmax</span><span class="p">,</span><span class="n">nb</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="p">[:</span><span class="n">nb</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:</span><span class="n">nb</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.</span>
+    <span class="n">width</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">roll</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)[:</span><span class="n">nb</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[:</span><span class="n">nb</span><span class="p">])</span>
+    <span class="n">term1</span> <span class="o">=</span> <span class="p">(</span><span class="n">omega</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">rf</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">term2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">term1</span><span class="p">,</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span>
+    <span class="n">intot</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">term2</span><span class="o">*</span><span class="n">width</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">intot</span></div>
+
+<div class="viewcode-block" id="BknPow"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.BknPow">[docs]</a><span class="k">def</span> <span class="nf">BknPow</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">alpha1</span><span class="p">,</span><span class="n">alpha2</span><span class="p">,</span><span class="n">rf</span><span class="p">,</span><span class="n">norm</span><span class="p">,</span><span class="n">jump</span><span class="p">,</span><span class="n">bkg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Broken power law 3D model projected along the line of sight for discontinuity modeling</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        I(r) = I_0 \\int F(\\omega)^2 d\\ell + B</span>
+
+<span class="sd">    with :math:`\\omega^2 = r^2 + \ell^2` and</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        F(\\omega) = \left\{ \\begin{array}{ll} \omega^{-\\alpha_1}, &amp; \omega&lt;r_f \\\\ \\frac{1}{C}\omega ^{-\\alpha_2}, &amp; \omega\\geq r_f</span>
+<span class="sd">        \end{array} \\right.</span>
+
+<span class="sd">    :param x: Radius in arcmin</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param alpha1: :math:`\\alpha_1` parameter</span>
+<span class="sd">    :type alpha1: float</span>
+<span class="sd">    :param alpha2: :math:`\\alpha_2` parameter</span>
+<span class="sd">    :type alpha2: float</span>
+<span class="sd">    :param rf: rf parameter</span>
+<span class="sd">    :type rf: float</span>
+<span class="sd">    :param norm: log of I0 parameter</span>
+<span class="sd">    :type norm: float</span>
+<span class="sd">    :param jump: C parameter</span>
+<span class="sd">    :type jump: float</span>
+<span class="sd">    :param bkg: log of B parameter</span>
+<span class="sd">    :type bkg: float</span>
+<span class="sd">    :return: Calculated model</span>
+<span class="sd">    :rtype: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">A1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span><span class="n">norm</span><span class="p">)</span>
+    <span class="n">A2</span> <span class="o">=</span> <span class="n">A1</span> <span class="o">/</span> <span class="n">jump</span><span class="o">**</span><span class="mi">2</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+    <span class="n">inreg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">rf</span><span class="p">)</span>
+    <span class="n">term1</span> <span class="o">=</span> <span class="n">IntFunc</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">inreg</span><span class="p">],</span><span class="n">rf</span><span class="p">,</span><span class="n">alpha1</span><span class="p">,</span><span class="mf">0.01</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">inreg</span><span class="p">])),</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rf</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">inreg</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">term2</span> <span class="o">=</span> <span class="n">IntFunc</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">inreg</span><span class="p">],</span><span class="n">rf</span><span class="p">,</span><span class="n">alpha2</span><span class="p">,</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">rf</span><span class="o">**</span><span class="mi">2</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">inreg</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span><span class="mf">1e3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">inreg</span><span class="p">])))</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">inreg</span><span class="p">]</span> <span class="o">=</span> <span class="n">A1</span> <span class="o">*</span> <span class="n">term1</span> <span class="o">+</span> <span class="n">A2</span> <span class="o">*</span> <span class="n">term2</span>
+    <span class="n">outreg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">rf</span><span class="p">)</span>
+    <span class="n">term</span> <span class="o">=</span> <span class="n">IntFunc</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">outreg</span><span class="p">],</span><span class="n">rf</span><span class="p">,</span><span class="n">alpha2</span><span class="p">,</span><span class="mf">0.01</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">outreg</span><span class="p">])),</span><span class="mf">1e3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">outreg</span><span class="p">])))</span>
+    <span class="n">out</span><span class="p">[</span><span class="n">outreg</span><span class="p">]</span> <span class="o">=</span> <span class="n">A2</span> <span class="o">*</span> <span class="n">term</span>
+    <span class="n">c2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">bkg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span> <span class="o">+</span> <span class="n">c2</span></div>
+
+
+<div class="viewcode-block" id="Model"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.Model">[docs]</a><span class="k">class</span> <span class="nc">Model</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class containing pyproffit models</span>
+
+<span class="sd">    :param model: Function to be used as surface brightness model</span>
+<span class="sd">    :type model: function</span>
+<span class="sd">    :param vals: Array containing initial values for the parameters (optional)</span>
+<span class="sd">    :type vals: :class:`numpy.ndarray`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model</span><span class="p">,</span><span class="n">vals</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor of class Model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">=</span><span class="n">model</span>
+        <span class="k">if</span> <span class="n">vals</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">=</span><span class="n">vals</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">=</span><span class="kc">None</span>
+
+<div class="viewcode-block" id="Model.SetParameters"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.Model.SetParameters">[docs]</a>    <span class="k">def</span> <span class="nf">SetParameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">vals</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set input values for the model parameters</span>
+
+<span class="sd">        :param vals: Array containing initial values for the parameters</span>
+<span class="sd">        :type vals: :class:`numpy.ndarray`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">=</span><span class="n">vals</span></div>
+
+<div class="viewcode-block" id="Model.SetErrors"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.models.Model.SetErrors">[docs]</a>    <span class="k">def</span> <span class="nf">SetErrors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">vals</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set input values for the errors on the parameters</span>
+
+<span class="sd">        :param vals: Array containing initial values for the errors</span>
+<span class="sd">        :type vals: :class:`numpy.ndarray`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">=</span><span class="n">vals</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, D. Eckert
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

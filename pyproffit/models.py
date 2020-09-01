@@ -180,18 +180,25 @@ def BknPow(x,alpha1,alpha2,rf,norm,jump,bkg):
 
     .. math::
 
-        F(\\omega) = \left\{ \\begin{array}{ll} \omega^{-\\alpha_1}, & \omega<\omega_c \\\\ \\frac{1}{C}\omega ^{-\\alpha_2}, & \omega\\geq\\omega_c
+        F(\\omega) = \left\{ \\begin{array}{ll} \omega^{-\\alpha_1}, & \omega<r_f \\\\ \\frac{1}{C}\omega ^{-\\alpha_2}, & \omega\\geq r_f
         \end{array} \\right.
 
     :param x: Radius in arcmin
     :type x: numpy.ndarray
-    :param alpha1:
-    :param alpha2:
-    :param rf:
-    :param norm:
-    :param jump:
-    :param bkg:
-    :return:
+    :param alpha1: :math:`\\alpha_1` parameter
+    :type alpha1: float
+    :param alpha2: :math:`\\alpha_2` parameter
+    :type alpha2: float
+    :param rf: rf parameter
+    :type rf: float
+    :param norm: log of I0 parameter
+    :type norm: float
+    :param jump: C parameter
+    :type jump: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
     """
     A1 = np.power(10.,norm)
     A2 = A1 / jump**2

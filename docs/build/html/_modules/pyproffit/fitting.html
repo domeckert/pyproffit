@@ -1,0 +1,422 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pyproffit.fitting &mdash; pyproffit 0.5 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/graphviz.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> pyproffit
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyproffit.html">pyproffit</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">pyproffit</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>pyproffit.fitting</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for pyproffit.fitting</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">iminuit</span>
+
+<span class="c1"># Generic class to fit data with chi-square</span>
+<div class="viewcode-block" id="ChiSquared"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.fitting.ChiSquared">[docs]</a><span class="k">class</span> <span class="nc">ChiSquared</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class defining a chi-square likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method=&#39;chi2&#39; option.</span>
+
+<span class="sd">    :param model: Model definition. A :class:`pyproffit.models.Model` object defining the model to be used.</span>
+<span class="sd">    :type model: class:`pyproffit.models.Model`</span>
+<span class="sd">    :param x: x axis data</span>
+<span class="sd">    :type x: class:`numpy.ndarray`</span>
+<span class="sd">    :param dx: x bin size data. dx is defined as half of the total bin size.</span>
+<span class="sd">    :type dx: class:`numpy.ndarray`</span>
+<span class="sd">    :param y: y axis data</span>
+<span class="sd">    :type y: class:`numpy.ndarray`</span>
+<span class="sd">    :param dy: y error data</span>
+<span class="sd">    :type dy: class:`numpy.ndarray`</span>
+<span class="sd">    :param psfmat: PSF convolution matrix</span>
+<span class="sd">    :type psfmat: class:`numpy.ndarray` , optional</span>
+<span class="sd">    :param fitlow: Lower fitting boundary in arcmin. If fitlow=None the entire radial range is used, default to None</span>
+<span class="sd">    :type fitlow: float , optional</span>
+<span class="sd">    :param fithigh: Upper fitting boundary in arcmin. If fithigh=None the entire radial range is used, default to None</span>
+<span class="sd">    :type fithigh: float , optional</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x</span> <span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">psfmat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor of class ChiSquared</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>  <span class="c1"># model predicts y for given x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span>
+        <span class="n">fitl</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">fith</span> <span class="o">=</span> <span class="mf">1e10</span>
+        <span class="k">if</span> <span class="n">fitlow</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fitl</span> <span class="o">=</span> <span class="n">fitlow</span>
+        <span class="k">if</span> <span class="n">fithigh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fith</span> <span class="o">=</span> <span class="n">fithigh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">region</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">x</span><span class="o">&gt;=</span><span class="n">fitl</span><span class="p">,</span><span class="n">x</span><span class="o">&lt;=</span><span class="n">fith</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nonz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">dy</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">]</span><span class="o">&gt;</span><span class="mf">0.</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">psfmat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="o">=</span> <span class="n">psfmat</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func_code</span> <span class="o">=</span> <span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">make_func_code</span><span class="p">(</span><span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">):</span>  <span class="c1"># par are a variable number of model parameters</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Caller of class ChiSquared</span>
+
+<span class="sd">        :param par: Parameter set to be passed to the model</span>
+<span class="sd">        :return: chi-squared value</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ym</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rminus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+
+            <span class="n">rplus</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dx</span>
+
+            <span class="n">area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">rplus</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">rminus</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">ym</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span><span class="p">,</span><span class="n">ym</span> <span class="o">*</span> <span class="n">area</span><span class="p">)</span> <span class="o">/</span> <span class="n">area</span>
+
+        <span class="n">reg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">region</span>
+        <span class="n">nonz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nonz</span>
+        <span class="n">chi2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]</span> <span class="o">-</span> <span class="n">ym</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">dy</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">chi2</span></div>
+
+<span class="c1"># Generic class to fit data with C-stat</span>
+<div class="viewcode-block" id="Cstat"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.fitting.Cstat">[docs]</a><span class="k">class</span> <span class="nc">Cstat</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class defining a C-stat likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method=&#39;cstat&#39; option.</span>
+
+<span class="sd">    :param model: Model definition. A :class:`pyproffit.models.Model` object defining the model to be used.</span>
+<span class="sd">    :type model: class:`pyproffit.models.Model`</span>
+<span class="sd">    :param x: x axis data</span>
+<span class="sd">    :type x: numpy.ndarray</span>
+<span class="sd">    :param counts: counts per bin data</span>
+<span class="sd">    :type counts: numpy.ndarray</span>
+<span class="sd">    :param area: bin are in arcmin^2</span>
+<span class="sd">    :type area: numpy.ndarray</span>
+<span class="sd">    :param effexp: bin effective exposure in s</span>
+<span class="sd">    :type effexp: numpy.ndarray</span>
+<span class="sd">    :param bkgc: number of background counts per bin</span>
+<span class="sd">    :type bkgc: numpy.ndarray</span>
+<span class="sd">    :param psfmat: PSF convolution matrix</span>
+<span class="sd">    :type psfmat: numpy.ndarray</span>
+<span class="sd">    :param fitlow: Lower fitting boundary in arcmin. If fitlow=None (default) the entire radial range is used</span>
+<span class="sd">    :type fitlow: float</span>
+<span class="sd">    :param fithigh: Upper fitting boundary in arcmin. If fithigh=None (default) the entire radial range is used</span>
+<span class="sd">    :type fithigh: float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">area</span><span class="p">,</span> <span class="n">effexp</span><span class="p">,</span> <span class="n">bkgc</span><span class="p">,</span> <span class="n">psfmat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor of class Cstat</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>  <span class="c1"># model predicts y for given x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="n">counts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">area</span> <span class="o">=</span> <span class="n">area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">effexp</span> <span class="o">=</span> <span class="n">effexp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bkgc</span> <span class="o">=</span> <span class="n">bkgc</span>
+        <span class="n">fitl</span> <span class="o">=</span> <span class="mf">0.</span>
+        <span class="n">fith</span> <span class="o">=</span> <span class="mf">1e10</span>
+        <span class="k">if</span> <span class="n">fitlow</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fitl</span> <span class="o">=</span> <span class="n">fitlow</span>
+        <span class="k">if</span> <span class="n">fithigh</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fith</span> <span class="o">=</span> <span class="n">fithigh</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">region</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">logical_and</span><span class="p">(</span><span class="n">x</span><span class="o">&gt;=</span><span class="n">fitl</span><span class="p">,</span><span class="n">x</span><span class="o">&lt;=</span><span class="n">fith</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nonz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">counts</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">]</span><span class="o">&gt;</span><span class="mf">0.</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">isz</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">counts</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">psfmat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="o">=</span> <span class="n">psfmat</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func_code</span> <span class="o">=</span> <span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">make_func_code</span><span class="p">(</span><span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Caller for class Cstat</span>
+
+<span class="sd">        :param par: Parameter set to be passed to the model</span>
+<span class="sd">        :return: C-stat value</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ym</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">)</span>
+        <span class="n">modcounts</span> <span class="o">=</span> <span class="n">ym</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">area</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">effexp</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">modcounts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span><span class="p">,</span><span class="n">modcounts</span><span class="p">)</span>
+        <span class="n">mm</span> <span class="o">=</span> <span class="n">modcounts</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bkgc</span> <span class="c1"># model counts</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">region</span>
+        <span class="n">nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c</span>
+        <span class="n">nonz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nonz</span>
+        <span class="n">cstat</span> <span class="o">=</span> <span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mm</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]</span><span class="o">-</span><span class="n">nc</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mm</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">])</span><span class="o">-</span><span class="n">nc</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]</span><span class="o">+</span><span class="n">nc</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">nc</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">nonz</span><span class="p">]))</span> <span class="c1"># normalized C-statistic</span>
+        <span class="n">isz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">isz</span>
+        <span class="n">cstat</span> <span class="o">=</span> <span class="n">cstat</span> <span class="o">+</span> <span class="mf">2.</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mm</span><span class="p">[</span><span class="n">reg</span><span class="p">][</span><span class="n">isz</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">cstat</span></div>
+
+<span class="c1"># Class including fitting tool</span>
+<div class="viewcode-block" id="Fitter"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.fitting.Fitter">[docs]</a><span class="k">class</span> <span class="nc">Fitter</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class containing the tools to fit surface brightness profiles with a model. Sets up the likelihood and optimizes for the parameters.</span>
+
+<span class="sd">    :param model: Object of type :class:`pyproffit.models.Model` defining the model to be used.</span>
+<span class="sd">    :type model: class:`pyproffit.models.Model`</span>
+<span class="sd">    :param profile: Object of type :class:`pyproffit.profextract.Profile` containing the surface brightness profile to be fitted</span>
+<span class="sd">    :type profile: class:`pyproffit.profextract.Profile`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Constructor of class Fitter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mod</span><span class="o">=</span><span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">profile</span><span class="o">=</span><span class="n">profile</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mlike</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minuit</span><span class="o">=</span><span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">=</span><span class="kc">None</span>
+
+<div class="viewcode-block" id="Fitter.Migrad"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.fitting.Fitter.Migrad">[docs]</a>    <span class="k">def</span> <span class="nf">Migrad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;chi2&#39;</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.</span>
+
+<span class="sd">        :param method: Likelihood function to be optimized. Available likelihoods are &#39;chi2&#39; (chi-squared) and &#39;cstat&#39; (C statistic). Defaults to &#39;chi2&#39;.</span>
+<span class="sd">        :type method: str</span>
+<span class="sd">        :param fitlow: Lower boundary of the active fitting radial range. If fitlow=None the entire range is used. Defaults to None</span>
+<span class="sd">        :type fitlow: float</span>
+<span class="sd">        :param fithigh: Upper boundary of the active fitting radial range. If fithigh=None the entire range is used. Defaults to None</span>
+<span class="sd">        :type fithigh: float</span>
+<span class="sd">        :param kwargs: List of arguments to be passed to the iminuit library. For instance, setting parameter boundaries, optimization options or fixing parameters.</span>
+<span class="sd">            See the iminuit documentation: https://iminuit.readthedocs.io/en/stable/index.html</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prof</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">profile</span>
+        <span class="k">if</span> <span class="n">prof</span><span class="o">.</span><span class="n">profile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: No valid profile exists in provided object&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">model</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">model</span>
+        <span class="k">if</span> <span class="n">prof</span><span class="o">.</span><span class="n">psfmat</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">psfmat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">prof</span><span class="o">.</span><span class="n">psfmat</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">psfmat</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">method</span><span class="o">==</span><span class="s1">&#39;chi2&#39;</span><span class="p">:</span>
+             <span class="c1"># Define the fitting algorithm</span>
+            <span class="n">chi2</span><span class="o">=</span><span class="n">ChiSquared</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">bins</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">ebins</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">profile</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">eprof</span><span class="p">,</span><span class="n">psfmat</span><span class="o">=</span><span class="n">psfmat</span><span class="p">,</span><span class="n">fitlow</span><span class="o">=</span><span class="n">fitlow</span><span class="p">,</span><span class="n">fithigh</span><span class="o">=</span><span class="n">fithigh</span><span class="p">)</span>
+            <span class="c1"># Construct iminuit object</span>
+            <span class="n">minuit</span><span class="o">=</span><span class="n">iminuit</span><span class="o">.</span><span class="n">Minuit</span><span class="p">(</span><span class="n">chi2</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">method</span><span class="o">==</span><span class="s1">&#39;cstat&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">prof</span><span class="o">.</span><span class="n">counts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: No count profile exists&#39;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="c1"># Define the fitting algorithm</span>
+            <span class="n">cstat</span><span class="o">=</span><span class="n">Cstat</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">bins</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">counts</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">area</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">effexp</span><span class="p">,</span><span class="n">prof</span><span class="o">.</span><span class="n">bkgcounts</span><span class="p">,</span><span class="n">psfmat</span><span class="o">=</span><span class="n">psfmat</span><span class="p">,</span><span class="n">fitlow</span><span class="o">=</span><span class="n">fitlow</span><span class="p">,</span><span class="n">fithigh</span><span class="o">=</span><span class="n">fithigh</span><span class="p">)</span>
+            <span class="c1"># Construct iminuit object</span>
+            <span class="n">minuit</span><span class="o">=</span><span class="n">iminuit</span><span class="o">.</span><span class="n">Minuit</span><span class="p">(</span><span class="n">cstat</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Unknown method &#39;</span><span class="p">,</span><span class="n">method</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="n">fmin</span><span class="p">,</span> <span class="n">param</span><span class="o">=</span><span class="n">minuit</span><span class="o">.</span><span class="n">migrad</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">fmin</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
+        <span class="n">npar</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">minuit</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="n">outval</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">npar</span><span class="p">)</span>
+        <span class="n">outerr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">npar</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">npar</span><span class="p">):</span>
+            <span class="n">outval</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">minuit</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">outerr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">minuit</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">SetParameters</span><span class="p">(</span><span class="n">outval</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">SetErrors</span><span class="p">(</span><span class="n">outerr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mod</span><span class="o">.</span><span class="n">parnames</span> <span class="o">=</span> <span class="n">minuit</span><span class="o">.</span><span class="n">parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">=</span><span class="n">minuit</span><span class="o">.</span><span class="n">values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">=</span><span class="n">minuit</span><span class="o">.</span><span class="n">errors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mlike</span><span class="o">=</span><span class="n">fmin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">minuit</span><span class="o">=</span><span class="n">minuit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="o">=</span><span class="n">param</span></div></div>
+
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, D. Eckert
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

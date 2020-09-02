@@ -42,8 +42,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinx.ext.graphviz',
-    'sphinx_automodapi.automodapi',
-    'sphinx_automodapi.smart_resolver',
     'sphinx.ext.autosectionlabel',
     #'sphinxcontrib.plantuml',
     'sphinx.ext.napoleon',

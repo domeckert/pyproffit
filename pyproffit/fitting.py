@@ -141,6 +141,7 @@ class Cstat:
         cstat = cstat + 2.*np.sum(mm[reg][isz])
         return cstat
 
+
 # Class including fitting tool
 class Fitter:
     """

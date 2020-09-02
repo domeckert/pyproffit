@@ -47,6 +47,7 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     #'sphinxcontrib.plantuml',
     'sphinx.ext.napoleon',
+    'nbsphinx',
     #'matplotlib.sphinxext.plot_directive',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.autosummary',

@@ -649,7 +649,7 @@ class MyDeprojVol:
 
         """
         self.radin=radin
-        self.radot=radout
+        self.radout=radout
         self.help=''
 
     def deproj_vol(self):

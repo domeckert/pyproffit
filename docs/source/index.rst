@@ -11,7 +11,8 @@ Welcome to pyproffit's documentation!
     :caption: Contents:
     
     Intro <intro.rst>
-    pyproffit <pyproffit.rst>
+    Tutorials <tutorials.rst>
+    API <pyproffit.rst>
 
 Indices and tables
 ==================

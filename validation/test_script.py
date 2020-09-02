@@ -154,7 +154,6 @@ depr.Density()
 
 # Density and Mgas test
 
-depr.Density()
 if os.path.exists('test_density.pdf'):
     os.remove('test_density.pdf')
 if os.path.exists('test_mgas.pdf'):
@@ -229,6 +228,7 @@ else:
     depr_stan = pyproffit.Deproject(z=z_a3158, cf=cf_a3158, profile=prof)
 
     depr_stan.Multiscale(backend='stan', nmcmc=1000, bkglim=25.)
+    depr_stan.Density()
 
     check_sb = np.nan_to_num(ref_rec / depr_stan.sb)
     check_sb[isz] = 1.

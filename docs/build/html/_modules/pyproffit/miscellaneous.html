@@ -154,8 +154,8 @@
             
   <h1>Source code for pyproffit.miscellaneous</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="k">import</span>  <span class="n">cdist</span>
-<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="k">import</span> <span class="n">poisson</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="kn">import</span>  <span class="n">cdist</span>
+<span class="kn">from</span> <span class="nn">scipy.stats</span> <span class="kn">import</span> <span class="n">poisson</span>
 
 <div class="viewcode-block" id="logbinning"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.miscellaneous.logbinning">[docs]</a><span class="k">def</span> <span class="nf">logbinning</span><span class="p">(</span><span class="n">binsize</span><span class="p">,</span><span class="n">maxrad</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -360,7 +360,7 @@
     <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">a</span></div>
 
-<span class="kn">from</span> <span class="nn">scipy.ndimage.filters</span> <span class="k">import</span> <span class="n">gaussian_filter</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage.filters</span> <span class="kn">import</span> <span class="n">gaussian_filter</span>
 
 <div class="viewcode-block" id="bkg_smooth"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.miscellaneous.bkg_smooth">[docs]</a><span class="k">def</span> <span class="nf">bkg_smooth</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">smoothing_scale</span><span class="o">=</span><span class="mi">25</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -380,7 +380,7 @@
     <span class="n">bkgsmoothed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">gsb</span><span class="p">,</span><span class="n">gsexp</span><span class="p">))</span><span class="o">*</span><span class="n">expo</span>
     <span class="k">return</span>  <span class="n">bkgsmoothed</span></div>
 
-<span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="k">import</span> <span class="n">generic_filter</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">generic_filter</span>
 
 <div class="viewcode-block" id="clean_bkg"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.miscellaneous.clean_bkg">[docs]</a><span class="k">def</span> <span class="nf">clean_bkg</span><span class="p">(</span><span class="n">img</span><span class="p">,</span><span class="n">bkg</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>

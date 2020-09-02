@@ -36,6 +36,14 @@ pyproffit.fitting module
    :undoc-members:
    :show-inheritance:
 
+pyproffit.hmc module
+--------------------
+
+.. automodule:: pyproffit.hmc
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pyproffit.miscellaneous module
 ------------------------------
 

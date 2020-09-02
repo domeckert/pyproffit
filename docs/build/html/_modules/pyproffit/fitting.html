@@ -178,7 +178,7 @@
 <span class="sd">    :param fithigh: Upper fitting boundary in arcmin. If fithigh=None the entire radial range is used, default to None</span>
 <span class="sd">    :type fithigh: float , optional</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x</span> <span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">psfmat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x</span> <span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dy</span><span class="p">,</span> <span class="n">psfmat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructor of class ChiSquared</span>
 
@@ -202,7 +202,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">func_code</span> <span class="o">=</span> <span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">make_func_code</span><span class="p">(</span><span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
 
-    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">):</span>  <span class="c1"># par are a variable number of model parameters</span>
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">):</span>  <span class="c1"># par are a variable number of model parameters</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Caller of class ChiSquared</span>
 
@@ -249,7 +249,7 @@
 <span class="sd">    :param fithigh: Upper fitting boundary in arcmin. If fithigh=None (default) the entire radial range is used</span>
 <span class="sd">    :type fithigh: float</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">area</span><span class="p">,</span> <span class="n">effexp</span><span class="p">,</span> <span class="n">bkgc</span><span class="p">,</span> <span class="n">psfmat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">counts</span><span class="p">,</span> <span class="n">area</span><span class="p">,</span> <span class="n">effexp</span><span class="p">,</span> <span class="n">bkgc</span><span class="p">,</span> <span class="n">psfmat</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fitlow</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">fithigh</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructor of class Cstat</span>
 
@@ -275,7 +275,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">psfmat</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">func_code</span> <span class="o">=</span> <span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">make_func_code</span><span class="p">(</span><span class="n">iminuit</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)[</span><span class="mi">1</span><span class="p">:])</span>
 
-    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">par</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Caller for class Cstat</span>
 
@@ -307,7 +307,7 @@
 <span class="sd">    :param profile: Object of type :class:`pyproffit.profextract.Profile` containing the surface brightness profile to be fitted</span>
 <span class="sd">    :type profile: class:`pyproffit.profextract.Profile`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">profile</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructor of class Fitter</span>
 <span class="sd">        &quot;&quot;&quot;</span>

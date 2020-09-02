@@ -153,15 +153,15 @@
            <div itemprop="articleBody">
             
   <h1>Source code for pyproffit.profextract</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">astropy.io</span> <span class="k">import</span> <span class="n">fits</span>
-<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="k">import</span> <span class="n">convolve</span>
-<span class="kn">from</span> <span class="nn">.miscellaneous</span> <span class="k">import</span> <span class="o">*</span>
-<span class="kn">from</span> <span class="nn">scipy.ndimage.filters</span> <span class="k">import</span> <span class="n">gaussian_filter</span>
+<span></span><span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">convolve</span>
+<span class="kn">from</span> <span class="nn">.miscellaneous</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage.filters</span> <span class="kn">import</span> <span class="n">gaussian_filter</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">matplotlib.gridspec</span> <span class="k">as</span> <span class="nn">gridspec</span>
-<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="k">import</span> <span class="n">brentq</span>
-<span class="kn">from</span> <span class="nn">.emissivity</span> <span class="k">import</span> <span class="o">*</span>
-<span class="kn">from</span> <span class="nn">astropy.cosmology</span> <span class="k">import</span> <span class="n">Planck15</span> <span class="k">as</span> <span class="n">cosmo</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">brentq</span>
+<span class="kn">from</span> <span class="nn">.emissivity</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">astropy.cosmology</span> <span class="kn">import</span> <span class="n">Planck15</span> <span class="k">as</span> <span class="n">cosmo</span>
 
 <div class="viewcode-block" id="Profile"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.profextract.Profile">[docs]</a><span class="k">class</span> <span class="nc">Profile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -195,7 +195,7 @@
 <span class="sd">    :param bins: in case binning is set to &#39;custom&#39;, a numpy array containing the binning definition. For an input array of length N, the binning will contain N-1 bins with boundaries set as the values of the input array.</span>
 <span class="sd">    :type bins: class:`numpy.ndarray`</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_choice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxrad</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">binsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_choice</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxrad</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">binsize</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_ra</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_dec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">binning</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">,</span> <span class="n">centroid_region</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Constructor of class Profile</span>

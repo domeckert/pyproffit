@@ -17,6 +17,20 @@ a3d = 0.1  # Fractional perturbations
 
 # Function to Mexican Hat filter images at a given scale sc
 def calc_mexicanhat(sc, img, mask, simmod):
+    """
+    Filter an input image with a Mexican-hat filter
+
+    :param sc: Mexican Hat scale in pixel
+    :type sc: float
+    :param img: Image to be smoothed
+    :type img: class:`numpy.ndarray`
+    :param mask: Mask image
+    :type mask: class:`numpy.ndarray`
+    :param simmod: Model surface brightness image
+    :type simmod: class:`numpy.ndarray`
+    :return: Mexican Hat convolved image and SB model
+    :rtype: class:`numpy.ndarray`
+    """
     # Define Gaussian convolution kernel
     gf = np.zeros(img.shape)
     cx = int(img.shape[0] / 2 + 0.5)
@@ -46,6 +60,16 @@ def calc_mexicanhat(sc, img, mask, simmod):
 
 # Bootstrap function to compute the covariance matrix
 def do_bootstrap(vals, nsample):
+    """
+    Compute the covariance matrix of power spectra by bootstrapping the image
+
+    :param vals: Set of values
+    :type vals: class:`numpy.ndarray`
+    :param nsample: Number of bootstrap samples
+    :type nsample: int
+    :return: 2D covariance matrix
+    :rtype: class:`numpy.ndarray`
+    """
     nval = len(vals[0])
     nsc = len(vals)
     vout = np.zeros([nsc, nsample])
@@ -57,8 +81,25 @@ def do_bootstrap(vals, nsample):
     return cov
 
 
-# Function to compute the power at a given scale kr from the Mexican Hat filtered images
 def calc_ps(region, img, mod, kr, nreg):
+    """
+    Function to compute the power at a given scale kr from the Mexican Hat filtered images
+
+    :param region: Index defining the region from which the power spectrum will be extracted
+    :type region: class:`numpy.ndarray`
+    :param img: Mexican Hat filtered image
+    :type img: class:`numpy.ndarray`
+    :param mod: Mexican Hat filtered SB model
+    :type mod: class:`numpy.ndarray`
+    :param kr: Extraction scale
+    :type kr: float
+    :param nreg: Number of subregions into which the image should be splitted to perform the bootstrap
+    :type nreg: int
+    :return:
+            - ps (float): Power at scale kr
+            - psnoise (float): Noise at scale kr
+            - vals (class:`numpy.ndarray`): set of values for bootstrap error calculation
+    """
     var = np.var(img[region])  # Eq. 17 of Churazov et al. 2012
     vmod = np.var(mod[region])
     ps = (var - vmod) / epsilon ** 2 / Yofn / kr ** 2
@@ -99,6 +140,22 @@ def doublebeta(x, pars):
 
 # Function to compute numerically the 2D to 3D deprojection factor
 def calc_projection_factor(nn, mask, betaparams, scale):
+    """
+    Compute numerically the 2D to 3D deprojection factor. The routine is simulating 3D fluctuations using the surface brightness model and the region mask, projecting the 3D data along one axis, and computing the ratio of 2D to 3D power as a function of scale.
+
+    Caution: this is a memory intensive computation which will run into memory overflow if the image size is too large or the available memory is insufficient.
+
+    :param nn: Image size in pixel
+    :type nn: int
+    :param mask: Array defining the mask of active pixels, of size (nn , nn)
+    :type mask: class:`numpy.ndarray`
+    :param betaparams: Parameters of the beta model or double beta model
+    :type betaparams: class:`numpy.ndarray`
+    :param scale: Array of scales at which the projection factor should be computed
+    :type scale: class:`numpy.ndarray`
+    :return: Array containing wave number, 2D power, 2D amplitude, and 3D power
+    :rtype: class:`numpy.ndarray`
+    """
     tinit = time.time()
 
     # params defining cutoff scales in ADIM UNITS, i.e. divide by (2PI/L)
@@ -251,17 +308,36 @@ def calc_projection_factor(nn, mask, betaparams, scale):
     return pout
 
 
-class PowerSpectrum:
+class PowerSpectrum(object):
+    """
+    Class to perform fluctuation power spectrum analysis from Poisson count images. This is the code used in Eckert et al. 2017.
+
+    :param data: Object of type :class:`pyproffit.data.Data` including the image, exposure map, background map, and region definition
+    :type data: class:`pyproffit.data.Data`
+    :param profile: Object of type :class:`pyproffit.profextract.Profile` including the extracted surface brightness profile
+    :type profile: class:`pyproffit.profextract.Profile`
+    """
     def __init__(self, data, profile):
+        """
+        Constructor for class PowerSpectrum
+
+        """
         self.data = data
         self.profile = profile
 
     def MexicanHat(self, modimg_file, z, region_size=1., factshift=1.5):
-        # Function to compute Mexican Hat convolution
-        # Inputs:
-        # z: redshift
-        # region_size: size of the region of interest in Mpc
-        # factshift: size of the border around the region
+        """
+        Convolve the input image and model image with a set of Mexican Hat filters at various scales. The convolved images are automatically stored into FITS images called conv_scale_xx.fits and conv_beta_xx.fits, with xx the scale in kpc.
+
+        :param modimg_file: Path to a FITS file including the model image, typically produced with :meth:`pyproffit.profextract.Profile.SaveModelImage`
+        :type modimg_file: str
+        :param z: Source redshift
+        :type z: float
+        :param region_size: Size of the region of interest in Mpc. Defaults to 1.0
+        :type region_size: float
+        :param factshift: Size of the border around the region, i.e. a region of size factshift * region_size is used for the computation. Defaults to 1.5
+        :type factshift: float
+        """
         imgo = self.data.img
         expo = self.data.exposure
         bkg = self.data.bkg
@@ -317,9 +393,20 @@ class PowerSpectrum:
             fmod.writeto('conv_model_%d_kpc.fits' % (int(np.round(sckpc[i]))), overwrite=True)
         fmod.close()
 
-    # Function to estimate the power spectrum in a given circle or annulus
-    # radius_in and radius_out are in Mpc
+    #
     def PS(self, z, region_size=1., radius_in=0., radius_out=1.):
+        """
+        Function to compute the power spectrum from existing Mexican Hat images in a given circle or annulus
+
+        :param z: Source redshift
+        :type z: float
+        :param region_size: Size of the region of interest in Mpc. Defaults to 1.0. This value must be equal to the region_size parameter used in :meth:`pyproffit.power_spectrum.PowerSpectrum.MexicanHat`.
+        :type region_size: float
+        :param radius_in: Inner boundary in Mpc of the annulus to be used. Defaults to 0.0
+        :type radius_in: float
+        :param radius_out: Outer boundary in Mpc of the annulus to be used. Defaults to 1.0
+        :type radius_out: float
+        """
         kpcp = cosmo.kpc_proper_per_arcmin(z).value
         Mpcpix = 1000. / kpcp / self.data.pixsize  # 1 Mpc in pixel
         regsizepix = region_size * Mpcpix
@@ -382,6 +469,20 @@ class PowerSpectrum:
         self.cov = cov
 
     def Plot(self, save_plots=True, outps='power_spectrum.pdf', outamp='a2d.pdf', plot_3d=False, cfact=None):
+        """
+        Plot the loaded power spectrum
+
+        :param save_plots: Indicate whether the plot should be saved to disk or not. Defaults to True.
+        :type save_plots: bool
+        :param outps: Name of output file. Defaults to 'power_spectrum.pdf'
+        :type outps: str
+        :param outamp: Name of output file to save the 2D amplitude plot. Defaults to 'a2d.pdf'
+        :type outamp: str
+        :param plot_3d: Add or not the 3D power spectrum to the plot. Defaults to False
+        :type plot_3d: bool
+        :param cfact: 2D to 3D projection factor
+        :type cfact: class:`numpy.ndarray` , optional
+        """
         if self.ps is None:
             print('Error: No power spectrum exists in structure')
             return
@@ -444,6 +545,14 @@ class PowerSpectrum:
             plt.show()
 
     def Save(self, outfile, outcov='covariance.txt'):
+        """
+        Save the loaded power spectra to an output ASCII file
+
+        :param outfile: Name of output ASCII file
+        :type outfile: str
+        :param outcov: Output covariance matrix. Defaults to 'covariance.txt'
+        :type outcov: str
+        """
         if self.ps is None:
             print('Error: Nothing to save')
             return
@@ -452,6 +561,20 @@ class PowerSpectrum:
         np.savetxt(outcov, self.cov)
 
     def ProjectionFactor(self, z, betaparams, region_size=1.):
+        """
+        Compute numerically the 2D to 3D deprojection factor. The routine is simulating 3D fluctuations using the surface brightness model and the region mask, projecting the 3D data along one axis, and computing the ratio of 2D to 3D power as a function of scale.
+
+        Caution: this is a memory intensive computation which will run into memory overflow if the image size is too large or the available memory is insufficient.
+
+        :param z: Source redshift
+        :type z: float
+        :param betaparams: Parameters of the beta model or double beta model
+        :type betaparams: class:`numpy.ndarray`
+        :param region_size: Size of the region of interest in Mpc. Defaults to 1.0. This value must be equal to the region_size parameter used in :meth:`pyproffit.power_spectrum.PowerSpectrum.MexicanHat`.
+        :type region_size: float
+        :return: Array of projection factors
+        :rtype: class:`numpy.ndarray`
+        """
         pixsize = self.data.pixsize
         npar = len(betaparams)
         if npar == 4:

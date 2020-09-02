@@ -5,4 +5,3 @@ numpy
 pymc3
 pystan
 scipy
-stan_utility

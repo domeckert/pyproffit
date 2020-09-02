@@ -17,6 +17,20 @@ mh = 1.66053904e-24 #proton mass in g
 
 
 def plot_multi_methods(profs, deps, labels=None, outfile=None):
+    """
+    Plot multiple gas density profiles (e.g. obtained through several methods, centers or sectors) to compare them
+
+    :param profs: List of Profile objects to be plotted
+    :type profs: tuple
+    :param deps: List of Deproject objects to be plotted
+    :type deps: tuple
+    :param labels: List of labels for the legend (default=None)
+    :type labels: tuple
+    :param outfile: If outfile is not None, path to file name to output the plot
+    :type outfile: str
+    :return: matplotlib figure object
+    :rtype: class:`matplotlib.figure`
+    """
     if len(profs) != len(deps):
         print("ERROR: different numbers of profiles and deprojection elements")
         return
@@ -44,8 +58,9 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
 
         kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
 
-        rkpc = prof.bins * kpcp
-        erkpc = prof.ebins * kpcp
+        sourcereg = np.where(prof.bins < dep.bkglim)
+        rkpc = prof.bins[sourcereg] * kpcp
+        erkpc = prof.ebins[sourcereg] * kpcp
 
         plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt='.',
                      color='C%d' % i, elinewidth=2,
@@ -54,12 +69,23 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     plt.legend(loc=0,fontsize=22)
     if outfile is not None:
         plt.savefig(outfile)
-    else:
-        plt.show(block=False)
 
-# Function to calculate a linear operator transforming parameter vector into predicted model counts
+    return fig
+
 
 def fbul19(R,z,Runit='kpc'):
+    """
+    Compute Mgas from input R500 using Bulbul+19 M-Mgas scaling relation
+
+    :param R: Input R500 value
+    :type R: float
+    :param z: Input redshift
+    :type z: float
+    :param Runit: Unit of input radis, kpc or arcmin (default='kpc')
+    :type Runit: str
+    :return: Mgas
+    :rtype: float
+    """
     if Runit == 'arcmin':
         amin2kpc = cosmo.kpc_proper_per_arcmin(z).value
         R=R*amin2kpc
@@ -86,6 +112,24 @@ def fbul19(R,z,Runit='kpc'):
 
 
 def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
+    """
+    Function to calculate a linear operator transforming parameter vector into predicted model counts
+
+    :param rad: Array of input radii in arcmin
+    :type rad: numpy.ndarray
+    :param sourcereg: Selection array for the source region
+    :type sourcereg: numpy.ndarray
+    :param pars: List of beta model parameters obtained through list_params
+    :type pars: numpy.ndarray
+    :param area: Bin area in arcmin^2
+    :type area: numpy.ndarray
+    :param expo: Bin effective exposure in s
+    :type expo: numpy.ndarray
+    :param psf: PSF mixing matrix
+    :type psf: numpy.ndarray
+    :return: Linear projection and PSF mixing operator
+    :rtype: numpy.ndarray
+    """
     # Select values in the source region
     rfit=rad[sourcereg]
     npt=len(rfit)
@@ -116,6 +160,22 @@ def calc_linear_operator(rad,sourcereg,pars,area,expo,psf):
 nsh=4. # number of basis functions to set
 
 def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
+    """
+    Define a list of parameters to define the dictionary of basis functions
+
+    :param rad: Array of input radii in arcmin
+    :type rad: numpy.ndarray
+    :param sourcereg: Selection array for the source region
+    :type sourcereg: numpy.ndarray
+    :param nrc: Number of core radii. If nrc=None (default), the number of core radiis will be defined on-the-fly
+    :type nrc: int
+    :param nbetas: Number of beta values. Default=6
+    :type nbetas: int
+    :param min_beta: Minimum value of beta. Default=0.6
+    :type min_beta: float
+    :return: Array containing sets of values to set up the function dictionary
+    :rtype: numpy.ndarray
+    """
     rfit=rad[sourcereg]
     npfit=len(rfit)
     if nrc is None:
@@ -135,6 +195,19 @@ def list_params(rad,sourcereg,nrc=None,nbetas=6,min_beta=0.6):
 # Function to create a linear operator transforming parameters into surface brightness
 
 def calc_sb_operator(rad,sourcereg,pars):
+    """
+    Function to calculate a linear operator transforming parameter vector into surface brightness
+
+    :param rad: Array of input radii in arcmin
+    :type rad: numpy.ndarray
+    :param sourcereg: Selection array for the source region
+    :type sourcereg: numpy.ndarray
+    :param pars: List of beta model parameters obtained through list_params
+    :type pars: numpy.ndarray
+    :return: Linear projection operator
+    :rtype: numpy.ndarray
+    """
+
     # Select values in the source region
     rfit=rad[sourcereg]
     npt=len(rfit)
@@ -156,6 +229,24 @@ def calc_sb_operator(rad,sourcereg,pars):
 
 
 def calc_sb_operator_psf(rad, sourcereg, pars, area, expo, psf):
+    """
+    Same as calc_sb_operator but convolving the model surface brightness with the PSF model
+
+    :param rad: Array of input radii in arcmin
+    :type rad: numpy.ndarray
+    :param sourcereg: Selection array for the source region
+    :type sourcereg: numpy.ndarray
+    :param pars: List of beta model parameters obtained through list_params
+    :type pars: numpy.ndarray
+    :param area: Bin area in arcmin^2
+    :type area: numpy.ndarray
+    :param expo: Bin effective exposure in s
+    :type expo: numpy.ndarray
+    :param psf: PSF mixing matrix
+    :type psf: numpy.ndarray
+    :return: Linear projection and PSF mixing operator
+    :rtype: numpy.ndarray
+    """
     # Select values in the source region
     rfit = rad[sourcereg]
     npt = len(rfit)
@@ -184,6 +275,18 @@ def calc_sb_operator_psf(rad, sourcereg, pars, area, expo, psf):
 
 
 def calc_int_operator(a, b, pars):
+    """
+    Compute a linear operator to integrate analytically the basis functions within some radial range and return count rate and luminosities
+
+    :param a: Lower integration boundary
+    :type a: float
+    :param b: Upper integration boundary
+    :type b: float
+    :param pars: List of beta model parameters obtained through list_params
+    :type pars: numpy.ndarray
+    :return: Linear integration operator
+    :rtype: numpy.ndarray
+    """
     # Select values in the source region
     npars = len(pars[:, 0])
     rads = np.array([a, b])
@@ -204,6 +307,24 @@ def calc_int_operator(a, b, pars):
 
 
 def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
+    """
+    Define a list of parameters to transform the basis functions into gas density profiles
+
+    :param rad: Array of input radii in arcmin
+    :type rad: numpy.ndarray
+    :param sourcereg: Selection array for the source region
+    :type sourcereg: numpy.ndarray
+    :param z: Source redshift
+    :type z: float
+    :param nrc: Number of core radii. If nrc=None (default), the number of core radiis will be defined on-the-fly
+    :type nrc: int
+    :param nbetas: Number of beta values. Default=6
+    :type nbetas: int
+    :param min_beta: Minimum value of beta. Default=0.6
+    :type min_beta: float
+    :return: Array containing sets of values to set up the function dictionary
+    :rtype: numpy.ndarray
+    """
     rfit=rad[sourcereg]
     npfit=len(rfit)
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
@@ -224,6 +345,18 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
 # Linear operator to transform parameters into density
 
 def calc_density_operator(rad,pars,z):
+    """
+    Compute linear operator to transform parameters into gas density profiles
+
+    :param rad: Array of input radii in arcmin
+    :type rad: numpy.ndarray
+    :param pars: List of beta model parameters obtained through list_params
+    :type pars: numpy.ndarray
+    :param z: Source redshift
+    :type z: float
+    :return: Linear operator for gas density
+    :rtype: numpy.ndarray
+    """
     # Select values in the source region
     kpcp=cosmo.kpc_proper_per_arcmin(z).value
     rfit=rad*kpcp
@@ -247,6 +380,29 @@ def calc_density_operator(rad,pars,z):
     return Ktot
 
 def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
+    """
+    Run the multiscale deprojection optimization using the Stan backend
+
+    :param deproj: Object containing the data and parameters
+    :type deproj: pyproffit.Deproject
+    :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
+    :type bkglim: float
+    :param nmcmc: Number of HMC points in the output sample
+    :type nmcmc: int
+    :param back: Input value for the background, around which a gaussian prior is set. If back=None (default), the input background value will be computed as the average of the source-free region
+    :type back: float
+    :param samplefile: Path to output file to write the output samples. If samplefile=None (default), the data are not written to file and only loaded into memory
+    :type samplefile: str
+    :param nrc: Number of core radii. If nrc=None (default), the number of core radiis will be defined on-the-fly
+    :type nrc: int
+    :param nbetas: Number of beta values. Default=6
+    :type nbetas: int
+    :param depth: Set the max_treedepth parameter for Stan (default=10)
+    :type depth: int
+    :param min_beta: Minimum value of beta. Default=0.6
+    :type min_beta: float
+    :return:
+    """
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -302,7 +458,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     if not os.path.exists(stan_dir):
         os.makedirs(stan_dir)
 
-    code = '''
+    code = """
     data {
     int<lower=0> N;
     int<lower=0> M;
@@ -320,7 +476,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     model {
     log_norm ~ normal(norm0,10);
     cts_tot ~ poisson(K * norm + cts_back);
-    }'''
+    }"""
 
 
     f = open('mybeta_GP.stan', 'w')
@@ -362,6 +518,28 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
 def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
+    """
+    Run the multiscale deprojection optimization using the PyMC3 backend
+
+    :param deproj: Object containing the data and parameters
+    :type deproj: pyproffit.Deproject
+    :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
+    :type bkglim: float
+    :param nmcmc: Number of HMC points in the output sample
+    :type nmcmc: int
+    :param back: Input value for the background, around which a gaussian prior is set. If back=None (default), the input background value will be computed as the average of the source-free region
+    :type back: float
+    :param samplefile: Path to output file to write the output samples. If samplefile=None (default), the data are not written to file and only loaded into memory
+    :type samplefile: str
+    :param nrc: Number of core radii. If nrc=None (default), the number of core radiis will be defined on-the-fly
+    :type nrc: int
+    :param nbetas: Number of beta values. Default=6
+    :type nbetas: int
+    :param min_beta: Minimum value of beta. Default=0.6
+    :type min_beta: float
+    :return:
+    """
+
     prof = deproj.profile
     sb = prof.profile
     rad = prof.bins
@@ -425,9 +603,9 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     tinit = time.time()
     print('Running MCMC...')
     with basic_model:
-        #tm = pm.find_MAP()
-        #trace = pm.sample(nmcmc, start=tm)
-        trace = pm.sample(nmcmc)
+        tm = pm.find_MAP()
+        trace = pm.sample(nmcmc, start=tm)
+        #trace = pm.sample(nmcmc)
     print('Done.')
     tend = time.time()
     print(' Total computing time is: ', (tend - tinit) / 60., ' minutes')
@@ -457,24 +635,33 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
 
 
 class MyDeprojVol:
-    '''
-    Mydeproj
-    '''
-    def __init__(self, radin, radot):
-        '''
+    """
+    Class to compute the projection volumes
 
-        :param radin:
+    :param radin: Array of inner radii of the bins
+    :type radin: class:`numpy.ndarray`
+    :param radout: Array of outer radii of the bins
+    :type radout: class:`numpy.ndarray`
+    """
+    def __init__(self, radin, radout):
+        """
+        Constructor for class MyDeprojVol
 
-        :param radot:
-        '''
+        """
         self.radin=radin
-        self.radot=radot
+        self.radout=radout
         self.help=''
 
     def deproj_vol(self):
+        """
+        Compute the projection volumes
+
+        :return: Volume matrix
+        :rtype: numpy.ndarray
+        """
         ###############volume=deproj_vol(radin,radot)
         ri=np.copy(self.radin)
-        ro=np.copy(self.radot)
+        ro=np.copy(self.radout)
 
         diftot=0
         for i in range(1,len(ri)):
@@ -506,6 +693,14 @@ class MyDeprojVol:
         return volume2
 
 def medsmooth(prof):
+    """
+    Smooth a given profile by taking the median value of surrounding points instead of the initial value
+
+    :param prof: Input profile to be smoothed
+    :type prof: numpy.ndarray
+    :return: Smoothd profile
+    :rtype: numpy.ndarray
+    """
     width=5
     nbin=len(prof)
     xx=np.empty((nbin,width))
@@ -526,6 +721,20 @@ def medsmooth(prof):
     return  smoothed
 
 def EdgeCorr(nbin,rin_cm,rout_cm,em0):
+    """
+    For Onion Peeling deprojection, correct for edge effects by estimating the contribution of flux beyond the edge, using McLaughlin+99 method
+
+    :param nbin: Number of bins in input profile
+    :type nbin: int
+    :param rin_cm: Inner radii of the bins in cm
+    :type rin_cm: numpy.ndarray
+    :param rout_cm: Outer radii of the bins in cm
+    :type rout_cm: numpy.ndarray
+    :param em0: Deprojected emissivity profile before edge correction
+    :type em0: numpy.ndarray
+    :return: Edge-corrected deprojected profile
+    :rtype: numpy.ndarray
+    """
     # edge correction
     mrad = [rin_cm[nbin - 1], rout_cm[nbin - 1]]
     edge0 = (mrad[0] + mrad[1]) * mrad[0] * mrad[1] / rout_cm ** 3
@@ -543,6 +752,15 @@ def EdgeCorr(nbin,rin_cm,rout_cm,em0):
     return corr
 
 def OP(deproj,nmc=1000):
+    """
+    Run standard Onion Peeling deprojection including edge correction
+
+    :param deproj: Input data
+    :type deproj: pyproffit.Deproject
+    :param nmc: Number of Monte Carlo realizations of the profile to compute the uncertainties (default=1000)
+    :type nmc: int
+    :return: None
+    """
     # Standard onion peeling
     prof=deproj.profile
     nbin=prof.nbin
@@ -589,9 +807,26 @@ def OP(deproj,nmc=1000):
     deproj.dens_lo = deproj.dens - edens
     deproj.dens_hi = deproj.dens + edens
 
+    deproj.bkglim = np.max(routam)
 
-class Deproject:
+
+class Deproject(object):
+    """
+    pyproffit.Deproject class to perform all calculations of deprojection, density profile, gas mass, count rate, and luminosity
+
+    :param z: Source redshift. If z=None, only the surface brightness reconstruction can be done.
+    :type z: float
+    :param profile: Object of type :class:`pyproffit.profextract.Profile` containing the surface brightness profile data
+    :type profile: class:`pyproffit.profextract.Profile`
+    :param cf: Conversion factor from count rate to emissivity. If cf=None, only the surface brightness reconstruction can be done.
+    :type cf: float
+    :param f_abund: Solar abundance table to compute the electron-to-proton ratio and mean molecular weight. Available tables are 'aspl' (Aspling+09, default), 'angr' (Anders & Grevesse 89), and 'grsa' (Grevesse & Sauval 98)
+    :type f_abund: str
+     """
     def __init__(self,z=None,profile=None,cf=None,f_abund='aspl'):
+        """
+        Constructor for class pyproffit.Deproject
+       """
         self.profile = profile
         self.z = z
         self.samples = None
@@ -643,6 +878,28 @@ class Deproject:
 
 
     def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
+        """
+        Run Multiscale deprojection using the method described in Eckert+20
+
+        :param backend: Backend to run the optimization problem. Available backends are 'pymc3' (default) and 'stan'
+        :type backend: strr
+        :param nmcmc: Number of HMC points in the output sample
+        :type nmcmc: int
+        :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
+        :type bkglim: float
+        :param back: Input value for the background, around which a gaussian prior is set. If back=None (default), the input background value will be computed as the average of the source-free region
+        :type back: float
+        :param samplefile: Path to output file to write the output samples. If samplefile=None (default), the data are not written to file and only loaded into memory
+        :type samplefile: str
+        :param nrc: Number of core radii. If nrc=None (default), the number of core radiis will be defined on-the-fly
+        :type nrc: int
+        :param nbetas: Number of beta values. Default=6
+        :type nbetas: int
+        :param depth: Set the max_treedepth parameter for Stan (default=10)
+        :type depth: int
+        :param min_beta: Minimum value of beta. Default=0.6
+        :type min_beta: float
+        """
         self.backend=backend
         self.nmcmc=nmcmc
         self.bkglim=bkglim
@@ -661,9 +918,23 @@ class Deproject:
 
 
     def OnionPeeling(self,nmc=1000):
+        """
+        Run standard Onion Peeling deprojection using the Kriss+83 method and the McLaughlin+99 edge correction
+
+        :param nmc: Number of Monte Carlo realizations of the profile to compute the uncertainties (default=1000)
+        :type nmc: int
+        """
         OP(self,nmc)
 
     def PlotDensity(self,outfile=None,xscale='kpc'):
+        """
+        Plot the loaded density profile
+
+        :param outfile: Output file name. If outfile=None (default) plot only to stdout
+        :type outfile: str
+        :param xscale: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
+        :type xscale: str
+        """
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
@@ -674,9 +945,13 @@ class Deproject:
         if xscale not in ['arcmin','kpc','both']:
             xscale='kpc'
 
+        sourcereg_out = np.where(self.rout < self.bkglim)
+
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
-        rkpc = self.rout * kpcp
+        rkpc = self.rout[sourcereg_out] * kpcp
+
+        rout = self.rout[sourcereg_out]
         #erkpc = self.profile.ebins * kpcp
 
         plt.clf()
@@ -696,8 +971,8 @@ class Deproject:
             ax.fill_between(rkpc, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
             ax.set_xlabel('Radius [kpc]', fontsize=40)
         else:
-            ax.plot(self.rout, self.dens, color='C0', lw=2)
-            ax.fill_between(self.rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
+            ax.plot(rout, self.dens, color='C0', lw=2)
+            ax.fill_between(rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
             ax.set_xlabel('Radius [arcmin]', fontsize=40)
 
         if xscale == 'both':
@@ -720,6 +995,12 @@ class Deproject:
             plt.show(block=False)
 
     def Density(self,rout=None):
+        """
+        Compute a density profile from a multiscale reconstruction
+
+        :param rout: Radial binning of the density profile. If rout=None, the original binning of the surface brightness profile is used
+        :type rout: numpy.ndarray
+        """
         z = self.z
         cf = self.cf
         samples = self.samples
@@ -753,6 +1034,12 @@ class Deproject:
             print('No redshift and/or conversion factor, nothing to do')
 
     def PlotSB(self,outfile=None):
+        """
+        Plot the surface brightness profile reconstructed after applying the multiscale deprojection and PSF deconvolution technique, and compare it with the input brightness profile
+
+        :param outfile: File name of saving the output figure. If outfile=None (default), plot only to stdout
+        :type outfile: str
+        """
         if self.profile is None:
             print('Error: No profile extracted')
             return
@@ -844,6 +1131,20 @@ class Deproject:
 
 
     def CountRate(self,a,b,plot=True,outfile=None):
+        """
+        Compute the model count rate integrated between radii a and b. Optionally, the count rate distribution can be plotted and saved.
+
+        :param a: Inner integration boundary in arcmin
+        :type a: float
+        :param b: Outer integration boundary in arcmin
+        :type b: float
+        :param plot: Plot the posterior count rate distribution (default=True)
+        :type plot: bool
+        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
+        :type outfile: str
+        :return: Median count rate, 16th and 84th percentiles
+        :rtype: float
+        """
         if self.samples is None:
             print('Error: no MCMC samples found')
             return
@@ -888,6 +1189,16 @@ class Deproject:
         return  medint,intlo,inthi
 
     def Ncounts(self,plot=True,outfile=None):
+        """
+        Compute the total model number of counts. Optionally, the posterior distribution can be plotted and saved.
+
+        :param plot: Plot the posterior distribution of number of counts (default=True)
+        :type plot: bool
+        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
+        :type outfile: str
+        :return: Median count rate, 16th and 84th percentiles
+        :rtype: float
+        """
         if self.samples is None:
             print('Error: no MCMC samples found')
             return
@@ -941,6 +1252,18 @@ class Deproject:
 
     # Compute Mgas within radius in kpc
     def Mgas(self,radius,plot=True,outfile=None):
+        """
+        Compute the posterior cumulative gas mass within a given radius. . Optionally, the posterior distribution can be plotted and saved.
+
+        :param radius: Gas mass integration radius in kpc
+        :type radius: float
+        :param plot: Plot the posterior Mgas distribution (default=True)
+        :type plot: bool
+        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
+        :type outfile: str
+        :return: Median count rate, 16th and 84th percentiles
+        :rtype: float
+        """
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -955,7 +1278,7 @@ class Deproject:
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
         pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
-        Kdens = calc_density_operator(rad, sourcereg, pardens, self.z)
+        Kdens = calc_density_operator(rad, pardens, self.z)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
@@ -993,7 +1316,17 @@ class Deproject:
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="kpc",scaling_relation=None):
+    def PlotMgas(self,rout=None,outfile=None,xscale="kpc"):
+        """
+        Plot the cumulative gas mass profile from the output of a reconstruction
+
+        :param rout: Radial binning of the gas mass profile. If rout=None, the original binning of the surface brightness profile is used
+        :type rout: numpy.ndarray
+        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
+        :type outfile: str
+        :param xscale: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
+        :type xscale: str
+        """
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
@@ -1022,7 +1355,8 @@ class Deproject:
             rout = rad
         else:
             sourcereg_out = np.where(rout < self.bkglim)
-        Kdens = calc_density_operator(rout, sourcereg_out, pardens, self.z)
+
+        Kdens = calc_density_operator(rout, pardens, self.z)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
@@ -1102,6 +1436,14 @@ class Deproject:
 
 
     def Reload(self,samplefile,bkglim=None):
+        """
+        Reload the samples stored from a previous reconstruction run
+
+        :param samplefile: Path to file containing the saved HMC samples
+        :type samplefile: str
+        :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. This parameter needs to be the same as the value used to run the reconstruction. If bkglim=None (default), the entire radial range is used
+        :type bkglim: float
+        """
         # Reload the output of a previous PyMC3 run
         samples = np.loadtxt(samplefile)
         pars=np.loadtxt(samplefile+'.par')
@@ -1149,6 +1491,20 @@ class Deproject:
         self.bkg = bfit
 
     def CSB(self,rin=40.,rout=400.,plot=True,outfile=None):
+        """
+        Compute the surface brightness concentration from a loaded brightness profile reconstruction. The surface brightness concentration is defined as the ratio of fluxes computed within two apertures.
+
+        :param rin: Lower aperture value in kpc (default=40)
+        :type rin: float
+        :param rout: Higher aperture value in kpc (default=400)
+        :type rout: float
+        :param plot: Plot the posterior CSB distribution (default=True)
+        :type plot: bool
+        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
+        :type outfile: str
+        :return: Median count rate, 16th and 84th percentiles
+        :rtype: float
+        """
         if self.samples is None or self.z is None:
             print('Error: no profile reconstruction found')
             return
@@ -1193,13 +1549,16 @@ class Deproject:
 
 
     def SaveAll(self, outfile=None):
-        #####################################################
-        # Function to save profile into FITS file
-        # First extension is data
-        # Second extension is density
-        # Third extension is Mgas
-        # Forth extension is PSF
-        #####################################################
+        """
+        Save the results of a profile reconstruction into an output FITS file
+        First extension is data
+        Second extension is density
+        Third extension is Mgas
+        Fourth extension is PSF
+
+        :param outfile: Output file name
+        :type outfile: str
+        """
         if outfile is None:
             print('No output file name given')
             return

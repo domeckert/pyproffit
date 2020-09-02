@@ -10,7 +10,7 @@ setup(
       url="https://github.com/domeckert/pyproffit",
       packages=['pyproffit'],
       install_requires=[
-            'numpy','scipy','astropy','matplotlib','iminuit','pymc3','pystan','nbsphinx'
+            'numpy','scipy','astropy','matplotlib','iminuit','pymc3','pystan'
       ],
 )
 

@@ -32,7 +32,6 @@ release = '0.5'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx_automodapi.automodapi',
     #'numpydoc',
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',

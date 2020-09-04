@@ -159,7 +159,13 @@
 <span class="c1"># Generic class to fit data with chi-square</span>
 <div class="viewcode-block" id="ChiSquared"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.fitting.ChiSquared">[docs]</a><span class="k">class</span> <span class="nc">ChiSquared</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class defining a chi-square likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method=&#39;chi2&#39; option.</span>
+<span class="sd">    Class defining a chi-square likelihood based on a surface brightness profile and a model. Let :math:`S_i` be the measured surface brightness in annulus i and :math:`\\sigma_i` the corresponding Gaussian error. The likelihood function to be optimized is</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        -2\\log \\mathcal{L} = \\sum_{i=1}^N \\frac{(S_i - f(r_i))^2}{\\sigma_i^2}</span>
+
+<span class="sd">    This class is called by the Fitter object when using the method=&#39;chi2&#39; option.</span>
 
 <span class="sd">    :param model: Model definition. A :class:`pyproffit.models.Model` object defining the model to be used.</span>
 <span class="sd">    :type model: class:`pyproffit.models.Model`</span>
@@ -228,7 +234,15 @@
 <span class="c1"># Generic class to fit data with C-stat</span>
 <div class="viewcode-block" id="Cstat"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.fitting.Cstat">[docs]</a><span class="k">class</span> <span class="nc">Cstat</span><span class="p">:</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class defining a C-stat likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method=&#39;cstat&#39; option.</span>
+<span class="sd">    Class defining a C-stat likelihood based on a surface brightness profile and a model. Let :math:`A_i` , :math:`T_i` be the area and the effective exposure time of annulus i. We set :math:`F_{i} = f(r_{i})A_{i}T_{i}` the predicted number of counts in the annulus. The Poisson likelihood is then given by</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        -2\\log \\mathcal{L} = 2 \\sum_{i=1}^N F_i - C_i \\log F_i - C_i + C_i \\log C_i</span>
+
+<span class="sd">    with :math:`C_i` the observed number of counts in annulus i.</span>
+
+<span class="sd">    This class is called by the Fitter object when using the method=&#39;cstat&#39; option.</span>
 
 <span class="sd">    :param model: Model definition. A :class:`pyproffit.models.Model` object defining the model to be used.</span>
 <span class="sd">    :type model: class:`pyproffit.models.Model`</span>

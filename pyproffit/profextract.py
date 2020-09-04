@@ -589,12 +589,14 @@ class Profile(object):
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self,model=None,outfile=None,axes=None):
+    def Plot(self, model=None, hmcmod=None, outfile=None, axes=None):
         """
         Plot the loaded surface brightness profile
 
         :param model: If model is not None, plot the provided model of type :class:`pyproffit.models.Model` together with the data. Defaults to None
         :type model: class:`pyproffit.models.Model` , optional
+        :param hmcmod: If hmcmod is not None, use the provided HMC trace of type :class:`pyproffit.hmc.HMCModel` to compute the median optimized models and upper and lower envelopes. Defaults to None
+        :type hmcmod: class:`pyproffit.hmc.HMCModel`
         :param outfile: If outfile is not None, name of output file to save the plot. Defaults to None
         :type outfile: str , optional
         :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.

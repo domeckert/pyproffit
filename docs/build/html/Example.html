@@ -421,7 +421,7 @@ div.rendered_html tbody tr:hover {
 <p>This thread shows how to read data, extract surface brightness profiles, fit data and extract density profiles with PyProffit.</p>
 <p>We start by loading the packages:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -440,7 +440,7 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="kn">import</span> <span class="nn">os</span>
 
 <span class="c1"># Change this to the proper directory containing your run</span>
-<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;../validation/&#39;</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;../../validation/&#39;</span><span class="p">)</span>
 <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -521,7 +521,7 @@ the RADECSYS keyword is deprecated, use RADESYSa. [astropy.wcs.wcs]
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;matplotlib.image.AxesImage at 0x7f8c550195e0&gt;
+&lt;matplotlib.image.AxesImage at 0x7f3cb4aeb8b0&gt;
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -567,7 +567,7 @@ Excluded 2 sources
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-&lt;matplotlib.image.AxesImage at 0x7f8c54067340&gt;
+&lt;matplotlib.image.AxesImage at 0x7f3cb3b3aa90&gt;
 </pre></div></div>
 </div>
 <div class="nboutput docutils container">
@@ -588,7 +588,7 @@ Excluded 2 sources
 <h2><p>Profile extraction</p>
 </h2><p>Now we define a <em>Profile</em> object in the following way:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -605,9 +605,9 @@ Computing centroid and ellipse parameters using principal component analysis
 No approximate center provided, will search for the centroid within a radius of 30 arcmin from the center of the image
 Denoising image...
 Running PCA...
-Centroid position: 272.6956034226353 279.18237274024386
-Corresponding FK5 coordinates:  55.71658679320788 -53.63576859991975
-Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
+Centroid position: 272.16333357029663 278.8198598333728
+Corresponding FK5 coordinates:  55.72031020012356 -53.637277222392434
+Ellipse axis ratio and position angle: 1.1640229917099292 -144.95592639836158
 </pre></div></div>
 </div>
 <h2><p>Profile class options</p>
@@ -625,7 +625,7 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 <p><p>centroid_region=radius: for centroid calculation (center_choice=centroid), optionally provide a radius within which the centroid will be computed, instead of the entire image.</p>
 </blockquote><h3><p>Now let’s extract the profile…</p>
 </h3><div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -639,7 +639,7 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 </p><p><p>angle_low, angle_high=angle: in case of profile extraction in sectors, the position angle of the minimum and maximum angles of the sector, with 0 equivalent to the R.A. axis (default=None, i.e. the entire azimuth)</p>
 </blockquote><p><p>Now let’s plot the profile…</p>
 </p><div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -665,7 +665,7 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 <h2><p>Defining a model</p>
 </h2><p><p>Models can be defined using the Model class. Currently few built-in models are provided, but all the Proffit models will eventually be ported.</p>
 </p><div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -673,11 +673,29 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 </pre></div>
 </div>
 </div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">mod</span><span class="o">.</span><span class="n">parnames</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(&#39;beta&#39;, &#39;rc&#39;, &#39;norm&#39;, &#39;bkg&#39;)
+</pre></div></div>
+</div>
 <p>Any user-defined Python function operating on NumPy arrays can be defined here, see below.</p>
 <h2><p>Fitting the data</p>
 </h2><p><p>To fit the extracted profiles PyProffit provides the Fitter class, which takes a Profile and a Model object as input:</p>
 </p><div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -694,8 +712,8 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 ------------------------------------------------------------------
-| FCN = 170.3                   |     Ncalls=133 (133 total)     |
-| EDM = 5.78E-06 (Goal: 0.0002) |            up = 1.0            |
+| FCN = 156.7                   |     Ncalls=140 (140 total)     |
+| EDM = 1.67E-06 (Goal: 0.0002) |            up = 1.0            |
 ------------------------------------------------------------------
 |  Valid Min.   | Valid Param.  | Above EDM | Reached call limit |
 ------------------------------------------------------------------
@@ -709,16 +727,16 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 |   | Name |   Value   | Hesse Err | Minos Err- | Minos Err+ | Limit-  | Limit+  | Fixed |
 ------------------------------------------------------------------------------------------
 | 0 | beta |    0.7    |    1.0    |            |            |         |         |  yes  |
-| 1 | rc   |   3.41    |   0.06    |            |            |    0    |   10    |       |
-| 2 | norm |  -1.405   |   0.014   |            |            |         |         |       |
-| 3 | bkg  |  -3.709   |   0.014   |            |            |         |         |       |
+| 1 | rc   |   3.47    |   0.06    |            |            |    0    |   10    |       |
+| 2 | norm |  -1.403   |   0.014   |            |            |         |         |       |
+| 3 | bkg  |  -3.703   |   0.014   |            |            |         |         |       |
 ------------------------------------------------------------------------------------------
 </pre></div></div>
 </div>
 <p>Here <em>beta</em> was fixed to its input value through fix_beta=True option, and rc was constrained to be in the region [0,10] through the limit_rc=(0,10) argument.</p>
 <p>Now we can plot the data together with the best fitting model</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -738,7 +756,7 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_24_1.png" src="_images/Example_24_1.png" />
+<img alt="_images/Example_25_1.png" src="_images/Example_25_1.png" />
 </div>
 </div>
 <p><p>That’s nice; now if instead of <span class="math notranslate nohighlight">\(\chi^2\)</span> we want to fit the counts with C-stat</p>
@@ -800,7 +818,7 @@ Ellipse axis ratio and position angle: 1.1208927164140738 -146.76753513469183
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_28_1.png" src="_images/Example_28_1.png" />
+<img alt="_images/Example_29_1.png" src="_images/Example_29_1.png" />
 </div>
 </div>
 <p>Now if we want to re-extract the profile with a different binning and subtract the background…</p>
@@ -845,7 +863,7 @@ Corresponding FK5 coordinates:  55.72357900571692 -53.63992702587888
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_31_1.png" src="_images/Example_31_1.png" />
+<img alt="_images/Example_32_1.png" src="_images/Example_32_1.png" />
 </div>
 </div>
 <p>We will use the results of the previous fit stored in the <em>Fitter</em> object to subtract the background. The <em>Backsub</em> method of the <em>Profile</em> reads the <em>bkg</em> parameter, subtracts its value from the brightness profile and adds the statistics error in quadrature:</p>
@@ -871,7 +889,7 @@ Corresponding FK5 coordinates:  55.72357900571692 -53.63992702587888
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_33_1.png" src="_images/Example_33_1.png" />
+<img alt="_images/Example_34_1.png" src="_images/Example_34_1.png" />
 </div>
 </div>
 <h2><p>Fitting with a custom function</p>
@@ -964,7 +982,7 @@ Corresponding FK5 coordinates:  55.72357900571692 -53.63992702587888
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_39_1.png" src="_images/Example_39_1.png" />
+<img alt="_images/Example_40_1.png" src="_images/Example_40_1.png" />
 </div>
 </div>
 <h2><p>Deprojection</p>
@@ -1064,7 +1082,7 @@ Done.
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_44_1.png" src="_images/Example_44_1.png" />
+<img alt="_images/Example_45_1.png" src="_images/Example_45_1.png" />
 </div>
 </div>
 <p>Here we were using the default PyMC3 backend for optimization. If instead we want to use the Stan backend:</p>
@@ -1130,7 +1148,7 @@ Done.
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_48_2.png" src="_images/Example_48_2.png" />
+<img alt="_images/Example_49_2.png" src="_images/Example_49_2.png" />
 </div>
 </div>
 <p>The standard onion peeling profile can be computed using the OnionPeeling function of the <em>Deproject</em> class. Here the input profile should be background subtracted first.</p>
@@ -1167,7 +1185,7 @@ Done.
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_51_1.png" src="_images/Example_51_1.png" />
+<img alt="_images/Example_52_1.png" src="_images/Example_52_1.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -1234,7 +1252,7 @@ Passing one of &#39;on&#39;, &#39;true&#39;, &#39;off&#39;, &#39;false&#39; as a
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_52_3.png" src="_images/Example_52_3.png" />
+<img alt="_images/Example_53_3.png" src="_images/Example_53_3.png" />
 </div>
 </div>
 <p>The multiscale decomposition results can also be used to measure count rates in various apertures and gas masses, in the following way:</p>
@@ -1269,7 +1287,7 @@ Reconstructed count rate: 1.79801 (1.77162 , 1.82541)
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_54_2.png" src="_images/Example_54_2.png" />
+<img alt="_images/Example_55_2.png" src="_images/Example_55_2.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
@@ -1293,7 +1311,7 @@ Reconstructed count rate: 1.79801 (1.77162 , 1.82541)
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="_images/Example_55_1.png" src="_images/Example_55_1.png" />
+<img alt="_images/Example_56_1.png" src="_images/Example_56_1.png" />
 </div>
 </div>
 <div class="nbinput docutils container">

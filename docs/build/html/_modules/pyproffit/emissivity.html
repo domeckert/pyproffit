@@ -251,9 +251,9 @@
 
     <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;10000, 1</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;ign **-</span><span class="si">%g</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">elow</span><span class="p">))</span>
+    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;ign **-</span><span class="si">%1.2lf</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">elow</span><span class="p">))</span>
 
-    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;ign </span><span class="si">%g</span><span class="s1">-**</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ehigh</span><span class="p">))</span>
+    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;ign </span><span class="si">%1.2lf</span><span class="s1">-**</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ehigh</span><span class="p">))</span>
 
     <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;log sim.txt</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
@@ -263,7 +263,7 @@
 
     <span class="k">elif</span> <span class="nb">type</span> <span class="o">==</span> <span class="s1">&#39;photon&#39;</span><span class="p">:</span>
 
-        <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;flux </span><span class="si">%g</span><span class="s1"> </span><span class="si">%g</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">elow</span><span class="p">,</span> <span class="n">ehigh</span><span class="p">))</span>
+        <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;flux </span><span class="si">%1.2lf</span><span class="s1"> </span><span class="si">%1.2lf</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">elow</span><span class="p">,</span> <span class="n">ehigh</span><span class="p">))</span>
 
     <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;log none</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
@@ -302,8 +302,6 @@
         <span class="n">lsim</span> <span class="o">=</span> <span class="n">ssim</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
         <span class="n">cr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lsim</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">3</span><span class="p">])</span>
-
-    <span class="c1">#ccf = 1. / cr</span>
 
     <span class="k">return</span> <span class="n">cr</span></div>
 

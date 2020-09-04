@@ -851,7 +851,10 @@ Requires XSPEC to be in PATH</p>
 <dt id="pyproffit.fitting.ChiSquared">
 <em class="property">class </em><code class="sig-prename descclassname">pyproffit.fitting.</code><code class="sig-name descname">ChiSquared</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">dx</span></em>, <em class="sig-param"><span class="n">y</span></em>, <em class="sig-param"><span class="n">dy</span></em>, <em class="sig-param"><span class="n">psfmat</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fitlow</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fithigh</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/fitting.html#ChiSquared"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.fitting.ChiSquared" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class defining a chi-square likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method=’chi2’ option.</p>
+<p>Class defining a chi-square likelihood based on a surface brightness profile and a model. Let <span class="math notranslate nohighlight">\(S_i\)</span> be the measured surface brightness in annulus i and <span class="math notranslate nohighlight">\(\sigma_i\)</span> the corresponding Gaussian error. The likelihood function to be optimized is</p>
+<div class="math notranslate nohighlight">
+\[-2\log \mathcal{L} = \sum_{i=1}^N \frac{(S_i - f(r_i))^2}{\sigma_i^2}\]</div>
+<p>This class is called by the Fitter object when using the method=’chi2’ option.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -872,7 +875,11 @@ Requires XSPEC to be in PATH</p>
 <dt id="pyproffit.fitting.Cstat">
 <em class="property">class </em><code class="sig-prename descclassname">pyproffit.fitting.</code><code class="sig-name descname">Cstat</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">counts</span></em>, <em class="sig-param"><span class="n">area</span></em>, <em class="sig-param"><span class="n">effexp</span></em>, <em class="sig-param"><span class="n">bkgc</span></em>, <em class="sig-param"><span class="n">psfmat</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fitlow</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fithigh</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/fitting.html#Cstat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.fitting.Cstat" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class defining a C-stat likelihood based on a surface brightness profile and a model. This class is called by the Fitter object when using the method=’cstat’ option.</p>
+<p>Class defining a C-stat likelihood based on a surface brightness profile and a model. Let <span class="math notranslate nohighlight">\(A_i\)</span> , <span class="math notranslate nohighlight">\(T_i\)</span> be the area and the effective exposure time of annulus i. We set <span class="math notranslate nohighlight">\(F_{i} = f(r_{i})A_{i}T_{i}\)</span> the predicted number of counts in the annulus. The Poisson likelihood is then given by</p>
+<div class="math notranslate nohighlight">
+\[-2\log \mathcal{L} = 2 \sum_{i=1}^N F_i - C_i \log F_i - C_i + C_i \log C_i\]</div>
+<p>with <span class="math notranslate nohighlight">\(C_i\)</span> the observed number of counts in annulus i.</p>
+<p>This class is called by the Fitter object when using the method=’cstat’ option.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -926,8 +933,100 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 <div class="section" id="module-pyproffit.hmc">
 <span id="pyproffit-hmc-module"></span><h2>pyproffit.hmc module<a class="headerlink" href="#module-pyproffit.hmc" title="Permalink to this headline">¶</a></h2>
 <dl class="py function">
+<dt id="pyproffit.hmc.BetaModelPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">BetaModelPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#BetaModelPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.BetaModelPM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyproffit.hmc.BknPowPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">BknPowPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">alpha1</span></em>, <em class="sig-param"><span class="n">alpha2</span></em>, <em class="sig-param"><span class="n">rf</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">jump</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#BknPowPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.BknPowPM" title="Permalink to this definition">¶</a></dt>
+<dd><p>Broken power law 3D model projected along the line of sight for discontinuity modeling</p>
+<div class="math notranslate nohighlight">
+\[I(r) = I_0 \int F(\omega)^2 d\ell + B\]</div>
+<p>with <span class="math notranslate nohighlight">\(\omega^2 = r^2 + \ell^2\)</span> and</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}F(\omega) = \left\{ \begin{array}{ll} \omega^{-\alpha_1}, &amp; \omega&lt;r_f \\ \frac{1}{C}\omega ^{-\alpha_2}, &amp; \omega\geq r_f
+\end{array} \right.\end{split}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>numpy.ndarray</em>) – Radius in arcmin</p></li>
+<li><p><strong>alpha1</strong> (<em>class:theano.</em>) – <span class="math notranslate nohighlight">\(\alpha_1\)</span> parameter</p></li>
+<li><p><strong>alpha2</strong> (<em>float</em>) – <span class="math notranslate nohighlight">\(\alpha_2\)</span> parameter</p></li>
+<li><p><strong>rf</strong> (<em>float</em>) – rf parameter</p></li>
+<li><p><strong>norm</strong> (<em>float</em>) – log of I0 parameter</p></li>
+<li><p><strong>jump</strong> (<em>float</em>) – C parameter</p></li>
+<li><p><strong>bkg</strong> (<em>float</em>) – log of B parameter</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Calculated model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyproffit.hmc.ConstPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">ConstPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#ConstPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.ConstPM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyproffit.hmc.DoubleBetaPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">DoubleBetaPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc1</span></em>, <em class="sig-param"><span class="n">rc2</span></em>, <em class="sig-param"><span class="n">ratio</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#DoubleBetaPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.DoubleBetaPM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="pyproffit.hmc.HMCModel">
+<em class="property">class </em><code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">HMCModel</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span></em>, <em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sd</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">limits</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fix</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#HMCModel"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.HMCModel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class containing pyproffit model structure for HMC optimization</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>function</em>) – Function to be used as surface brightness model</p></li>
+<li><p><strong>vals</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">numpy.ndarray</span></code>) – Array containing initial values for the parameters (optional)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="pyproffit.hmc.HMCModel.SetPriors">
+<code class="sig-name descname">SetPriors</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">sd</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">limits</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fix</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#HMCModel.SetPriors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.HMCModel.SetPriors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set prior definition for the function parameters</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> – </p></li>
+<li><p><strong>sd</strong> – </p></li>
+<li><p><strong>limits</strong> – </p></li>
+<li><p><strong>fix</strong> – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyproffit.hmc.IntFuncPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">IntFuncPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">omega</span></em>, <em class="sig-param"><span class="n">rf</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">xmin</span></em>, <em class="sig-param"><span class="n">xmax</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#IntFuncPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.IntFuncPM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyproffit.hmc.PowerLawPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">PowerLawPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">pivot</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#PowerLawPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.PowerLawPM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyproffit.hmc.VikhlininPM">
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">VikhlininPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">rs</span></em>, <em class="sig-param"><span class="n">epsilon</span></em>, <em class="sig-param"><span class="n">gamma</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#VikhlininPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.VikhlininPM" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
 <dt id="pyproffit.hmc.fit_profile_pymc3">
-<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">fit_profile_pymc3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fitter</span></em>, <em class="sig-param"><span class="n">fitlow</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fithigh</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#fit_profile_pymc3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.fit_profile_pymc3" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">pyproffit.hmc.</code><code class="sig-name descname">fit_profile_pymc3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">hmcmod</span></em>, <em class="sig-param"><span class="n">prof</span></em>, <em class="sig-param"><span class="n">nmcmc</span><span class="o">=</span><span class="default_value">1000</span></em>, <em class="sig-param"><span class="n">tune</span><span class="o">=</span><span class="default_value">500</span></em>, <em class="sig-param"><span class="n">find_map</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">fitlow</span><span class="o">=</span><span class="default_value">0.0</span></em>, <em class="sig-param"><span class="n">fithigh</span><span class="o">=</span><span class="default_value">10000000000.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/hmc.html#fit_profile_pymc3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.hmc.fit_profile_pymc3" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </div>
@@ -1115,11 +1214,6 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 </dd></dl>
 
 <dl class="py function">
-<dt id="pyproffit.models.BetaModelPM">
-<code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">BetaModelPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#BetaModelPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.BetaModelPM" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
 <dt id="pyproffit.models.BknPow">
 <code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">BknPow</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">alpha1</span></em>, <em class="sig-param"><span class="n">alpha2</span></em>, <em class="sig-param"><span class="n">rf</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">jump</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#BknPow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.BknPow" title="Permalink to this definition">¶</a></dt>
 <dd><p>Broken power law 3D model projected along the line of sight for discontinuity modeling</p>
@@ -1171,11 +1265,6 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 </dd></dl>
 
 <dl class="py function">
-<dt id="pyproffit.models.ConstPM">
-<code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">ConstPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#ConstPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.ConstPM" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
 <dt id="pyproffit.models.DoubleBeta">
 <code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">DoubleBeta</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc1</span></em>, <em class="sig-param"><span class="n">rc2</span></em>, <em class="sig-param"><span class="n">ratio</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#DoubleBeta"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.DoubleBeta" title="Permalink to this definition">¶</a></dt>
 <dd><p>Double beta model</p>
@@ -1203,11 +1292,6 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 </dd></dl>
 
 <dl class="py function">
-<dt id="pyproffit.models.DoubleBetaPM">
-<code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">DoubleBetaPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc1</span></em>, <em class="sig-param"><span class="n">rc2</span></em>, <em class="sig-param"><span class="n">ratio</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#DoubleBetaPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.DoubleBetaPM" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
 <dt id="pyproffit.models.IntFunc">
 <code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">IntFunc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">omega</span></em>, <em class="sig-param"><span class="n">rf</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">xmin</span></em>, <em class="sig-param"><span class="n">xmax</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#IntFunc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.IntFunc" title="Permalink to this definition">¶</a></dt>
 <dd><p>Numerical integration of a power law along the line of sight</p>
@@ -1231,11 +1315,6 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 </dd>
 </dl>
 </dd></dl>
-
-<dl class="py function">
-<dt id="pyproffit.models.IntFuncPM">
-<code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">IntFuncPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">omega</span></em>, <em class="sig-param"><span class="n">rf</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">xmin</span></em>, <em class="sig-param"><span class="n">xmax</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#IntFuncPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.IntFuncPM" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 <dl class="py class">
 <dt id="pyproffit.models.Model">
@@ -1300,11 +1379,6 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 </dd></dl>
 
 <dl class="py function">
-<dt id="pyproffit.models.PowerLawPM">
-<code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">PowerLawPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">pivot</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#PowerLawPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.PowerLawPM" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
 <dt id="pyproffit.models.Vikhlinin">
 <code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">Vikhlinin</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">rs</span></em>, <em class="sig-param"><span class="n">epsilon</span></em>, <em class="sig-param"><span class="n">gamma</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#Vikhlinin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.Vikhlinin" title="Permalink to this definition">¶</a></dt>
 <dd><p>Simplified Vikhlinin+06 surface brightness model used in Ghirardini+19</p>
@@ -1332,11 +1406,6 @@ See the iminuit documentation: <a class="reference external" href="https://iminu
 </dd>
 </dl>
 </dd></dl>
-
-<dl class="py function">
-<dt id="pyproffit.models.VikhlininPM">
-<code class="sig-prename descclassname">pyproffit.models.</code><code class="sig-name descname">VikhlininPM</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">beta</span></em>, <em class="sig-param"><span class="n">rc</span></em>, <em class="sig-param"><span class="n">alpha</span></em>, <em class="sig-param"><span class="n">rs</span></em>, <em class="sig-param"><span class="n">epsilon</span></em>, <em class="sig-param"><span class="n">gamma</span></em>, <em class="sig-param"><span class="n">norm</span></em>, <em class="sig-param"><span class="n">bkg</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/models.html#VikhlininPM"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.models.VikhlininPM" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
 
 </div>
 <div class="section" id="module-pyproffit.power_spectrum">
@@ -1647,12 +1716,13 @@ To compute the PSF mixing matrix, images of each annuli are convolved with the P
 
 <dl class="py method">
 <dt id="pyproffit.profextract.Profile.Plot">
-<code class="sig-name descname">Plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">outfile</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axes</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/profextract.html#Profile.Plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.profextract.Profile.Plot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">Plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">model</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">hmcmod</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">outfile</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">axes</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyproffit/profextract.html#Profile.Plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyproffit.profextract.Profile.Plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot the loaded surface brightness profile</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>model</strong> (class:<cite>pyproffit.models.Model</cite> , optional) – If model is not None, plot the provided model of type <a class="reference internal" href="#pyproffit.models.Model" title="pyproffit.models.Model"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyproffit.models.Model</span></code></a> together with the data. Defaults to None</p></li>
+<li><p><strong>hmcmod</strong> (class:<cite>pyproffit.hmc.HMCModel</cite>) – If hmcmod is not None, use the provided HMC trace of type <a class="reference internal" href="#pyproffit.hmc.HMCModel" title="pyproffit.hmc.HMCModel"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyproffit.hmc.HMCModel</span></code></a> to compute the median optimized models and upper and lower envelopes. Defaults to None</p></li>
 <li><p><strong>outfile</strong> (<em>str</em><em> , </em><em>optional</em>) – If outfile is not None, name of output file to save the plot. Defaults to None</p></li>
 <li><p><strong>axes</strong> (<em>list</em><em> , </em><em>optional</em>) – List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.</p></li>
 </ul>

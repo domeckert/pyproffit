@@ -744,12 +744,14 @@
         <span class="n">hdu</span><span class="o">.</span><span class="n">header</span> <span class="o">=</span> <span class="n">head</span>
         <span class="n">hdu</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Profile.Plot"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.profextract.Profile.Plot">[docs]</a>    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">axes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Profile.Plot"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.profextract.Profile.Plot">[docs]</a>    <span class="k">def</span> <span class="nf">Plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hmcmod</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot the loaded surface brightness profile</span>
 
 <span class="sd">        :param model: If model is not None, plot the provided model of type :class:`pyproffit.models.Model` together with the data. Defaults to None</span>
 <span class="sd">        :type model: class:`pyproffit.models.Model` , optional</span>
+<span class="sd">        :param hmcmod: If hmcmod is not None, use the provided HMC trace of type :class:`pyproffit.hmc.HMCModel` to compute the median optimized models and upper and lower envelopes. Defaults to None</span>
+<span class="sd">        :type hmcmod: class:`pyproffit.hmc.HMCModel`</span>
 <span class="sd">        :param outfile: If outfile is not None, name of output file to save the plot. Defaults to None</span>
 <span class="sd">        :type outfile: str , optional</span>
 <span class="sd">        :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.</span>

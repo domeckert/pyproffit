@@ -222,6 +222,8 @@ class Profile(object):
         self.bkgprof = None
         self.bkgcounts = None
         self.custom = False
+        self.ccf = None
+        self.lumfact = None
         if binning=='log':
             self.islogbin = True
         elif binning=='linear':
@@ -698,7 +700,7 @@ class Profile(object):
         self.eprof = np.sqrt(self.eprof**2 + eval**2)
 
 
-    def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr'):
+    def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr', lum_elow=0.5, lum_ehigh=2.0):
         """
         Use XSPEC to compute the conversion from count rate to emissivity using the pyproffit.calc_emissivity routine (see its description)
 
@@ -720,10 +722,14 @@ class Profile(object):
         :type arf: str , optional
         :param type: Specify whether the exposure map is in units of sec (type='cr') or photon flux (type='photon'). Defaults to 'cr'
         :type type: str
+        :param lum_elow: Low energy bound (rest frame) for luminosity calculation. Defaults to 0.5
+        :type lum_elow: float
+        :param lum_ehigh: High energy bound (rest frame) for luminosity calculation. Defaults to 2.0
+        :type lum_ehigh: float
         :return: Conversion factor
         :rtype: float
         """
-        self.ccf = calc_emissivity(cosmo=cosmo,
+        self.ccf, self.lumfact = calc_emissivity(cosmo=cosmo,
                                         z=z,
                                         nh=nh,
                                         kt=kt,
@@ -732,6 +738,8 @@ class Profile(object):
                                         elow=elow,
                                         ehigh=ehigh,
                                         arf=arf,
-                                        type=type)
+                                        type=type,
+                                        lum_elow=lum_elow,
+                                        lum_ehigh=lum_ehigh)
 
         return self.ccf

@@ -8,7 +8,7 @@ def is_tool(name):
     return find_executable(name) is not None
 
 
-def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr'):
+def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr', lum_elow=0.5, lum_ehigh=2.0):
     """
 
     Function calc_emissivity. The function computes the scaling factor between count rate and APEC/MEKAL norm using XSPEC, which is needed to extract density profiles.
@@ -34,6 +34,10 @@ def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None,
     :type arf: str
     :param type: Specify whether the exposure map is in units of sec (type='cr') or photon flux (type='photon'). By default type='cr'.
     :type type: str
+    :param lum_elow: Low energy bound (rest frame) for luminosity calculation. Defaults to 0.5
+    :type lum_elow: float
+    :param lum_ehigh: High energy bound (rest frame) for luminosity calculation. Defaults to 2.0
+    :type lum_ehigh: float
     :return: Conversion factor
     :rtype: float
     """
@@ -112,6 +116,12 @@ def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None,
 
     fsim.write('log none\n')
 
+    fsim.write('log lumin.txt\n')
+
+    fsim.write('lumin %g %1.2lf %1.2lf\n' % (z, lum_elow, lum_ehigh))
+
+    fsim.write('log none\n')
+
     fsim.write('quit\n')
 
     fsim.close()
@@ -148,7 +158,15 @@ def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None,
 
         cr = float(lsim.split()[3])
 
-    return cr
+    slum = os.popen('grep Luminosity lumin.txt', 'r')
+
+    llum = slum.readline()
+
+    lumtot = float(llum.split()[2])
+
+    lumfact = lumtot / cr
+
+    return cr, lumfact
 
 
 

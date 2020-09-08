@@ -1,6 +1,7 @@
 import pymc3 as pm
 import numpy as np
 import time
+from .models import IntFunc
 
 def BetaModelPM(x, beta, rc, norm, bkg):
     """
@@ -52,15 +53,18 @@ def IntFuncPM(omega,rf,alpha,xmin,xmax):
     nb = 100
     logmin = pm.math.log(xmin) / pm.math.log(10.)
     logmax = pm.math.log(xmax) / pm.math.log(10.)
-    x = np.logspace(logmin,logmax,nb+1)
-    z = (x[:nb] + np.roll(x, -1, axis=0)[:nb]) / 2.
-    width = (np.roll(x, -1, axis=0)[:nb] - x[:nb])
-    term1 = (omega**2 + z**2) / rf**2
-    term2 = term1 ** (-alpha)
-    intot = pm.math.sum(term2 * width , axis=0)
+    intot = 0.
+    for i in range(nb):
+        basex_low = (logmin + i / nb * (logmax - logmin))
+        basex_high = (logmin + (i+1) / nb * (logmax - logmin))
+        z = (10 ** basex_low + 10 ** basex_high) / 2.
+        width = 10 ** basex_high - 10 ** basex_low
+        term1 = (omega**2 + z**2) / rf**2
+        term2 = term1 ** (-alpha)
+        intot = intot + term2 * width
     return intot
 
-def BknPowPM(x, alpha1, alpha2, rf, norm, jump, bkg):
+def BknPowPM(x, alpha1, alpha2, norm, jump, bkg, rf=3.0):
     """
     Broken power law 3D model projected along the line of sight for discontinuity modeling
 
@@ -78,31 +82,30 @@ def BknPowPM(x, alpha1, alpha2, rf, norm, jump, bkg):
     :param x: Radius in arcmin
     :type x: numpy.ndarray
     :param alpha1: :math:`\\alpha_1` parameter
-    :type alpha1: class:theano.
+    :type alpha1: class:`theano.tensor`
     :param alpha2: :math:`\\alpha_2` parameter
-    :type alpha2: float
+    :type alpha2: class:`theano.tensor`
     :param rf: rf parameter
     :type rf: float
     :param norm: log of I0 parameter
-    :type norm: float
+    :type norm: class:`theano.tensor`
     :param jump: C parameter
-    :type jump: float
+    :type jump: class:`theano.tensor`
     :param bkg: log of B parameter
-    :type bkg: float
+    :type bkg: class:`theano.tensor`
     :return: Calculated model
     :rtype: :class:`numpy.ndarray`
     """
     A1 = 10. ** norm
     A2 = A1 / (jump ** 2)
-    out = np.empty(len(x))
-    numrf = rf.get_value()
-    inreg = np.where(x < numrf)
-    term1 = IntFuncPM(x[inreg], rf, alpha1, 0.01*np.ones(len(x[inreg])), np.sqrt(numrf**2 - x[inreg]**2))
-    term2 = IntFuncPM(x[inreg], rf, alpha2, np.sqrt(numrf**2 - x[inreg]**2), 1e3 * np.ones(len(x[inreg])))
-    out[inreg] = A1 * term1 + A2 * term2
-    outreg = np.where(x >= numrf)
-    term = IntFuncPM(x[outreg], rf, alpha2, 0.01*np.ones(len(x[outreg])), 1e3 * np.ones(len(x[outreg])))
-    out[outreg] = A2 * term
+    inreg = np.where(x < rf)
+    term1 = IntFunc(x[inreg], rf, alpha1, 0.01 * np.ones(len(x[inreg])), np.sqrt(rf ** 2 - x[inreg] ** 2))
+    term2 = IntFunc(x[inreg], rf, alpha2, np.sqrt(rf ** 2 - x[inreg] ** 2), 1e3 * np.ones(len(x[inreg])))
+    inside = A1 * term1 + A2 * term2
+    outreg = np.where(x >= rf)
+    term = IntFunc(x[outreg], rf, alpha2, 0.01 * np.ones(len(x[outreg])), 1e3 * np.ones(len(x[outreg])))
+    outside = A2 * term
+    out = pm.math.stack([inside, outside])
     c2 = 10. ** bkg
     return out + c2
 
@@ -140,13 +143,15 @@ def fit_profile_pymc3(hmcmod, prof, nmcmc=1000, tune=500, find_map=True, fitlow=
         # Set up model parameters
         allpmod = []
 
+        numrf = None
+
         for i in range(npar):
 
             name = hmcmod.parnames[i]
 
-            print('Setting Gaussian prior for parameter %s with center %g and standard deviation %g' % (name, hmcmod.start[i], hmcmod.sd[i]))
-
             if not hmcmod.fix[i]:
+
+                print('Setting Gaussian prior for parameter %s with center %g and standard deviation %g' % (name, hmcmod.start[i], hmcmod.sd[i]))
 
                 if hmcmod.limits is not None:
 
@@ -160,13 +165,27 @@ def fit_profile_pymc3(hmcmod, prof, nmcmc=1000, tune=500, find_map=True, fitlow=
 
             else:
 
+                print('Parameter %s is fixed' % (name))
+
                 modpar = pm.ConstantDist(name, hmcmod.start[i])
 
-            allpmod.append(modpar)
+            if name == 'rf':
+
+                numrf = modpar.random()
+
+            else:
+
+                allpmod.append(modpar)
 
         pmod = pm.math.stack(allpmod, axis=0)
 
-        modcounts = hmcmod.model(rad, *pmod) * area * exposure
+        if numrf is not None:
+
+            modcounts = hmcmod.model(rad, *pmod, rf=numrf) * area * exposure
+
+        else:
+
+            modcounts = hmcmod.model(rad, *pmod) * area * exposure
 
         pred = pm.math.dot(psfmat, modcounts) + bkgcounts
 

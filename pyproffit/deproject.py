@@ -945,7 +945,7 @@ class Deproject(object):
         if xscale not in ['arcmin','kpc','both']:
             xscale='kpc'
 
-        sourcereg_out = np.where(self.rout < self.bkglim)
+        sourcereg_out = np.where(self.rout <= self.bkglim)
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
@@ -1251,7 +1251,7 @@ class Deproject(object):
 
 
     # Compute Mgas within radius in kpc
-    def Mgas(self,radius,plot=True,outfile=None):
+    def Mgas(self, radius, radius_err=None, plot=True, outfile=None):
         """
         Compute the posterior cumulative gas mass within a given radius. . Optionally, the posterior distribution can be plotted and saved.
 
@@ -1291,7 +1291,19 @@ class Deproject(object):
 
         # Interpolate at the radius of interest
         f = interp1d(rkpc, mgas, axis=0)
-        mgasdist = f(radius)
+
+        # Set randomization of the radius if radius_err is not None
+        if radius_err is not None:
+
+            nsim = 1000
+            radii = radius_err * np.random.randn(nsim) + radius
+
+            mgasdist = f(radii)
+
+        else:
+
+            mgasdist = f(radius)
+
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
         if plot:
             plt.clf()

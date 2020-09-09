@@ -1195,7 +1195,7 @@ class Deproject(object):
 
     def Luminosity(self,a,b,plot=True,outfile=None):
         """
-        Compute the model count rate integrated between radii a and b. Optionally, the count rate distribution can be plotted and saved.
+        Compute the luminosity integrated between radii a and b. Optionally, the luminosity distribution can be plotted and saved.
 
         :param a: Inner integration boundary in arcmin
         :type a: float
@@ -1205,7 +1205,7 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
-        :return: Median count rate, 16th and 84th percentiles
+        :return: Median luminosity, 16th and 84th percentiles
         :rtype: float
         """
         if self.samples is None:

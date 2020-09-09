@@ -14,3 +14,10 @@ The PyPI repository should contain the latest stable release (as judged by the d
     pip3 install .
     
 ``pyproffit`` depends on numpy, scipy, astropy, matplotlib, iminuit, pymc3, and pystan.
+
+A test dataset and a validation script are also available in the ``validation`` directory. To run the validation script::
+
+    cd validation
+    python3 test_script.py
+    
+

@@ -1195,7 +1195,7 @@ class Deproject(object):
 
     def Luminosity(self,a,b,plot=True,outfile=None):
         """
-        Compute the luminosity integrated between radii a and b. Optionally, the luminosity distribution can be plotted and saved.
+        Compute the luminosity integrated between radii a and b. Optionally, the luminosity distribution can be plotted and saved. Requires the luminosity factor to be computed using the :meth:`pyproffit.profextract.Profile.Emissivity` method.
 
         :param a: Inner integration boundary in arcmin
         :type a: float
@@ -1264,7 +1264,7 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
-        :return: Median count rate, 16th and 84th percentiles
+        :return: Median number of counts, 16th and 84th percentiles
         :rtype: float
         """
         if self.samples is None:
@@ -1325,11 +1325,13 @@ class Deproject(object):
 
         :param radius: Gas mass integration radius in kpc
         :type radius: float
+        :param radius_err: (Gaussian) error on the input radius to be propagated to the gas mass measurement. To be used in case one wants to evaluate $M_{gas}$ at an overdensity radius with a known uncertainty
+        :type float , optional
         :param plot: Plot the posterior Mgas distribution (default=True)
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
-        :type outfile: str
-        :return: Median count rate, 16th and 84th percentiles
+        :type outfile: str , optional
+        :return: Median $M_{gas}$, 16th and 84th percentiles
         :rtype: float
         """
         if self.samples is None or self.z is None or self.cf is None:

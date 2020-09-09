@@ -11,6 +11,7 @@ Welcome to pyproffit's documentation!
     :caption: Contents:
     
     Intro <intro.rst>
+    Install <install.rst>
     Tutorials <tutorials.rst>
     API <pyproffit.rst>
 

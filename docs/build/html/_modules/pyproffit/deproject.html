@@ -87,6 +87,7 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pyproffit.html">API</a></li>
 </ul>
@@ -986,6 +987,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">z</span> <span class="o">=</span> <span class="n">z</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cf</span> <span class="o">=</span> <span class="n">cf</span>
+        <span class="k">if</span> <span class="n">cf</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">profile</span><span class="o">.</span><span class="n">ccf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cf</span> <span class="o">=</span> <span class="n">profile</span><span class="o">.</span><span class="n">ccf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lumfact</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">profile</span><span class="o">.</span><span class="n">lumfact</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lumfact</span> <span class="o">=</span> <span class="n">profile</span><span class="o">.</span><span class="n">lumfact</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dens</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dens_lo</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dens_hi</span> <span class="o">=</span> <span class="kc">None</span>
@@ -1100,7 +1106,7 @@
         <span class="k">if</span> <span class="n">xscale</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;arcmin&#39;</span><span class="p">,</span><span class="s1">&#39;kpc&#39;</span><span class="p">,</span><span class="s1">&#39;both&#39;</span><span class="p">]:</span>
             <span class="n">xscale</span><span class="o">=</span><span class="s1">&#39;kpc&#39;</span>
 
-        <span class="n">sourcereg_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rout</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bkglim</span><span class="p">)</span>
+        <span class="n">sourcereg_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rout</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bkglim</span><span class="p">)</span>
 
         <span class="n">kpcp</span> <span class="o">=</span> <span class="n">cosmo</span><span class="o">.</span><span class="n">kpc_proper_per_arcmin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">z</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
 
@@ -1343,6 +1349,69 @@
 
         <span class="k">return</span>  <span class="n">medint</span><span class="p">,</span><span class="n">intlo</span><span class="p">,</span><span class="n">inthi</span></div>
 
+<div class="viewcode-block" id="Deproject.Luminosity"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.deproject.Deproject.Luminosity">[docs]</a>    <span class="k">def</span> <span class="nf">Luminosity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the luminosity integrated between radii a and b. Optionally, the luminosity distribution can be plotted and saved.</span>
+
+<span class="sd">        :param a: Inner integration boundary in arcmin</span>
+<span class="sd">        :type a: float</span>
+<span class="sd">        :param b: Outer integration boundary in arcmin</span>
+<span class="sd">        :type b: float</span>
+<span class="sd">        :param plot: Plot the posterior count rate distribution (default=True)</span>
+<span class="sd">        :type plot: bool</span>
+<span class="sd">        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout</span>
+<span class="sd">        :type outfile: str</span>
+<span class="sd">        :return: Median luminosity, 16th and 84th percentiles</span>
+<span class="sd">        :rtype: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: no MCMC samples found&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lumfact</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: no luminosity conversion factor found&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Set source region</span>
+        <span class="n">prof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">profile</span>
+        <span class="n">rad</span> <span class="o">=</span> <span class="n">prof</span><span class="o">.</span><span class="n">bins</span>
+        <span class="n">sourcereg</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rad</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">bkglim</span><span class="p">)</span>
+
+        <span class="c1"># Avoid diverging profiles in the center by cutting to the innermost points, if necessary</span>
+        <span class="k">if</span> <span class="n">a</span><span class="o">&lt;</span><span class="n">prof</span><span class="o">.</span><span class="n">bins</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">prof</span><span class="o">.</span><span class="n">bins</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">2.</span>
+
+        <span class="c1"># Set vector with list of parameters</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="n">list_params</span><span class="p">(</span><span class="n">rad</span><span class="p">,</span> <span class="n">sourcereg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nrc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nbetas</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_beta</span><span class="p">)</span>
+        <span class="n">Kint</span> <span class="o">=</span> <span class="n">calc_int_operator</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">pars</span><span class="p">)</span>
+        <span class="n">allint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Kint</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">T</span><span class="p">))</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">lumfact</span>
+        <span class="n">medint</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">allint</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">allint</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">intlo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">allint</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">allint</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="mf">50.</span> <span class="o">-</span> <span class="mf">68.3</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span>
+        <span class="n">inthi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">allint</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">allint</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:],</span> <span class="mf">50.</span> <span class="o">+</span> <span class="mf">68.3</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Reconstructed luminosity: </span><span class="si">%g</span><span class="s1"> (</span><span class="si">%g</span><span class="s1"> , </span><span class="si">%g</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">medint</span><span class="p">,</span> <span class="n">intlo</span><span class="p">,</span> <span class="n">inthi</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>
+            <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+            <span class="n">ax_size</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.14</span><span class="p">,</span> <span class="mf">0.12</span><span class="p">,</span>
+                       <span class="mf">0.85</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">]</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_axes</span><span class="p">(</span><span class="n">ax_size</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">minorticks_on</span><span class="p">()</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;major&#39;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s1">&#39;minor&#39;</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">()</span> <span class="o">+</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_yticklabels</span><span class="p">()):</span>
+                <span class="n">item</span><span class="o">.</span><span class="n">set_fontsize</span><span class="p">(</span><span class="mi">22</span><span class="p">)</span>
+            <span class="c1"># plt.yscale(&#39;log&#39;)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">allint</span><span class="p">[</span><span class="mi">1</span><span class="p">,:]</span><span class="o">-</span><span class="n">allint</span><span class="p">[</span><span class="mi">0</span><span class="p">,:],</span> <span class="n">bins</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Count Rate [cts/s]&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Frequency&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">outfile</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">block</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">return</span>  <span class="n">medint</span><span class="p">,</span><span class="n">intlo</span><span class="p">,</span><span class="n">inthi</span></div>
+
 <div class="viewcode-block" id="Deproject.Ncounts"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.deproject.Deproject.Ncounts">[docs]</a>    <span class="k">def</span> <span class="nf">Ncounts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the total model number of counts. Optionally, the posterior distribution can be plotted and saved.</span>
@@ -1406,7 +1475,7 @@
 
 
     <span class="c1"># Compute Mgas within radius in kpc</span>
-<div class="viewcode-block" id="Deproject.Mgas"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.deproject.Deproject.Mgas">[docs]</a>    <span class="k">def</span> <span class="nf">Mgas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">radius</span><span class="p">,</span><span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Deproject.Mgas"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.deproject.Deproject.Mgas">[docs]</a>    <span class="k">def</span> <span class="nf">Mgas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">radius_err</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Compute the posterior cumulative gas mass within a given radius. . Optionally, the posterior distribution can be plotted and saved.</span>
 
@@ -1445,8 +1514,26 @@
         <span class="n">mgas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">alldens</span> <span class="o">*</span> <span class="n">nhconv</span> <span class="o">*</span> <span class="n">volmat</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
         <span class="c1"># Interpolate at the radius of interest</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">rkpc</span><span class="p">,</span> <span class="n">mgas</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-        <span class="n">mgasdist</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">radius</span><span class="p">)</span>
+
+        <span class="c1"># Set randomization of the radius if radius_err is not None</span>
+        <span class="k">if</span> <span class="n">radius_err</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+            <span class="n">nsim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">mgas</span><span class="p">)</span>
+
+            <span class="n">radii</span> <span class="o">=</span> <span class="n">radius_err</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">nsim</span><span class="p">)</span> <span class="o">+</span> <span class="n">radius</span>
+
+            <span class="n">mgasdist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mgas</span><span class="p">))</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mgas</span><span class="p">)):</span>
+
+                <span class="n">mgasdist</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">radii</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">rkpc</span><span class="p">,</span> <span class="n">mgas</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span>
+
+        <span class="k">else</span><span class="p">:</span>
+
+            <span class="n">f</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">rkpc</span><span class="p">,</span> <span class="n">mgas</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">mgasdist</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">radius</span><span class="p">)</span>
+
         <span class="n">mg</span><span class="p">,</span> <span class="n">mgl</span><span class="p">,</span> <span class="n">mgh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">mgasdist</span><span class="p">,[</span><span class="mf">50.</span><span class="p">,</span><span class="mf">50.</span><span class="o">-</span><span class="mf">68.3</span><span class="o">/</span><span class="mf">2.</span><span class="p">,</span><span class="mf">50.</span><span class="o">+</span><span class="mf">68.3</span><span class="o">/</span><span class="mf">2.</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">plot</span><span class="p">:</span>
             <span class="n">plt</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>

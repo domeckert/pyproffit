@@ -87,6 +87,7 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pyproffit.html">API</a></li>
 </ul>
@@ -377,6 +378,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">bkgprof</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bkgcounts</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">custom</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ccf</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lumfact</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="n">binning</span><span class="o">==</span><span class="s1">&#39;log&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">islogbin</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">elif</span> <span class="n">binning</span><span class="o">==</span><span class="s1">&#39;linear&#39;</span><span class="p">:</span>
@@ -853,7 +856,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">eprof</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eprof</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="nb">eval</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="Profile.Emissivity"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.profextract.Profile.Emissivity">[docs]</a>    <span class="k">def</span> <span class="nf">Emissivity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nh</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kt</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span> <span class="n">rmf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">elow</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">ehigh</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">arf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;cr&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="Profile.Emissivity"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.profextract.Profile.Emissivity">[docs]</a>    <span class="k">def</span> <span class="nf">Emissivity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nh</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">kt</span><span class="o">=</span><span class="mf">6.0</span><span class="p">,</span> <span class="n">rmf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">elow</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">ehigh</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">arf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;cr&#39;</span><span class="p">,</span> <span class="n">lum_elow</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lum_ehigh</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Use XSPEC to compute the conversion from count rate to emissivity using the pyproffit.calc_emissivity routine (see its description)</span>
 
@@ -875,10 +878,14 @@
 <span class="sd">        :type arf: str , optional</span>
 <span class="sd">        :param type: Specify whether the exposure map is in units of sec (type=&#39;cr&#39;) or photon flux (type=&#39;photon&#39;). Defaults to &#39;cr&#39;</span>
 <span class="sd">        :type type: str</span>
+<span class="sd">        :param lum_elow: Low energy bound (rest frame) for luminosity calculation. Defaults to 0.5</span>
+<span class="sd">        :type lum_elow: float</span>
+<span class="sd">        :param lum_ehigh: High energy bound (rest frame) for luminosity calculation. Defaults to 2.0</span>
+<span class="sd">        :type lum_ehigh: float</span>
 <span class="sd">        :return: Conversion factor</span>
 <span class="sd">        :rtype: float</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ccf</span> <span class="o">=</span> <span class="n">calc_emissivity</span><span class="p">(</span><span class="n">cosmo</span><span class="o">=</span><span class="n">cosmo</span><span class="p">,</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ccf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lumfact</span> <span class="o">=</span> <span class="n">calc_emissivity</span><span class="p">(</span><span class="n">cosmo</span><span class="o">=</span><span class="n">cosmo</span><span class="p">,</span>
                                         <span class="n">z</span><span class="o">=</span><span class="n">z</span><span class="p">,</span>
                                         <span class="n">nh</span><span class="o">=</span><span class="n">nh</span><span class="p">,</span>
                                         <span class="n">kt</span><span class="o">=</span><span class="n">kt</span><span class="p">,</span>
@@ -887,7 +894,9 @@
                                         <span class="n">elow</span><span class="o">=</span><span class="n">elow</span><span class="p">,</span>
                                         <span class="n">ehigh</span><span class="o">=</span><span class="n">ehigh</span><span class="p">,</span>
                                         <span class="n">arf</span><span class="o">=</span><span class="n">arf</span><span class="p">,</span>
-                                        <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">)</span>
+                                        <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">,</span>
+                                        <span class="n">lum_elow</span><span class="o">=</span><span class="n">lum_elow</span><span class="p">,</span>
+                                        <span class="n">lum_ehigh</span><span class="o">=</span><span class="n">lum_ehigh</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ccf</span></div></div>
 </pre></div>

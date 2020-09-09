@@ -1358,17 +1358,23 @@ class Deproject(object):
         mgas = np.cumsum(alldens * nhconv * volmat, axis=0)
 
         # Interpolate at the radius of interest
-        f = interp1d(rkpc, mgas, axis=0)
 
         # Set randomization of the radius if radius_err is not None
         if radius_err is not None:
 
-            nsim = 1000
+            nsim = len(mgas)
+
             radii = radius_err * np.random.randn(nsim) + radius
 
-            mgasdist = f(radii)
+            mgasdist = np.empty(len(mgas))
+
+            for i in range(len(mgas)):
+
+                mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
 
         else:
+
+            f = interp1d(rkpc, mgas, axis=0)
 
             mgasdist = f(radius)
 

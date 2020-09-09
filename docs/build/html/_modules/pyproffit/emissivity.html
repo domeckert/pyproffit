@@ -87,6 +87,7 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../pyproffit.html">API</a></li>
 </ul>
@@ -163,7 +164,7 @@
     <span class="k">return</span> <span class="n">find_executable</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div>
 
 
-<div class="viewcode-block" id="calc_emissivity"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.emissivity.calc_emissivity">[docs]</a><span class="k">def</span> <span class="nf">calc_emissivity</span><span class="p">(</span><span class="n">cosmo</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">nh</span><span class="p">,</span> <span class="n">kt</span><span class="p">,</span> <span class="n">rmf</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">elow</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">ehigh</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">arf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;cr&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="calc_emissivity"><a class="viewcode-back" href="../../pyproffit.html#pyproffit.emissivity.calc_emissivity">[docs]</a><span class="k">def</span> <span class="nf">calc_emissivity</span><span class="p">(</span><span class="n">cosmo</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">nh</span><span class="p">,</span> <span class="n">kt</span><span class="p">,</span> <span class="n">rmf</span><span class="p">,</span> <span class="n">Z</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">elow</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">ehigh</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">arf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;cr&#39;</span><span class="p">,</span> <span class="n">lum_elow</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">lum_ehigh</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">    Function calc_emissivity. The function computes the scaling factor between count rate and APEC/MEKAL norm using XSPEC, which is needed to extract density profiles.</span>
@@ -189,6 +190,10 @@
 <span class="sd">    :type arf: str</span>
 <span class="sd">    :param type: Specify whether the exposure map is in units of sec (type=&#39;cr&#39;) or photon flux (type=&#39;photon&#39;). By default type=&#39;cr&#39;.</span>
 <span class="sd">    :type type: str</span>
+<span class="sd">    :param lum_elow: Low energy bound (rest frame) for luminosity calculation. Defaults to 0.5</span>
+<span class="sd">    :type lum_elow: float</span>
+<span class="sd">    :param lum_ehigh: High energy bound (rest frame) for luminosity calculation. Defaults to 2.0</span>
+<span class="sd">    :type lum_ehigh: float</span>
 <span class="sd">    :return: Conversion factor</span>
 <span class="sd">    :rtype: float</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -267,6 +272,12 @@
 
     <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;log none</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
+    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;log lumin.txt</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;lumin </span><span class="si">%1.2lf</span><span class="s1"> </span><span class="si">%1.2lf</span><span class="s1"> </span><span class="si">%g</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">lum_elow</span><span class="p">,</span> <span class="n">lum_ehigh</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span>
+
+    <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;log none</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
     <span class="n">fsim</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;quit</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="n">fsim</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -303,7 +314,15 @@
 
         <span class="n">cr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lsim</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">3</span><span class="p">])</span>
 
-    <span class="k">return</span> <span class="n">cr</span></div>
+    <span class="n">slum</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">popen</span><span class="p">(</span><span class="s1">&#39;grep Luminosity lumin.txt&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+
+    <span class="n">llum</span> <span class="o">=</span> <span class="n">slum</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
+
+    <span class="n">lumtot</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">llum</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="n">lumfact</span> <span class="o">=</span> <span class="n">lumtot</span> <span class="o">/</span> <span class="n">cr</span>
+
+    <span class="k">return</span> <span class="n">cr</span><span class="p">,</span> <span class="n">lumfact</span></div>
 
 
 

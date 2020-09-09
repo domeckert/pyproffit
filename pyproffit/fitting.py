@@ -108,13 +108,14 @@ class Cstat:
     :param fithigh: Upper fitting boundary in arcmin. If fithigh=None (default) the entire radial range is used
     :type fithigh: float
     """
-    def __init__(self, model, x, counts, area, effexp, bkgc, psfmat=None, fitlow=None, fithigh=None):
+    def __init__(self, model, x, dx, counts, area, effexp, bkgc, psfmat=None, fitlow=None, fithigh=None):
         """
         Constructor of class Cstat
 
         """
         self.model = model  # model predicts y for given x
         self.x = x
+        self.dx = dx
         self.c = counts
         self.area = area
         self.effexp = effexp
@@ -143,9 +144,13 @@ class Cstat:
         :rtype: float
         """
         ym = self.model(self.x, *par)
-        modcounts = ym*self.area*self.effexp
         if self.psfmat is not None:
-            modcounts = np.dot(self.psfmat,modcounts)
+            rminus = self.x - self.dx
+            rplus = self.x + self.dx
+            areatot = np.pi * (rplus ** 2 - rminus ** 2)
+            ym = np.dot(self.psfmat, ym * areatot) / areatot
+
+        modcounts = ym*self.area*self.effexp
         mm = modcounts + self.bkgc # model counts
         reg = self.region
         nc = self.c
@@ -210,7 +215,7 @@ class Fitter:
                 print('Error: No count profile exists')
                 return
             # Define the fitting algorithm
-            cstat=Cstat(model,prof.bins,prof.counts,prof.area,prof.effexp,prof.bkgcounts,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
+            cstat=Cstat(model,prof.bins,prof.ebins,prof.counts,prof.area,prof.effexp,prof.bkgcounts,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
             # Construct iminuit object
             minuit=iminuit.Minuit(cstat,**kwargs)
         else:

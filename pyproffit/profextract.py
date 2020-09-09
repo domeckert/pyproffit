@@ -8,6 +8,58 @@ from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import Planck15 as cosmo
 
+
+def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
+    """
+    Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
+
+    :param profs: List of Profile objects to be plotted
+    :type profs: tuple
+    :param labels: List of labels for the legend (default=None)
+    :type labels: tuple
+    :param outfile: If outfile is not None, path to file name to output the plot
+    :type outfile: str
+    :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
+    :type axes: list , optional
+    :return: matplotlib figure object
+    :rtype: class:`matplotlib.figure`
+    """
+
+    print("Showing %d brightness profiles" % len(profs))
+    if labels is None:
+        labels = [None] * len(profs)
+    else:
+        if len(labels) != len(profs):
+            print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
+            labels = [None] * len(profs)
+
+    fig = plt.figure(figsize=(13, 10))
+    ax_size = [0.14, 0.14,
+               0.83, 0.83]
+    ax = fig.add_axes(ax_size)
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+    plt.xlabel('Radius [kpc]', fontsize=40)
+    plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=40)
+    plt.xscale('log')
+    plt.yscale('log')
+    for i in range(len(profs)):
+        prof = profs[i]
+        plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='C%d' % i, elinewidth=2,
+                     markersize=7, capsize=3, label=labels[i])
+    plt.legend(loc=0,fontsize=22)
+    if axes is not None:
+        plt.axis(axes)
+
+    if outfile is not None:
+        plt.savefig(outfile)
+
+    return fig
+
+
 class Profile(object):
     """
     pyproffit.Profile class. The class allows the user to extract surface brightness profiles and use them to fit models, extract density profiles, etc.
@@ -635,7 +687,14 @@ class Profile(object):
         if model is not None:
             tmod = model.model(self.bins, *model.params)
             if self.psfmat is not None:
-                tmod = np.dot(np.transpose(self.psfmat),tmod*self.area*self.effexp)/self.area/self.effexp
+                rminus = self.bins - self.ebins
+
+                rplus = self.bins + self.ebins
+
+                area = np.pi * (rplus ** 2 - rminus ** 2)
+
+                tmod = np.dot(np.transpose(self.psfmat),tmod * area) / area
+
             plt.plot(self.bins, tmod, color='blue', label='Model')
         xmin = self.bins[0] * 0.9
         xmax = self.bins[len(self.bins) - 1] * 1.1

@@ -383,8 +383,8 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     """
     Run the multiscale deprojection optimization using the Stan backend
 
-    :param deproj: Object containing the data and parameters
-    :type deproj: pyproffit.Deproject
+    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the data and parameters
+    :type deproj: class:`pyproffit.deproject.Deproject`
     :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
     :type bkglim: float
     :param nmcmc: Number of HMC points in the output sample
@@ -401,7 +401,6 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     :type depth: int
     :param min_beta: Minimum value of beta. Default=0.6
     :type min_beta: float
-    :return:
     """
     prof = deproj.profile
     sb = prof.profile
@@ -521,8 +520,8 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     """
     Run the multiscale deprojection optimization using the PyMC3 backend
 
-    :param deproj: Object containing the data and parameters
-    :type deproj: pyproffit.Deproject
+    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the data and parameters
+    :type deproj: class:`pyproffit.deproject.Deproject`
     :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
     :type bkglim: float
     :param nmcmc: Number of HMC points in the output sample
@@ -537,7 +536,6 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     :type nbetas: int
     :param min_beta: Minimum value of beta. Default=0.6
     :type min_beta: float
-    :return:
     """
 
     prof = deproj.profile
@@ -755,11 +753,10 @@ def OP(deproj,nmc=1000):
     """
     Run standard Onion Peeling deprojection including edge correction
 
-    :param deproj: Input data
-    :type deproj: pyproffit.Deproject
+    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the input data
+    :type deproj: class:`pyproffit.deproject.Deproject`
     :param nmc: Number of Monte Carlo realizations of the profile to compute the uncertainties (default=1000)
     :type nmc: int
-    :return: None
     """
     # Standard onion peeling
     prof=deproj.profile
@@ -812,7 +809,7 @@ def OP(deproj,nmc=1000):
 
 class Deproject(object):
     """
-    pyproffit.Deproject class to perform all calculations of deprojection, density profile, gas mass, count rate, and luminosity
+    Class to perform all calculations of deprojection, density profile, gas mass, count rate, and luminosity
 
     :param z: Source redshift. If z=None, only the surface brightness reconstruction can be done.
     :type z: float
@@ -887,7 +884,7 @@ class Deproject(object):
         Run Multiscale deprojection using the method described in Eckert+20
 
         :param backend: Backend to run the optimization problem. Available backends are 'pymc3' (default) and 'stan'
-        :type backend: strr
+        :type backend: str
         :param nmcmc: Number of HMC points in the output sample
         :type nmcmc: int
         :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
@@ -1246,7 +1243,7 @@ class Deproject(object):
                 item.set_fontsize(22)
             # plt.yscale('log')
             plt.hist(allint[1,:]-allint[0,:], bins=30)
-            plt.xlabel('Count Rate [cts/s]', fontsize=40)
+            plt.xlabel('$L_{X}$ [erg/s]', fontsize=40)
             plt.ylabel('Frequency', fontsize=40)
             if outfile is not None:
                 plt.savefig(outfile)
@@ -1321,17 +1318,17 @@ class Deproject(object):
     # Compute Mgas within radius in kpc
     def Mgas(self, radius, radius_err=None, plot=True, outfile=None):
         """
-        Compute the posterior cumulative gas mass within a given radius. . Optionally, the posterior distribution can be plotted and saved.
+        Compute the posterior cumulative gas mass within a given radius. Optionally, the posterior distribution can be plotted and saved.
 
         :param radius: Gas mass integration radius in kpc
         :type radius: float
-        :param radius_err: (Gaussian) error on the input radius to be propagated to the gas mass measurement. To be used in case one wants to evaluate $M_{gas}$ at an overdensity radius with a known uncertainty
-        :type float , optional
+        :param radius_err: (Gaussian) error on the input radius to be propagated to the gas mass measurement. To be used in case one wants to evaluate :math:`M_{gas}` at an overdensity radius with a known uncertainty
+        :type radius_err: float , optional
         :param plot: Plot the posterior Mgas distribution (default=True)
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str , optional
-        :return: Median $M_{gas}$, 16th and 84th percentiles
+        :return: Median :math:`M_{gas}`, 16th and 84th percentiles
         :rtype: float
         """
         if self.samples is None or self.z is None or self.cf is None:

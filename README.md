@@ -18,6 +18,13 @@ The PyPI repository should contain the latest stable release (as judged by the d
 
 # Documentation
 
-An extensive documentation is available on readthedocs:
+An extensive documentation is available on Read The Docs:
 
 https://pyproffit.readthedocs.io
+
+A test dataset and a validation script are also available in the `validation` directory. To run the validation script,
+
+    cd validation
+    python3 test_script.py
+    
+Enjoy!

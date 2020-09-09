@@ -1364,13 +1364,13 @@ class Deproject(object):
         # Set randomization of the radius if radius_err is not None
         if radius_err is not None:
 
-            nsim = len(mgas)
+            nsim = len(self.samples)
 
             radii = radius_err * np.random.randn(nsim) + radius
 
-            mgasdist = np.empty(len(mgas))
+            mgasdist = np.empty(len(self.samples))
 
-            for i in range(len(mgas)):
+            for i in range(len(self.samples)):
 
                 mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
 

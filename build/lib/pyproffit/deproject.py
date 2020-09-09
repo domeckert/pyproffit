@@ -383,8 +383,8 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     """
     Run the multiscale deprojection optimization using the Stan backend
 
-    :param deproj: Object containing the data and parameters
-    :type deproj: pyproffit.Deproject
+    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the data and parameters
+    :type deproj: class:`pyproffit.deproject.Deproject`
     :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
     :type bkglim: float
     :param nmcmc: Number of HMC points in the output sample
@@ -401,7 +401,6 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     :type depth: int
     :param min_beta: Minimum value of beta. Default=0.6
     :type min_beta: float
-    :return:
     """
     prof = deproj.profile
     sb = prof.profile
@@ -521,8 +520,8 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     """
     Run the multiscale deprojection optimization using the PyMC3 backend
 
-    :param deproj: Object containing the data and parameters
-    :type deproj: pyproffit.Deproject
+    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the data and parameters
+    :type deproj: class:`pyproffit.deproject.Deproject`
     :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
     :type bkglim: float
     :param nmcmc: Number of HMC points in the output sample
@@ -537,7 +536,6 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     :type nbetas: int
     :param min_beta: Minimum value of beta. Default=0.6
     :type min_beta: float
-    :return:
     """
 
     prof = deproj.profile
@@ -755,11 +753,10 @@ def OP(deproj,nmc=1000):
     """
     Run standard Onion Peeling deprojection including edge correction
 
-    :param deproj: Input data
-    :type deproj: pyproffit.Deproject
+    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the input data
+    :type deproj: class:`pyproffit.deproject.Deproject`
     :param nmc: Number of Monte Carlo realizations of the profile to compute the uncertainties (default=1000)
     :type nmc: int
-    :return: None
     """
     # Standard onion peeling
     prof=deproj.profile
@@ -812,7 +809,7 @@ def OP(deproj,nmc=1000):
 
 class Deproject(object):
     """
-    pyproffit.Deproject class to perform all calculations of deprojection, density profile, gas mass, count rate, and luminosity
+    Class to perform all calculations of deprojection, density profile, gas mass, count rate, and luminosity
 
     :param z: Source redshift. If z=None, only the surface brightness reconstruction can be done.
     :type z: float
@@ -831,6 +828,11 @@ class Deproject(object):
         self.z = z
         self.samples = None
         self.cf = cf
+        if cf is None and profile.ccf is not None:
+            self.cf = profile.ccf
+        self.lumfact = None
+        if profile.lumfact is not None:
+            self.lumfact = profile.lumfact
         self.dens = None
         self.dens_lo = None
         self.dens_hi = None
@@ -882,7 +884,7 @@ class Deproject(object):
         Run Multiscale deprojection using the method described in Eckert+20
 
         :param backend: Backend to run the optimization problem. Available backends are 'pymc3' (default) and 'stan'
-        :type backend: strr
+        :type backend: str
         :param nmcmc: Number of HMC points in the output sample
         :type nmcmc: int
         :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
@@ -945,7 +947,7 @@ class Deproject(object):
         if xscale not in ['arcmin','kpc','both']:
             xscale='kpc'
 
-        sourcereg_out = np.where(self.rout < self.bkglim)
+        sourcereg_out = np.where(self.rout <= self.bkglim)
 
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
@@ -1188,6 +1190,69 @@ class Deproject(object):
 
         return  medint,intlo,inthi
 
+    def Luminosity(self,a,b,plot=True,outfile=None):
+        """
+        Compute the luminosity integrated between radii a and b. Optionally, the luminosity distribution can be plotted and saved. Requires the luminosity factor to be computed using the :meth:`pyproffit.profextract.Profile.Emissivity` method.
+
+        :param a: Inner integration boundary in arcmin
+        :type a: float
+        :param b: Outer integration boundary in arcmin
+        :type b: float
+        :param plot: Plot the posterior count rate distribution (default=True)
+        :type plot: bool
+        :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
+        :type outfile: str
+        :return: Median luminosity, 16th and 84th percentiles
+        :rtype: float
+        """
+        if self.samples is None:
+            print('Error: no MCMC samples found')
+            return
+
+        if self.lumfact is None:
+            print('Error: no luminosity conversion factor found')
+            return
+
+        # Set source region
+        prof = self.profile
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        # Avoid diverging profiles in the center by cutting to the innermost points, if necessary
+        if a<prof.bins[0]/2.:
+            a = prof.bins[0]/2.
+
+        # Set vector with list of parameters
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
+        Kint = calc_int_operator(a, b, pars)
+        allint = np.dot(Kint, np.exp(self.samples.T)) * self.lumfact
+        medint = np.median(allint[1, :] - allint[0, :])
+        intlo = np.percentile(allint[1, :] - allint[0, :], 50. - 68.3 / 2.)
+        inthi = np.percentile(allint[1, :] - allint[0, :], 50. + 68.3 / 2.)
+        print('Reconstructed luminosity: %g (%g , %g)' % (medint, intlo, inthi))
+        if plot:
+            plt.clf()
+            fig = plt.figure(figsize=(13, 10))
+            ax_size = [0.14, 0.12,
+                       0.85, 0.85]
+            ax = fig.add_axes(ax_size)
+            ax.minorticks_on()
+            ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+            ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+            for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+                item.set_fontsize(22)
+            # plt.yscale('log')
+            plt.hist(allint[1,:]-allint[0,:], bins=30)
+            plt.xlabel('$L_{X}$ [erg/s]', fontsize=40)
+            plt.ylabel('Frequency', fontsize=40)
+            if outfile is not None:
+                plt.savefig(outfile)
+                plt.close()
+            else:
+                plt.show(block=False)
+
+        return  medint,intlo,inthi
+
     def Ncounts(self,plot=True,outfile=None):
         """
         Compute the total model number of counts. Optionally, the posterior distribution can be plotted and saved.
@@ -1196,7 +1261,7 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
-        :return: Median count rate, 16th and 84th percentiles
+        :return: Median number of counts, 16th and 84th percentiles
         :rtype: float
         """
         if self.samples is None:
@@ -1251,17 +1316,19 @@ class Deproject(object):
 
 
     # Compute Mgas within radius in kpc
-    def Mgas(self,radius,plot=True,outfile=None):
+    def Mgas(self, radius, radius_err=None, plot=True, outfile=None):
         """
-        Compute the posterior cumulative gas mass within a given radius. . Optionally, the posterior distribution can be plotted and saved.
+        Compute the posterior cumulative gas mass within a given radius. Optionally, the posterior distribution can be plotted and saved.
 
         :param radius: Gas mass integration radius in kpc
         :type radius: float
+        :param radius_err: (Gaussian) error on the input radius to be propagated to the gas mass measurement. To be used in case one wants to evaluate :math:`M_{gas}` at an overdensity radius with a known uncertainty
+        :type radius_err: float , optional
         :param plot: Plot the posterior Mgas distribution (default=True)
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
-        :type outfile: str
-        :return: Median count rate, 16th and 84th percentiles
+        :type outfile: str , optional
+        :return: Median :math:`M_{gas}`, 16th and 84th percentiles
         :rtype: float
         """
         if self.samples is None or self.z is None or self.cf is None:
@@ -1290,8 +1357,26 @@ class Deproject(object):
         mgas = np.cumsum(alldens * nhconv * volmat, axis=0)
 
         # Interpolate at the radius of interest
-        f = interp1d(rkpc, mgas, axis=0)
-        mgasdist = f(radius)
+
+        # Set randomization of the radius if radius_err is not None
+        if radius_err is not None:
+
+            nsim = len(self.samples)
+
+            radii = radius_err * np.random.randn(nsim) + radius
+
+            mgasdist = np.empty(len(self.samples))
+
+            for i in range(len(self.samples)):
+
+                mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
+
+        else:
+
+            f = interp1d(rkpc, mgas, axis=0)
+
+            mgasdist = f(radius)
+
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
         if plot:
             plt.clf()

@@ -2,6 +2,4 @@ astropy
 iminuit
 matplotlib
 numpy
-pymc3
-pystan
 scipy

@@ -289,20 +289,24 @@ class Profile(object):
             print('Unknown binning option '+binning+', reverting to linear')
             self.islogbin = False
 
-    def SBprofile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
+    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., voronoi=False, box=False, width=None):
         """
         Extract a surface brightness profile and store the results in the input Profile object
 
         :param ellipse_ratio: Ratio a/b of major to minor axis in the case of an elliptical annulus definition. Defaults to 1.0, i.e. circular annuli.
         :type ellipse_ratio: float
-        :param ellipse_angle: Position angle of the elliptical annulus respective to the R.A. axis. Defaults 0.
-        :type ellipse_angle: float
+        :param rotation_angle: Rotation angle of the ellipse or box respective to the R.A. axis. Defaults 0.
+        :type rotation_angle: float
         :param angle_low: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, lower position angle of the sector respective to the R.A. axis. Defaults to 0
         :type angle_low: float
         :param angle_high: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, upper position angle of the sector respective to the R.A. axis. Defaults to 360
         :type angle_high: float
         :param voronoi: Set whether the input data is a Voronoi binned image (True) or a standard raw count image (False). Defaults to False.
         :type voronoi: bool
+        :param box: Define whether the profile should be extract along an annulus or a box. Defaults to False.
+        :type box: bool
+        :param width: In case box=True, set the full width of the box (in arcmin)
+        :type width: float
         """
         data = self.data
         img = data.img
@@ -324,8 +328,8 @@ class Profile(object):
         profile, eprof, counts, area, effexp, bkgprof, bkgcounts = np.empty(self.nbin), np.empty(self.nbin), np.empty(
                 self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
-        if ellipse_angle is not None:
-            self.ellangle = ellipse_angle
+        if rotation_angle is not None:
+            self.ellangle = rotation_angle
         else:
             self.ellangle = 0.0
 
@@ -333,7 +337,7 @@ class Profile(object):
             self.ellratio = ellipse_ratio
         else:
             self.ellratio = 1.0
-        tta = ellipse_angle - 90.
+        tta = rotation_angle - 90.
         if tta < -90. or tta > 270.:
             print('Error: input angle must be between 0 and 360 degrees')
             return
@@ -372,13 +376,27 @@ class Profile(object):
             angles = angles - anglow
         tol = 0.5e-5
         for i in range(nbin):
-            if i == 0:
-                id = np.where(
-                    np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
-                                   exposure > 0.0), angles >= 0.), angles <= anghigh))
+            if not box:
+                if i == 0:
+                    id = np.where(
+                        np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
+                                       exposure > 0.0), angles >= 0.), angles <= anghigh))
+                else:
+                    id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
+                                                rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), angles >= 0.), angles <= anghigh))
+
             else:
-                id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
-                                            rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), angles >= 0.), angles <= anghigh))
+                if width is None:
+                    print('Error: box width not provided')
+                    return
+                else:
+                    if i == 0:
+                        id = np.where(
+                            np.logical_and(np.logical_and(np.logical_and(ytil + self.maxrad/2. >= 0, ytil + self.maxrad/2. < np.round(self.bins[i] + self.ebins[i], 5) + tol),
+                                           exposure > 0.0), np.fabs(xtil) <= width/2.))
+                    else:
+                        id = np.where(np.logical_and(np.logical_and(np.logical_and(ytil + self.maxrad/2. >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
+                                                    ytil + self.maxrad/2. < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), np.fabs(xtil) <= width/2.))
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
@@ -414,6 +432,7 @@ class Profile(object):
             self.counts = counts
             self.bkgprof = bkgprof
             self.bkgcounts = bkgcounts
+
 
     def MedianSB(self):
         """

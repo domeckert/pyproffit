@@ -303,7 +303,7 @@ class Profile(object):
         :type angle_high: float
         :param voronoi: Set whether the input data is a Voronoi binned image (True) or a standard raw count image (False). Defaults to False.
         :type voronoi: bool
-        :param box: Define whether the profile should be extract along an annulus or a box. Defaults to False.
+        :param box: Define whether the profile should be extract along an annulus or a box. The parameter definition of the box matches the DS9 definition. Defaults to False.
         :type box: bool
         :param width: In case box=True, set the full width of the box (in arcmin)
         :type width: float

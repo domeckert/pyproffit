@@ -8,7 +8,6 @@ from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import Planck15 as cosmo
 
-
 def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
     """
     Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
@@ -276,6 +275,7 @@ class Profile(object):
         self.custom = False
         self.ccf = None
         self.lumfact = None
+        self.box = False
         if binning=='log':
             self.islogbin = True
         elif binning=='linear':
@@ -390,6 +390,7 @@ class Profile(object):
                     print('Error: box width not provided')
                     return
                 else:
+                    self.box = True
                     if i == 0:
                         id = np.where(
                             np.logical_and(np.logical_and(np.logical_and(ytil + self.maxrad/2. >= 0, ytil + self.maxrad/2. < np.round(self.bins[i] + self.ebins[i], 5) + tol),
@@ -697,26 +698,30 @@ class Profile(object):
             plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=40)
         else:
             plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=28)
-        plt.xscale('log')
         plt.yscale('log')
-        plt.errorbar(self.bins, self.profile, xerr=self.ebins, yerr=self.eprof, fmt='o', color='black', elinewidth=2,
+        if not self.box:
+            plt.xscale('log')
+            rads = self.bins
+        else:
+            rads = self.bins - self.maxrad/2.
+        plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt='o', color='black', elinewidth=2,
                      markersize=7, capsize=0,mec='black', label='Brightness')
         if self.bkgprof is not None:
-            plt.plot(self.bins, self.bkgprof, color='green', label='Background')
+            plt.plot(rads, self.bkgprof, color='green', label='Background')
         if model is not None:
-            tmod = model.model(self.bins, *model.params)
+            tmod = model.model(rads, *model.params)
             if self.psfmat is not None:
-                rminus = self.bins - self.ebins
+                rminus = rads - self.ebins
 
-                rplus = self.bins + self.ebins
+                rplus = rads + self.ebins
 
                 area = np.pi * (rplus ** 2 - rminus ** 2)
 
                 tmod = np.dot(np.transpose(self.psfmat),tmod * area) / area
 
             plt.plot(self.bins, tmod, color='blue', label='Model')
-        xmin = self.bins[0] * 0.9
-        xmax = self.bins[len(self.bins) - 1] * 1.1
+        xmin = rads[0] * 0.9
+        xmax = rads[len(self.bins) - 1] * 1.1
         ylim = ax.get_ylim()
         if axes is None:
             ax.axis([xmin,xmax,ylim[0],ylim[1]])
@@ -728,15 +733,18 @@ class Profile(object):
             gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
             ax2 = plt.subplot(gs1[0])
             chi = (self.profile-tmod)/self.eprof
-            plt.errorbar(self.bins, chi, yerr=np.ones(len(self.bins)), fmt='o', color='black', elinewidth=2,
+            plt.errorbar(rads, chi, yerr=np.ones(len(rads)), fmt='o', color='black', elinewidth=2,
                      markersize=7, capsize=0,mec='black')
             plt.xlabel('Radius [arcmin]', fontsize=28)
             plt.ylabel('$\chi$', fontsize=28)
-            plt.xscale('log')
+            if not self.box:
+                plt.xscale('log')
+                xl = np.logspace(np.log10(rads[0] / 2.), np.log10(rads[len(rads) - 1] * 2.), 100)
             #xmin=np.min(self.bins-self.ebins)
             #if xmin<=0:
             #    xmin=1e-2
-            xl = np.logspace(np.log10(self.bins[0] / 2.), np.log10(self.bins[len(self.bins) - 1] * 2.), 100)
+            else:
+                xl = np.linspace(rads[0] , rads[len(rads) - 1] , 100)
             plt.plot(xl, np.zeros(len(xl)), color='blue', linestyle='--')
             ax2.yaxis.set_label_coords(-0.07, 0.5)
             ax2.minorticks_on()
@@ -750,7 +758,7 @@ class Profile(object):
             else:
                 xmin = axes[0]
                 xmax = axes[1]
-                reg = np.where(np.logical_and(self.bins>=xmin, self.bins<=xmax))
+                reg = np.where(np.logical_and(rads>=xmin, rads<=xmax))
                 ymin = np.min(chi[reg]) - 1.
                 ymax = np.max(chi[reg]) + 1.
                 ax2.axis([xmin, xmax, ymin, ymax])

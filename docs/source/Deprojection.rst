@@ -8,7 +8,7 @@ al. (2020) to apply deprojection and PSF deconvolution.
 
 We start by loading the data and extracting a profile…
 
-.. code:: ipython3
+.. code:: python
 
     import numpy as np
     import pyproffit

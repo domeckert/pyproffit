@@ -14,7 +14,7 @@ We start by loading the data and extracting a profile…
     import pyproffit
     import matplotlib.pyplot as plt
 
-.. code:: ipython3
+.. code:: python
 
     import os
     
@@ -25,7 +25,7 @@ Let’s load the data into a
 `Data <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.data.Data>`__
 structure…
 
-.. code:: ipython3
+.. code:: python
 
     dat=pyproffit.Data(imglink='b_37.fits.gz',explink='expose_mask_37.fits.gz',
                        bkglink='back_37.fits.gz')
@@ -40,7 +40,7 @@ structure…
 Now we extract a profile in circular annuli from the surface brightness
 peak…
 
-.. code:: ipython3
+.. code:: python
 
     prof=pyproffit.Profile(dat,center_choice='peak',maxrad=45.,binsize=20.)
     
@@ -78,7 +78,7 @@ function.
 In the following example we model the ROSAT/PSPC PSF as a King function
 with a core radius of 25 arcsec
 
-.. code:: ipython3
+.. code:: python
 
     def fking(x):
         r0=25./60. # arcmin
@@ -95,7 +95,7 @@ of each annulus individually, convolves them with the PSF using FFT and
 computes the fraction of events in the FFT-convolved image that fall
 within each annulus. See Eckert et al. (2020) for more details.
 
-.. code:: ipython3
+.. code:: python
 
     prof.PSF(psffunc = fking)
 
@@ -103,7 +103,7 @@ Let’s inspect the PSF mixing matrix. Each row describes the fraction
 originating from that annulus which are in fact recorded in any other
 row
 
-.. code:: ipython3
+.. code:: python
 
     fig = plt.figure(figsize=(20,20))
     plt.imshow(np.log10(prof.psfmat), aspect='auto')
@@ -146,7 +146,7 @@ with an emission measure of 1 and retrieve the corresponding count rate.
 XSPEC needs to be accessible in the PATH for this command to work
 properly
 
-.. code:: ipython3
+.. code:: python
 
     z_a3158 = 0.059 # Source redshift, here 0.059 for the test cluster A3158
     kt_a3158 = 5.0 # Plasma temperature; if a soft band is used the profile is mildly dependent on it
@@ -178,7 +178,7 @@ known, it is still possible to run the PSF deconvolution and profile
 reconstruction, however the gas density profile and gas mass cannot be
 computed.
 
-.. code:: ipython3
+.. code:: python
 
     depr = pyproffit.Deproject(z=z_a3158, cf=cf, profile=prof)
 
@@ -200,7 +200,7 @@ The sampling time with HMC will depend on a number of factors, including
 the number of bins in the profile, the number of points in the output
 chain, and the bkglim value.
 
-.. code:: ipython3
+.. code:: python
 
     depr.Multiscale(nmcmc=1000, bkglim=30.)
 
@@ -240,7 +240,7 @@ method of the
 `Deproject <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.deproject.Deproject>`__
 class
 
-.. code:: ipython3
+.. code:: python
 
     depr.PlotSB()
 
@@ -270,7 +270,7 @@ the
 method, which integrates the PSF deconvolved model over the area. The
 posterior distribution of the count rate can be displayed as well.
 
-.. code:: ipython3
+.. code:: python
 
     cr, cr_lo, cr_hi = depr.CountRate(0., 30.)
 
@@ -295,7 +295,7 @@ And the luminosity can be obtained similarly through the
 method. Similarly to the gas density, the luminosity requires the
 emissivity conversion to be calculated
 
-.. code:: ipython3
+.. code:: python
 
     lum, lum_lo, lum_hi = depr.Luminosity(0., 30.)
 
@@ -331,7 +331,7 @@ class. The gas density profile can then be plotted through the
 `PlotDensity <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.deproject.Deproject.PlotDensity>`__
 method
 
-.. code:: ipython3
+.. code:: python
 
     depr.Density()
     
@@ -366,7 +366,7 @@ profiles. Here we provide an example of the use of the
 method. First, let us fit the surface brightness profile beyond 30
 arcmin with a constant,
 
-.. code:: ipython3
+.. code:: python
 
     mod = pyproffit.Model(pyproffit.Const)
     
@@ -396,7 +396,7 @@ arcmin with a constant,
     ------------------------------------------------------------------------------------------
 
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot(model=mod, axes=[30., 40., 5e-5, 1e-3])
 
@@ -416,7 +416,7 @@ Now we define a new
 object with a logarithmic binning, from which we will subtract the
 fitted background
 
-.. code:: ipython3
+.. code:: python
 
     prof2 = pyproffit.Profile(dat, center_choice='peak', binsize=30, maxrad=30., binning='log')
     
@@ -432,7 +432,7 @@ fitted background
     Corresponding FK5 coordinates:  55.72147733144434 -53.628226297404545
 
 
-.. code:: ipython3
+.. code:: python
 
     prof2.Plot()
 
@@ -453,13 +453,13 @@ object and apply the
 `OnionPeeling <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.deproject.Deproject.OnionPeeling>`__
 method,
 
-.. code:: ipython3
+.. code:: python
 
     depr_op = pyproffit.Deproject(profile=prof2, cf=cf, z=z_a3158)
     
     depr_op.OnionPeeling()
 
-.. code:: ipython3
+.. code:: python
 
     depr_op.PlotDensity(xscale='arcmin')
 
@@ -479,7 +479,7 @@ Clearly we want to know how the two methods compare. The
 function allows the user to easily compare the results of several
 density profile reconstructions
 
-.. code:: ipython3
+.. code:: python
 
     outfig = pyproffit.plot_multi_methods(deps = (depr, depr_op), 
                                 profs = (prof, prof2),
@@ -526,7 +526,7 @@ wherease
 computes :math:`M_{gas}` at any user given radius (in kpc) and plot the
 posterior distribution of this value.
 
-.. code:: ipython3
+.. code:: python
 
     depr.PlotMgas()
 
@@ -543,7 +543,7 @@ uncertainty in the overdensity radius can be propagated to the posterior
 :math:`M_{gas}` distribution by randomizing the radius out to which the
 profile is integrated
 
-.. code:: ipython3
+.. code:: python
 
     mg_r500, mg_lo, mg_hi = depr.Mgas(radius = 1123., radius_err=50.)
 

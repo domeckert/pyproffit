@@ -6,7 +6,7 @@ fit data and extract density profiles with *PyProffit*.
 
 We start by loading the packages:
 
-.. code:: ipython3
+.. code:: python
 
     import numpy as np
     import pyproffit
@@ -14,7 +14,7 @@ We start by loading the packages:
 
 Then we can move to the data directory with the *os* package.
 
-.. code:: ipython3
+.. code:: python
 
     import os
     
@@ -61,7 +61,7 @@ Now we load the data inside a
 `Data <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.data.Data>`__
 object in PyProffit structure:
 
-.. code:: ipython3
+.. code:: python
 
     dat=pyproffit.Data(imglink='b_37.fits.gz',explink='expose_mask_37.fits.gz',
                        bkglink='back_37.fits.gz')
@@ -87,7 +87,7 @@ The images are then loaded into the
 `Data <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.data.Data>`__
 structure and can be easily accessed as below:
 
-.. code:: ipython3
+.. code:: python
 
     fig = plt.figure(figsize=(20,20))
     s1=plt.subplot(221)
@@ -115,7 +115,7 @@ method of the
 `Data <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.data.Data>`__
 class, which loads a DS9 region file (in image or FK5 format):
 
-.. code:: ipython3
+.. code:: python
 
     dat.region('../tests/dmfilth.reg')
 
@@ -128,7 +128,7 @@ class, which loads a DS9 region file (in image or FK5 format):
 The exposure in the requested areas has been set to 0. Let’s look at the
 output:
 
-.. code:: ipython3
+.. code:: python
 
     plt.clf()
     fig = plt.figure(figsize=(10,10))
@@ -162,7 +162,7 @@ a 2D spline interpolation in between the gaps and generates a Poisson
 realization of the spline interpolated data, such that the filled holes
 have similar statistical properties to their surroundings
 
-.. code:: ipython3
+.. code:: python
 
     dat.dmfilth()
 
@@ -174,7 +174,7 @@ have similar statistical properties to their surroundings
     Filling holes
 
 
-.. code:: ipython3
+.. code:: python
 
     plt.clf()
     fig = plt.figure(figsize=(10,10))
@@ -220,7 +220,7 @@ Now we define a
 `Profile <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.profextract.Profile>`__
 object in the following way:
 
-.. code:: ipython3
+.. code:: python
 
     prof=pyproffit.Profile(dat,center_choice='centroid',maxrad=45.,binsize=20.,centroid_region=30.)
 
@@ -283,7 +283,7 @@ Now let’s extract the profile…
 
    </h3>
 
-.. code:: ipython3
+.. code:: python
 
     prof.SBprofile(ellipse_ratio=prof.ellratio,rotation_angle=prof.ellangle+180.)
 
@@ -318,7 +318,7 @@ Now let’s plot the profile…
 
    </p>
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot()
 
@@ -343,7 +343,7 @@ class. PyProffit includes several popular built-in models, however the
 structure is designed to be compatible with any custom Python function
 (see below)
 
-.. code:: ipython3
+.. code:: python
 
     mod=pyproffit.Model(pyproffit.BetaModel)
 
@@ -351,7 +351,7 @@ To check the parameters of the
 `BetaModel <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.models.BetaModel>`__
 function,
 
-.. code:: ipython3
+.. code:: python
 
     mod.parnames
 
@@ -378,7 +378,7 @@ and a
 `Model <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.models.Model>`__
 object as input:
 
-.. code:: ipython3
+.. code:: python
 
     fitobj=pyproffit.Fitter(model=mod, profile=prof)
     
@@ -416,7 +416,7 @@ limit_rc=(0,10) argument.
 
 Now we can plot the data together with the best fitting model
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot(model=mod)
 
@@ -442,7 +442,7 @@ with C-stat
 
    </p>
 
-.. code:: ipython3
+.. code:: python
 
     fitobj.Migrad(method='cstat',beta=0.7,rc=2.,norm=-2.,bkg=-4.,pedantic=False,fitlow=0.,fithigh=30.)
 
@@ -475,7 +475,7 @@ Here we have restricted the fitting range to be between 0 and 30 arcmin
 through the *fitlow* and *fithigh* arguments. This time, *beta* was left
 free while fitting.
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot(model=mod)
 
@@ -499,7 +499,7 @@ object contains a *minuit* object which can be used to run all *iminuit*
 commands. For instance, we can run *minos* to get more accurate errors
 on the parameters:
 
-.. code:: ipython3
+.. code:: python
 
     fitobj.minuit.minos()
 
@@ -777,7 +777,7 @@ on the parameters:
 
 The draw_mncontour method allows to compute parameter covariance plots
 
-.. code:: ipython3
+.. code:: python
 
     fitobj.minuit.draw_mncontour('rc', 'norm', nsigma=3)
 
@@ -797,7 +797,7 @@ The draw_mncontour method allows to compute parameter covariance plots
 Likelihood profiles for each parameter can be created using the
 draw_mnprofile method,
 
-.. code:: ipython3
+.. code:: python
 
     rcval, fcnval = fitobj.minuit.draw_mnprofile('rc')
 
@@ -814,7 +814,7 @@ subtract the background, we can create a new
 `Profile <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.profextract.Profile>`__
 object…
 
-.. code:: ipython3
+.. code:: python
 
     p2=pyproffit.Profile(dat,center_choice='custom_ima',center_ra=prof.cx,center_dec=prof.cy,
                          maxrad=25.,binsize=20.,binning='log')
@@ -827,7 +827,7 @@ object…
     Corresponding FK5 coordinates:  55.72164392100449 -53.646907112712
 
 
-.. code:: ipython3
+.. code:: python
 
     p2.Plot()
 
@@ -851,7 +851,7 @@ method of the
 class reads the *bkg* parameter, subtracts its value from the brightness
 profile and adds the statistical error in quadrature:
 
-.. code:: ipython3
+.. code:: python
 
     p2.Backsub(fitobj)
     p2.Plot()
@@ -875,7 +875,7 @@ function with the desired model and pass it to a PyProffit
 `Model <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.models.Model>`__
 object, with the following structure:
 
-.. code:: ipython3
+.. code:: python
 
     # Create your own model, here some sort of cuspy beta model
     
@@ -885,7 +885,7 @@ object, with the following structure:
         b2 = np.power(10., bkg)
         return n2 * term1 + b2
 
-.. code:: ipython3
+.. code:: python
 
     # Pass the user-defined function to a new Model structure
     
@@ -897,7 +897,7 @@ We can also fix the value of some of the parameters to help the
 convergence. This is done easily with the fix_par=True option, where
 *par* is the name of the parameter.
 
-.. code:: ipython3
+.. code:: python
 
     fitvik=pyproffit.Fitter(model=cuspmod, profile=prof)
     fitvik.Migrad(beta=0.35, rc=1., alpha=0., norm=-1.7, bkg=-3.8,
@@ -929,7 +929,7 @@ convergence. This is done easily with the fix_par=True option, where
     -------------------------------------------------------------------------------------------
 
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot(model=cuspmod)
 

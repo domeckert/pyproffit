@@ -8,7 +8,7 @@ example of *XMM-Newton* observations of A2142 (z=0.09), which hosts one
 of the most famous cold fronts and the first to be recognized as such
 (Markevitch et al. 2000).
 
-.. code:: ipython3
+.. code:: python
 
     import numpy as np
     import pyproffit
@@ -18,7 +18,7 @@ We start by loading the image, exposure map and background map into a
 `Data <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.data.Data>`__
 structure
 
-.. code:: ipython3
+.. code:: python
 
     dat = pyproffit.Data(imglink='/home/deckert/Documents/Work/cluster_data/VLP/a2142/mosaic_a2142.fits.gz',
                         explink='/home/deckert/Documents/Work/cluster_data/VLP/a2142/mosaic_a2142_expo.fits.gz',
@@ -37,7 +37,7 @@ structure
 Let’s have a look at the data. Here it is a mosaic of several
 *XMM-Newton* pointings:
 
-.. code:: ipython3
+.. code:: python
 
     fig = plt.figure(figsize=(20,20))
     s1=plt.subplot(221)
@@ -59,7 +59,7 @@ Let’s have a look at the data. Here it is a mosaic of several
 
 We mask the detected point sources to avoid contaminating the profile
 
-.. code:: ipython3
+.. code:: python
 
     dat.region('/home/deckert/Documents/Work/cluster_data/VLP/a2142/src_ps.reg')
 
@@ -82,7 +82,7 @@ to which we pass the necessary information. We will extract a profile
 centered on R.A.= 239.5863, Dec=27.226989 with a linear binning of 5
 arcsec width out to 10 arcmin
 
-.. code:: ipython3
+.. code:: python
 
     prof = pyproffit.Profile(data=dat, binsize=5., maxrad=10., 
                              center_choice='custom_fk5', center_ra=239.5863, center_dec=27.226989)
@@ -101,12 +101,12 @@ class. We select the data in a sector between position angles 10 and 70
 degrees, across an ellipse rotated by 40 degrees and with a
 major-to-minor axis ratio of 1.65
 
-.. code:: ipython3
+.. code:: python
 
     prof.SBprofile(rotation_angle=40., ellipse_ratio=1.65,
                   angle_low=10., angle_high=70.)
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot()
 
@@ -132,7 +132,7 @@ objects and comparing them using the
 `plot_multi_profiles <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.profextract.plot_multi_profiles>`__
 function
 
-.. code:: ipython3
+.. code:: python
 
     prof_se = pyproffit.Profile(data=dat, binsize=5., maxrad=10., 
                              center_choice='custom_fk5', center_ra=239.5863, center_dec=27.226989)
@@ -156,7 +156,7 @@ In the new
 structures we now load brightness profiles in sectors of 60 degree
 opening along 4 perpendicular directions
 
-.. code:: ipython3
+.. code:: python
 
     prof_se.SBprofile(rotation_angle=40., ellipse_ratio=1.65,
                   angle_low=190., angle_high=250.)
@@ -171,7 +171,7 @@ We can now display all 4 profiles together using the
 `plot_multi_profiles <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.profextract.plot_multi_profiles>`__
 function
 
-.. code:: ipython3
+.. code:: python
 
     fig = pyproffit.plot_multi_profiles(profs=(prof, prof_ne, prof_se, prof_sw),
                                  labels=('Front', 'NE', 'SE', 'SW'),
@@ -206,7 +206,7 @@ distance, and we use the
 method to generate a PSF mixing matrix. We describe the *XMM-Newton* PSF
 as a King function with parameters provided in the calibration files
 
-.. code:: ipython3
+.. code:: python
 
     # Function describing the PSF
     def fking(x):
@@ -233,7 +233,7 @@ function which implements this model. We now define a
 `Model <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.models.Model>`__
 object containing the appropriate model
 
-.. code:: ipython3
+.. code:: python
 
     modbkn = pyproffit.Model(pyproffit.BknPow)
     
@@ -248,7 +248,7 @@ object containing the appropriate model
 To choose appropriate starting points for the parameter, we can set up
 initial values by hand and inspect how the model compares to the data
 
-.. code:: ipython3
+.. code:: python
 
     modbkn.SetParameters([0.8, 2., 3.5, -1.8, 1.8, -4.])
     
@@ -282,7 +282,7 @@ specified using the *fitlow* and *fithigh* parameters of the
 `Migrad <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.fitting.Fitter.Migrad>`__
 method
 
-.. code:: ipython3
+.. code:: python
 
     fitobj = pyproffit.Fitter(model=modbkn, profile=prof)
     
@@ -326,7 +326,7 @@ this front, :math:`2.0\pm0.1` (Owers et al. 2009).
 
 Now let us check the quality of the fit
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot(model=modbkn, axes=[1., 7., 2e-3, 0.2])
 
@@ -348,7 +348,7 @@ we can run the minimization again using the *method=‘cstat’* option. We
 can also fix the *bkg* parameter since it is not very relevant in this
 region and its value is not well constrained
 
-.. code:: ipython3
+.. code:: python
 
     fitobj.Migrad(method='cstat', pedantic=False, alpha1=0.9, alpha2=1.5, rf=3.609, jump=1.92, norm=-1.9, bkg=-3.8, 
                   fitlow=1.0, fithigh=7.0, fix_bkg=True)
@@ -380,7 +380,7 @@ region and its value is not well constrained
     --------------------------------------------------------------------------------------------
 
 
-.. code:: ipython3
+.. code:: python
 
     prof.Plot(model=modbkn, axes=[1., 7., 2e-3, 0.2])
 
@@ -407,7 +407,7 @@ The results of the fitting procedure are stored in the *params* and
 `Fitter <https://pyproffit.readthedocs.io/en/latest/pyproffit.html#pyproffit.fitting.Fitter>`__
 object
 
-.. code:: ipython3
+.. code:: python
 
     print(fitobj.params)
     print(fitobj.errors)
@@ -436,14 +436,14 @@ a very efficient optimization algorithm, however it is not designed to
 determine accurate, asymmetric error bars. For this purpose, iminuit
 includes the *Minos* algorithm, which can be ran easily from PyProffit
 
-.. code:: ipython3
+.. code:: python
 
     minos_result = fitobj.minuit.minos()
 
 The uncertainties in the *jump* parameter can be viewed and accessed in
 the following way
 
-.. code:: ipython3
+.. code:: python
 
     minos_result['jump']
 
@@ -522,7 +522,7 @@ the following way
 
 
 
-.. code:: ipython3
+.. code:: python
 
     print('Best fitting compression factor : %g (%g , %g)' 
           % (fitobj.params['jump'], minos_result['jump'].lower, minos_result['jump'].upper))
@@ -537,7 +537,7 @@ Correlations between parameters can be investigated using the
 draw_mncontour method. Here we show the usual correlation between the
 outer slope of the profile :math:`\alpha_2` and the compression factor
 
-.. code:: ipython3
+.. code:: python
 
     fitobj.minuit.draw_mncontour('alpha2', 'jump')
 

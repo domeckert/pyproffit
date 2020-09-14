@@ -2,6 +2,10 @@
 
 Pyproffit is a python package for the analysis of X-ray brightness profiles of clusters of galaxies. It is the python equivalent of the popular Proffit C++ package (Eckert et al. 2011).
 
+The paper describing the code is now published in the Open Journal of Astrophysics and available on arXiv:
+
+https://arxiv.org/abs/2009.03944
+
 # Installation
 
 ``pyproffit`` is available on PyPI. The easiest way of installing ``pyproffit`` is obviously to use pip:

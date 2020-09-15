@@ -44,6 +44,7 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
             print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
             labels = [None] * len(profs)
 
+
     fig = plt.figure(figsize=figsize)
     ax_size = [0.14, 0.14,
                0.83, 0.83]
@@ -53,7 +54,9 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
     ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(18)
-    plt.xlabel('Radius [kpc]', fontsize=fontsize)
+
+    plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+
     plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
     plt.xscale(xscale)
     plt.yscale(yscale)
@@ -61,6 +64,7 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
         prof = profs[i]
         plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt, color='C%d' % i, elinewidth=2,
                      markersize=markersize, capsize=3, label=labels[i])
+
     plt.legend(loc=0,fontsize=22)
     if axes is not None:
         plt.axis(axes)

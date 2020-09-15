@@ -16,7 +16,7 @@ msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
 
 
-def plot_multi_methods(profs, deps, labels=None, outfile=None):
+def plot_multi_methods(profs, deps, labels=None, outfile=None, xunit='kpc', figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='.', markersize=7):
     """
     Plot multiple gas density profiles (e.g. obtained through several methods, centers or sectors) to compare them
 
@@ -28,18 +28,33 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     :type labels: tuple
     :param outfile: If outfile is not None, path to file name to output the plot
     :type outfile: str
-    :return: matplotlib figure object
-    :rtype: class:`matplotlib.figure`
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'log'
+    :type yscale: str , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
     """
     if len(profs) != len(deps):
         print("ERROR: different numbers of profiles and deprojection elements")
         return
 
+    if xunit != 'kpc' and xunit != 'arcmin':
+        print('Unknown X unit %s , reverting to kpc' % xunit)
+
+        xunit = 'kpc'
+
     print("Showing %d density profiles" % len(deps))
     if labels is None:
         labels = [None] * len(deps)
 
-    fig = plt.figure(figsize=(13, 10))
+    fig = plt.figure(figsize=figsize)
     ax_size = [0.14, 0.14,
                0.83, 0.83]
     ax = fig.add_axes(ax_size)
@@ -48,29 +63,38 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(18)
-    plt.xlabel('Radius [kpc]', fontsize=40)
-    plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
-    plt.xscale('log')
-    plt.yscale('log')
+
+    if xunit == 'kpc':
+        plt.xlabel('Radius [kpc]', fontsize=fontsize)
+    else:
+        plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+
+    plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=fontsize)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
     for i in range(len(deps)):
         dep = deps[i]
         prof = profs[i]
 
+
         kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
 
         sourcereg = np.where(prof.bins < dep.bkglim)
-        rkpc = prof.bins[sourcereg] * kpcp
-        erkpc = prof.ebins[sourcereg] * kpcp
 
-        plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt='.',
+        if xunit == 'kpc':
+            rkpc = prof.bins[sourcereg] * kpcp
+            erkpc = prof.ebins[sourcereg] * kpcp
+        else:
+            rkpc = prof.bins[sourcereg]
+            erkpc = prof.bins[sourcereg]
+
+        plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt=fmt,
                      color='C%d' % i, elinewidth=2,
-                     markersize=7, capsize=3, label=labels[i])
+                     markersize=markersize, capsize=3, label=labels[i])
         plt.fill_between(rkpc, dep.dens_lo, dep.dens_hi, color='C%d' % i, alpha=0.3)
     plt.legend(loc=0,fontsize=22)
     if outfile is not None:
         plt.savefig(outfile)
-
-    return fig
 
 
 def fbul19(R,z,Runit='kpc'):

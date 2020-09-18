@@ -8,8 +8,7 @@ from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import Planck15 as cosmo
 
-
-def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
+def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
     """
     Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
 
@@ -21,8 +20,20 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
     :type outfile: str
     :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
     :type axes: list , optional
-    :return: matplotlib figure object
-    :rtype: class:`matplotlib.figure`
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'log'
+    :type yscale: str , optional
+    :param lw: Line width. Defaults to 2
+    :type lw: int , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
     """
 
     print("Showing %d brightness profiles" % len(profs))
@@ -33,7 +44,8 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
             print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
             labels = [None] * len(profs)
 
-    fig = plt.figure(figsize=(13, 10))
+
+    fig = plt.figure(figsize=figsize)
     ax_size = [0.14, 0.14,
                0.83, 0.83]
     ax = fig.add_axes(ax_size)
@@ -42,14 +54,17 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
     ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(18)
-    plt.xlabel('Radius [kpc]', fontsize=40)
-    plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=40)
-    plt.xscale('log')
-    plt.yscale('log')
+
+    plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+
+    plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
     for i in range(len(profs)):
         prof = profs[i]
-        plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='C%d' % i, elinewidth=2,
-                     markersize=7, capsize=3, label=labels[i])
+        plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt, color='C%d' % i, elinewidth=2,
+                     markersize=markersize, capsize=3, label=labels[i])
+
     plt.legend(loc=0,fontsize=22)
     if axes is not None:
         plt.axis(axes)
@@ -57,8 +72,8 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None):
     if outfile is not None:
         plt.savefig(outfile)
 
-    return fig
-
+    else:
+        plt.show(block=False)
 
 class Profile(object):
     """
@@ -276,6 +291,7 @@ class Profile(object):
         self.custom = False
         self.ccf = None
         self.lumfact = None
+        self.box = False
         if binning=='log':
             self.islogbin = True
         elif binning=='linear':
@@ -289,20 +305,24 @@ class Profile(object):
             print('Unknown binning option '+binning+', reverting to linear')
             self.islogbin = False
 
-    def SBprofile(self, ellipse_ratio=1.0, ellipse_angle=0.0, angle_low=0., angle_high=360., voronoi=False):
+    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., voronoi=False, box=False, width=None):
         """
         Extract a surface brightness profile and store the results in the input Profile object
 
         :param ellipse_ratio: Ratio a/b of major to minor axis in the case of an elliptical annulus definition. Defaults to 1.0, i.e. circular annuli.
         :type ellipse_ratio: float
-        :param ellipse_angle: Position angle of the elliptical annulus respective to the R.A. axis. Defaults 0.
-        :type ellipse_angle: float
+        :param rotation_angle: Rotation angle of the ellipse or box respective to the R.A. axis. Defaults 0.
+        :type rotation_angle: float
         :param angle_low: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, lower position angle of the sector respective to the R.A. axis. Defaults to 0
         :type angle_low: float
         :param angle_high: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, upper position angle of the sector respective to the R.A. axis. Defaults to 360
         :type angle_high: float
         :param voronoi: Set whether the input data is a Voronoi binned image (True) or a standard raw count image (False). Defaults to False.
         :type voronoi: bool
+        :param box: Define whether the profile should be extract along an annulus or a box. The parameter definition of the box matches the DS9 definition. Defaults to False.
+        :type box: bool
+        :param width: In case box=True, set the full width of the box (in arcmin)
+        :type width: float
         """
         data = self.data
         img = data.img
@@ -324,8 +344,8 @@ class Profile(object):
         profile, eprof, counts, area, effexp, bkgprof, bkgcounts = np.empty(self.nbin), np.empty(self.nbin), np.empty(
                 self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
-        if ellipse_angle is not None:
-            self.ellangle = ellipse_angle
+        if rotation_angle is not None:
+            self.ellangle = rotation_angle
         else:
             self.ellangle = 0.0
 
@@ -333,7 +353,7 @@ class Profile(object):
             self.ellratio = ellipse_ratio
         else:
             self.ellratio = 1.0
-        tta = ellipse_angle - 90.
+        tta = rotation_angle - 90.
         if tta < -90. or tta > 270.:
             print('Error: input angle must be between 0 and 360 degrees')
             return
@@ -372,13 +392,28 @@ class Profile(object):
             angles = angles - anglow
         tol = 0.5e-5
         for i in range(nbin):
-            if i == 0:
-                id = np.where(
-                    np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
-                                   exposure > 0.0), angles >= 0.), angles <= anghigh))
+            if not box:
+                if i == 0:
+                    id = np.where(
+                        np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
+                                       exposure > 0.0), angles >= 0.), angles <= anghigh))
+                else:
+                    id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
+                                                rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), angles >= 0.), angles <= anghigh))
+
             else:
-                id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
-                                            rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), angles >= 0.), angles <= anghigh))
+                if width is None:
+                    print('Error: box width not provided')
+                    return
+                else:
+                    self.box = True
+                    if i == 0:
+                        id = np.where(
+                            np.logical_and(np.logical_and(np.logical_and(ytil + self.maxrad/2. >= 0, ytil + self.maxrad/2. < np.round(self.bins[i] + self.ebins[i], 5) + tol),
+                                           exposure > 0.0), np.fabs(xtil) <= width/2.))
+                    else:
+                        id = np.where(np.logical_and(np.logical_and(np.logical_and(ytil + self.maxrad/2. >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
+                                                    ytil + self.maxrad/2. < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), np.fabs(xtil) <= width/2.))
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
@@ -414,6 +449,7 @@ class Profile(object):
             self.counts = counts
             self.bkgprof = bkgprof
             self.bkgcounts = bkgcounts
+
 
     def MedianSB(self):
         """
@@ -643,7 +679,9 @@ class Profile(object):
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self, model=None, hmcmod=None, outfile=None, axes=None):
+    def Plot(self, model=None, hmcmod=None, outfile=None, axes=None, figsize=(13, 10),
+             fontsize=40., xscale='log', yscale='log', fmt='o', markersize=7, lw=2,
+             data_color='black', bkg_color='green', model_color='blue', **kwargs):
         """
         Plot the loaded surface brightness profile
 
@@ -655,13 +693,34 @@ class Profile(object):
         :type outfile: str , optional
         :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
         :type axes: list , optional
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param xscale: Scale of the X axis. Defaults to 'log'
+        :type xscale: str , optional
+        :param yscale: Scale of the Y axis. Defaults to 'log'
+        :type yscale: str , optional
+        :param lw: Line width. Defaults to 2
+        :type lw: int , optional
+        :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+        :type fmt: str , optional
+        :param markersize: Marker size. Defaults to 7
+        :type markersize: int , optional
+        :param data_color: Color of the data points following matplotlib convention. Defaults to 'red'
+        :type data_color: str , optional
+        :param bkg_color: Color of the particle background following matplotlib convention. Defaults to 'green'
+        :type bkg_color: str , optional
+        :param model_color: Color of the model curve following matplotlib convention. Defaults to 'blue'
+        :type model_color: str , optional
+        :param kwargs: Arguments to be passed to :class:`matplotlib.pyplot.errorbar`
         """
         # Plot extracted profile
         if self.profile is None:
             print('Error: No profile extracted')
             return
         plt.clf()
-        fig = plt.figure(figsize=(13, 10))
+        fig = plt.figure(figsize=figsize)
         gs0 = gridspec.GridSpec(1, 1)
         if model is not None:
             gs0.update(left=0.12, right=0.95, wspace=0.0, top=0.95, bottom=0.35)
@@ -674,30 +733,34 @@ class Profile(object):
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
         if model is None:
-            plt.xlabel('Radius [arcmin]', fontsize=40)
-            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=40)
+            plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
         else:
-            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=28)
-        plt.xscale('log')
-        plt.yscale('log')
-        plt.errorbar(self.bins, self.profile, xerr=self.ebins, yerr=self.eprof, fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black', label='Brightness')
+            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+        plt.yscale(yscale)
+        plt.xscale(xscale)
+        if not self.box:
+            rads = self.bins
+        else:
+            rads = self.bins - self.maxrad/2.
+        plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt=fmt, color=data_color, elinewidth=2,
+                     markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
         if self.bkgprof is not None:
-            plt.plot(self.bins, self.bkgprof, color='green', label='Background')
+            plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
         if model is not None:
-            tmod = model.model(self.bins, *model.params)
+            tmod = model.model(rads, *model.params)
             if self.psfmat is not None:
-                rminus = self.bins - self.ebins
+                rminus = rads - self.ebins
 
-                rplus = self.bins + self.ebins
+                rplus = rads + self.ebins
 
                 area = np.pi * (rplus ** 2 - rminus ** 2)
 
                 tmod = np.dot(np.transpose(self.psfmat),tmod * area) / area
 
-            plt.plot(self.bins, tmod, color='blue', label='Model')
-        xmin = self.bins[0] * 0.9
-        xmax = self.bins[len(self.bins) - 1] * 1.1
+            plt.plot(rads, tmod, color=model_color, lw=lw, label='Model')
+        xmin = rads[0] * 0.9
+        xmax = rads[len(self.bins) - 1] * 1.1
         ylim = ax.get_ylim()
         if axes is None:
             ax.axis([xmin,xmax,ylim[0],ylim[1]])
@@ -709,15 +772,18 @@ class Profile(object):
             gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
             ax2 = plt.subplot(gs1[0])
             chi = (self.profile-tmod)/self.eprof
-            plt.errorbar(self.bins, chi, yerr=np.ones(len(self.bins)), fmt='o', color='black', elinewidth=2,
-                     markersize=7, capsize=0,mec='black')
-            plt.xlabel('Radius [arcmin]', fontsize=28)
-            plt.ylabel('$\chi$', fontsize=28)
-            plt.xscale('log')
+            plt.errorbar(rads, chi, yerr=np.ones(len(rads)), fmt=fmt, color=data_color, elinewidth=2,
+                     markersize=markersize, capsize=0, mec=data_color)
+            plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+            plt.ylabel('$\chi$', fontsize=fontsize)
+            plt.xscale(xscale)
+            if not self.box:
+                xl = np.logspace(np.log10(rads[0] / 2.), np.log10(rads[len(rads) - 1] * 2.), 100)
             #xmin=np.min(self.bins-self.ebins)
             #if xmin<=0:
             #    xmin=1e-2
-            xl = np.logspace(np.log10(self.bins[0] / 2.), np.log10(self.bins[len(self.bins) - 1] * 2.), 100)
+            else:
+                xl = np.linspace(rads[0] , rads[len(rads) - 1] , 100)
             plt.plot(xl, np.zeros(len(xl)), color='blue', linestyle='--')
             ax2.yaxis.set_label_coords(-0.07, 0.5)
             ax2.minorticks_on()
@@ -731,14 +797,13 @@ class Profile(object):
             else:
                 xmin = axes[0]
                 xmax = axes[1]
-                reg = np.where(np.logical_and(self.bins>=xmin, self.bins<=xmax))
+                reg = np.where(np.logical_and(rads>=xmin, rads<=xmax))
                 ymin = np.min(chi[reg]) - 1.
                 ymax = np.max(chi[reg]) + 1.
                 ax2.axis([xmin, xmax, ymin, ymax])
         if outfile is not None:
             plt.savefig(outfile)
-        else:
-            plt.show()
+
 
     def Backsub(self,fitter):
         """

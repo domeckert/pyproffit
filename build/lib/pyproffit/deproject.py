@@ -16,7 +16,7 @@ msun = 1.9891e33 #g
 mh = 1.66053904e-24 #proton mass in g
 
 
-def plot_multi_methods(profs, deps, labels=None, outfile=None):
+def plot_multi_methods(profs, deps, labels=None, outfile=None, xunit='kpc', figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='.', markersize=7):
     """
     Plot multiple gas density profiles (e.g. obtained through several methods, centers or sectors) to compare them
 
@@ -28,18 +28,33 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     :type labels: tuple
     :param outfile: If outfile is not None, path to file name to output the plot
     :type outfile: str
-    :return: matplotlib figure object
-    :rtype: class:`matplotlib.figure`
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'log'
+    :type yscale: str , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
     """
     if len(profs) != len(deps):
         print("ERROR: different numbers of profiles and deprojection elements")
         return
 
+    if xunit != 'kpc' and xunit != 'arcmin':
+        print('Unknown X unit %s , reverting to kpc' % xunit)
+
+        xunit = 'kpc'
+
     print("Showing %d density profiles" % len(deps))
     if labels is None:
         labels = [None] * len(deps)
 
-    fig = plt.figure(figsize=(13, 10))
+    fig = plt.figure(figsize=figsize)
     ax_size = [0.14, 0.14,
                0.83, 0.83]
     ax = fig.add_axes(ax_size)
@@ -48,29 +63,38 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None):
     ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
     for item in (ax.get_xticklabels() + ax.get_yticklabels()):
         item.set_fontsize(18)
-    plt.xlabel('Radius [kpc]', fontsize=40)
-    plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
-    plt.xscale('log')
-    plt.yscale('log')
+
+    if xunit == 'kpc':
+        plt.xlabel('Radius [kpc]', fontsize=fontsize)
+    else:
+        plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+
+    plt.ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=fontsize)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
     for i in range(len(deps)):
         dep = deps[i]
         prof = profs[i]
 
+
         kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
 
         sourcereg = np.where(prof.bins < dep.bkglim)
-        rkpc = prof.bins[sourcereg] * kpcp
-        erkpc = prof.ebins[sourcereg] * kpcp
 
-        plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt='.',
+        if xunit == 'kpc':
+            rkpc = prof.bins[sourcereg] * kpcp
+            erkpc = prof.ebins[sourcereg] * kpcp
+        else:
+            rkpc = prof.bins[sourcereg]
+            erkpc = prof.bins[sourcereg]
+
+        plt.errorbar(rkpc, dep.dens, xerr=erkpc, yerr=[dep.dens - dep.dens_lo, dep.dens_hi - dep.dens], fmt=fmt,
                      color='C%d' % i, elinewidth=2,
-                     markersize=7, capsize=3, label=labels[i])
+                     markersize=markersize, capsize=3, label=labels[i])
         plt.fill_between(rkpc, dep.dens_lo, dep.dens_hi, color='C%d' % i, alpha=0.3)
     plt.legend(loc=0,fontsize=22)
     if outfile is not None:
         plt.savefig(outfile)
-
-    return fig
 
 
 def fbul19(R,z,Runit='kpc'):
@@ -928,14 +952,23 @@ class Deproject(object):
         """
         OP(self,nmc)
 
-    def PlotDensity(self,outfile=None,xscale='kpc'):
+    def PlotDensity(self,outfile=None,xunit='kpc', figsize=(13, 10), fontsize=40, color='C0', lw=2, **kwargs):
         """
         Plot the loaded density profile
 
         :param outfile: Output file name. If outfile=None (default) plot only to stdout
         :type outfile: str
-        :param xscale: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
-        :type xscale: str
+        :param xunit: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
+        :type xunit: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param color: Line color following matplotlib conventions. Defaults to 'blue'
+        :type color: str , optional
+        :param lw: Line width. Defaults to 2
+        :type lw: int , optional
+        :param kwargs: Additional arguments to be passed to :class:`matplotlib.pyplot.plot`
         """
         # Plot extracted profile
         if self.profile is None:
@@ -944,8 +977,8 @@ class Deproject(object):
         if self.dens is None:
             print('Error: No density profile extracted')
             return
-        if xscale not in ['arcmin','kpc','both']:
-            xscale='kpc'
+        if xunit not in ['arcmin','kpc','both']:
+            xunit='kpc'
 
         sourcereg_out = np.where(self.rout <= self.bkglim)
 
@@ -957,34 +990,34 @@ class Deproject(object):
         #erkpc = self.profile.ebins * kpcp
 
         plt.clf()
-        fig = plt.figure(figsize=(13, 10),tight_layout=True)
+        fig = plt.figure(figsize=figsize, tight_layout=True)
         ax = fig.add_subplot(111)
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
         ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
-        ax.set_ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=40)
+        ax.set_ylabel('$n_{H}$ [cm$^{-3}$]', fontsize=fontsize)
         ax.set_xscale('log')
         ax.set_yscale('log')
 
-        if xscale == 'kpc' or xscale == 'both':
-            ax.plot(rkpc, self.dens, color='C0', lw=2)
-            ax.fill_between(rkpc, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
-            ax.set_xlabel('Radius [kpc]', fontsize=40)
+        if xunit == 'kpc' or xunit == 'both':
+            ax.plot(rkpc, self.dens, color=color, lw=lw, **kwargs)
+            ax.fill_between(rkpc, self.dens_lo, self.dens_hi, color=color, alpha=0.5)
+            ax.set_xlabel('Radius [kpc]', fontsize=fontsize)
         else:
-            ax.plot(rout, self.dens, color='C0', lw=2)
-            ax.fill_between(rout, self.dens_lo, self.dens_hi, color='C0', alpha=0.5)
-            ax.set_xlabel('Radius [arcmin]', fontsize=40)
+            ax.plot(rout, self.dens, color=color, lw=lw, **kwargs)
+            ax.fill_between(rout, self.dens_lo, self.dens_hi, color=color, alpha=0.5)
+            ax.set_xlabel('Radius [arcmin]', fontsize=fontsize)
 
-        if xscale == 'both':
+        if xunit == 'both':
             limx=ax.get_xlim()
             ax2 = ax.twiny()
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
             ax2.set_xscale('log')
             ax2.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
             ax2.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
-            ax2.set_xlabel('Radius [arcmin]', fontsize=40,labelpad=20)
+            ax2.set_xlabel('Radius [arcmin]', fontsize=fontsize, labelpad=20)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)
 
@@ -1035,12 +1068,35 @@ class Deproject(object):
         else:
             print('No redshift and/or conversion factor, nothing to do')
 
-    def PlotSB(self,outfile=None):
+    def PlotSB(self,outfile=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', lw=2,
+               fmt='d', markersize=7, data_color='red', bkg_color='green', model_color='C0', skybkg_color='k'):
         """
         Plot the surface brightness profile reconstructed after applying the multiscale deprojection and PSF deconvolution technique, and compare it with the input brightness profile
 
         :param outfile: File name of saving the output figure. If outfile=None (default), plot only to stdout
         :type outfile: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param xscale: Scale of the X axis. Defaults to 'log'
+        :type xscale: str , optional
+        :param yscale: Scale of the Y axis. Defaults to 'log'
+        :type yscale: str , optional
+        :param lw: Line width. Defaults to 2
+        :type lw: int , optional
+        :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+        :type fmt: str , optional
+        :param markersize: Marker size. Defaults to 7
+        :type markersize: int , optional
+        :param data_color: Color of the data points following matplotlib convention. Defaults to 'red'
+        :type data_color: str , optional
+        :param bkg_color: Color of the particle background following matplotlib convention. Defaults to 'green'
+        :type bkg_color: str , optional
+        :param model_color: Color of the surface brightness model following matplotlib convention. Defaults to 'C0'
+        :type model_color: str , optional
+        :param skybkg_color: Color of the fitted sky background model following matplotlib convention. Defaults to 'k'
+        :type skybkg_color: str , optional
         """
         if self.profile is None:
             print('Error: No profile extracted')
@@ -1050,29 +1106,29 @@ class Deproject(object):
             return
         prof=self.profile
         plt.clf()
-        fig = plt.figure(figsize=(13, 10))
+        fig = plt.figure(figsize=figsize)
 
         ax=fig.add_axes([0.12,0.2,0.8,0.7])
         ax_res=fig.add_axes([0.12,0.1,0.8,0.1])
 
-        ax_res.set_xlabel('Radius [arcmin]', fontsize=40)
-        ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
-        ax.set_xscale('log')
-        ax.set_yscale('log')
+        ax_res.set_xlabel('Radius [arcmin]', fontsize=fontsize)
+        ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=fontsize)
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
 
         #ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
         #            markersize=7, capsize=0, mec='black', label='Bkg - subtracted Data')
 
-        ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt='d',
-                    color='r', elinewidth=2,
-                    markersize=7, capsize=0, label='Data')
-        ax.plot(prof.bins, prof.bkgprof, color='green', label='Particle background')
+        ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt,
+                    color=data_color, elinewidth=2,
+                    markersize=markersize, capsize=0, label='Data')
+        ax.plot(prof.bins, prof.bkgprof, color=bkg_color, label='Particle background')
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
-        ax.plot(prof.bins, self.sb, color='C0', lw=2, label='Source model')
-        ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color='C0', alpha=0.5)
+        ax.plot(prof.bins, self.sb, color=model_color, lw=lw, label='Source model')
+        ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color=model_color, alpha=0.5)
 
-        ax.axhline(self.bkg,color='k',label='Sky background')
+        ax.axhline(self.bkg,color=skybkg_color,label='Sky background')
 
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
@@ -1092,7 +1148,7 @@ class Deproject(object):
         pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
         pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
 
-        ax.plot(prof.bins, pmc, color='C1', lw=2, label='Total model')
+        ax.plot(prof.bins, pmc, color='C1', lw=lw, label='Total model')
         ax.fill_between(prof.bins, pmcl, pmch, color='C1', alpha=0.5)
 
         self.pmc=pmc
@@ -1106,11 +1162,11 @@ class Deproject(object):
         veff=np.max(np.abs(res))
         if veff > vmin:
             vmin=veff*1.2
-        ax_res.scatter(prof.bins, res, color='r', lw=2)
+        ax_res.scatter(prof.bins, res, color=data_color, lw=lw)
         ax_res.axhline(0, color='k')
 
         ax.set_xticklabels([])
-        ax_res.set_xscale('log')
+        ax_res.set_xscale(xscale)
         ax.legend(loc=0)
 
         ax.minorticks_on()
@@ -1132,7 +1188,7 @@ class Deproject(object):
             plt.show(block=False)
 
 
-    def CountRate(self,a,b,plot=True,outfile=None):
+    def CountRate(self,a,b,plot=True,outfile=None, figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
         """
         Compute the model count rate integrated between radii a and b. Optionally, the count rate distribution can be plotted and saved.
 
@@ -1144,6 +1200,15 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param nbins: Number of bins on the X axis to construct the posterior distribution. Defaults to 30
+        :type nbins: int , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param yscale: Scale on the Y axis. Defaults to 'linear'
+        :type yscale: str , optional
+        :param kwargs: Options to be passed to :class:`matplotplib.pyplot.hist`
         :return: Median count rate, 16th and 84th percentiles
         :rtype: float
         """
@@ -1169,7 +1234,7 @@ class Deproject(object):
         print('Reconstructed count rate: %g (%g , %g)' % (medint, intlo, inthi))
         if plot:
             plt.clf()
-            fig = plt.figure(figsize=(13, 10))
+            fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
@@ -1178,10 +1243,10 @@ class Deproject(object):
             ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
-            # plt.yscale('log')
-            plt.hist(allint[1,:]-allint[0,:], bins=30)
-            plt.xlabel('Count Rate [cts/s]', fontsize=40)
-            plt.ylabel('Frequency', fontsize=40)
+            plt.yscale(yscale)
+            plt.hist(allint[1,:]-allint[0,:], bins=nbins, **kwargs)
+            plt.xlabel('Count Rate [cts/s]', fontsize=fontsize)
+            plt.ylabel('Frequency', fontsize=fontsize)
             if outfile is not None:
                 plt.savefig(outfile)
                 plt.close()
@@ -1190,7 +1255,7 @@ class Deproject(object):
 
         return  medint,intlo,inthi
 
-    def Luminosity(self,a,b,plot=True,outfile=None):
+    def Luminosity(self,a,b,plot=True,outfile=None, figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
         """
         Compute the luminosity integrated between radii a and b. Optionally, the luminosity distribution can be plotted and saved. Requires the luminosity factor to be computed using the :meth:`pyproffit.profextract.Profile.Emissivity` method.
 
@@ -1202,6 +1267,15 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param nbins: Number of bins on the X axis to construct the posterior distribution. Defaults to 30
+        :type nbins: int , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param yscale: Scale on the Y axis. Defaults to 'linear'
+        :type yscale: str , optional
+        :param kwargs: Options to be passed to :class:`matplotplib.pyplot.hist`
         :return: Median luminosity, 16th and 84th percentiles
         :rtype: float
         """
@@ -1232,7 +1306,7 @@ class Deproject(object):
         print('Reconstructed luminosity: %g (%g , %g)' % (medint, intlo, inthi))
         if plot:
             plt.clf()
-            fig = plt.figure(figsize=(13, 10))
+            fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
@@ -1241,10 +1315,10 @@ class Deproject(object):
             ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
-            # plt.yscale('log')
-            plt.hist(allint[1,:]-allint[0,:], bins=30)
-            plt.xlabel('$L_{X}$ [erg/s]', fontsize=40)
-            plt.ylabel('Frequency', fontsize=40)
+            plt.yscale(yscale)
+            plt.hist(allint[1,:]-allint[0,:], bins=nbins, **kwargs)
+            plt.xlabel('$L_{X}$ [erg/s]', fontsize=fontsize)
+            plt.ylabel('Frequency', fontsize=fontsize)
             if outfile is not None:
                 plt.savefig(outfile)
                 plt.close()
@@ -1253,7 +1327,7 @@ class Deproject(object):
 
         return  medint,intlo,inthi
 
-    def Ncounts(self,plot=True,outfile=None):
+    def Ncounts(self,plot=True,outfile=None, figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
         """
         Compute the total model number of counts. Optionally, the posterior distribution can be plotted and saved.
 
@@ -1261,6 +1335,15 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param nbins: Number of bins on the X axis to construct the posterior distribution. Defaults to 30
+        :type nbins: int , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param yscale: Scale on the Y axis. Defaults to 'linear'
+        :type yscale: str , optional
+        :param kwargs: Options to be passed to :class:`matplotplib.pyplot.hist`
         :return: Median number of counts, 16th and 84th percentiles
         :rtype: float
         """
@@ -1293,7 +1376,7 @@ class Deproject(object):
         print('Reconstructed counts: %g (%g , %g)' % (pnc, pncl, pnch))
         if plot:
             plt.clf()
-            fig = plt.figure(figsize=(13, 10))
+            fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
@@ -1302,10 +1385,10 @@ class Deproject(object):
             ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
-            # plt.yscale('log')
-            plt.hist(ncv, bins=30)
-            plt.xlabel('$N_{count}$', fontsize=40)
-            plt.ylabel('Frequency', fontsize=40)
+            plt.yscale(yscale)
+            plt.hist(ncv, bins=nbins, **kwargs)
+            plt.xlabel('$N_{count}$', fontsize=fontsize)
+            plt.ylabel('Frequency', fontsize=fontsize)
             if outfile is not None:
                 plt.savefig(outfile)
                 plt.close()
@@ -1316,7 +1399,7 @@ class Deproject(object):
 
 
     # Compute Mgas within radius in kpc
-    def Mgas(self, radius, radius_err=None, plot=True, outfile=None):
+    def Mgas(self, radius, radius_err=None, plot=True, outfile=None, figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
         """
         Compute the posterior cumulative gas mass within a given radius. Optionally, the posterior distribution can be plotted and saved.
 
@@ -1328,6 +1411,15 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str , optional
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param nbins: Number of bins on the X axis to construct the posterior distribution. Defaults to 30
+        :type nbins: int , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param yscale: Scale on the Y axis. Defaults to 'linear'
+        :type yscale: str , optional
+        :param kwargs: Options to be passed to :class:`matplotplib.pyplot.hist`
         :return: Median :math:`M_{gas}`, 16th and 84th percentiles
         :rtype: float
         """
@@ -1380,7 +1472,7 @@ class Deproject(object):
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
         if plot:
             plt.clf()
-            fig = plt.figure(figsize=(13, 10))
+            fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
@@ -1389,10 +1481,10 @@ class Deproject(object):
             ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
-            # plt.yscale('log')
-            plt.hist(mgasdist, bins=30)
-            plt.xlabel('$M_{gas} [M_\odot]$', fontsize=40)
-            plt.ylabel('Frequency', fontsize=40)
+            plt.yscale(yscale)
+            plt.hist(mgasdist, bins=nbins, **kwargs)
+            plt.xlabel('$M_{gas} [M_\odot]$', fontsize=fontsize)
+            plt.ylabel('Frequency', fontsize=fontsize)
             if outfile is not None:
                 plt.savefig(outfile)
                 plt.close()
@@ -1401,7 +1493,7 @@ class Deproject(object):
 
         return mg,mgl,mgh
 
-    def PlotMgas(self,rout=None,outfile=None,xscale="kpc"):
+    def PlotMgas(self,rout=None,outfile=None,xunit="kpc", figsize=(13, 10), color='C0', lw=2, fontsize=40, xscale='log', yscale='log'):
         """
         Plot the cumulative gas mass profile from the output of a reconstruction
 
@@ -1409,15 +1501,27 @@ class Deproject(object):
         :type rout: numpy.ndarray
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
-        :param xscale: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
-        :type xscale: str
+        :param xunit: Choose whether the x axis should be in unit of 'kpc' (default), 'arcmin', or 'both', in which case two axes are drawn at the top and the bottom of the plot
+        :type xunit: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param color: Line color following matplotlib conventions. Defaults to 'C0'
+        :type color: str , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param xscale: Scale of the X axis. Defaults to 'log'
+        :type xscale: str , optional
+        :param yscale: Scale of the Y axis. Defaults to 'log'
+        :type yscale: str , optional
+        :param lw: Line width. Defaults to 2
+        :type lw: int , optional
         """
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
 
-        if xscale not in ['arcmin','kpc','both']:
-            xscale='kpc'
+        if xunit not in ['arcmin','kpc','both']:
+            xunit='kpc'
 
 
         prof = self.profile
@@ -1474,25 +1578,22 @@ class Deproject(object):
 
         self.t500, self.t500_l, self.t500_h = self.r500/kpcp, self.r500_l/kpcp, self.r500_h/kpcp
 
-        fig = plt.figure(figsize=(13, 10),tight_layout=True)
+        fig = plt.figure(figsize=figsize,tight_layout=True)
         ax=fig.add_subplot(111)
 
-        if xscale == 'kpc' or xscale == 'both':
-            ax.plot(rkpc, mg, color='C0', lw=2, label='Gas mass')
-            ax.fill_between(rkpc, mgl, mgh, color='C0', alpha=0.5)
-            ax.set_xlabel('Radius [kpc]', fontsize=40)
+        if xunit == 'kpc' or xunit == 'both':
+            ax.plot(rkpc, mg, color=color, lw=lw, label='Gas mass')
+            ax.fill_between(rkpc, mgl, mgh, color=color, alpha=0.5)
+            ax.set_xlabel('Radius [kpc]', fontsize=fontsize)
         else:
-            ax.plot(rout, mg, color='C0', lw=2, label='Gas mass')
-            ax.fill_between(rout, mgl, mgh, color='C0', alpha=0.5)
-            ax.set_xlabel('Radius [arcmin]', fontsize=40)
+            ax.plot(rout, mg, color=color, lw=lw, label='Gas mass')
+            ax.fill_between(rout, mgl, mgh, color=color, alpha=0.5)
+            ax.set_xlabel('Radius [arcmin]', fontsize=fontsize)
 
 
         ax.set_xscale('log')
-        ax.set_yscale('log')
-        ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=40)
-
-
-        ax.legend(loc=0)
+        ax.set_yscale(yscale)
+        ax.set_ylabel('$M_{gas} [M_\odot]$', fontsize=fontsize)
 
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
@@ -1501,14 +1602,14 @@ class Deproject(object):
         for item in (ax.get_xticklabels() + ax.get_yticklabels()):
             item.set_fontsize(18)
 
-        if xscale == 'both':
+        if xunit == 'both':
             limx=ax.get_xlim()
             ax2 = ax.twiny()
             ax2.set_xlim([limx[0]/ kpcp,limx[1]/ kpcp])
-            ax2.set_xscale('log')
+            ax2.set_xscale(xscale)
             ax2.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
             ax2.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
-            ax2.set_xlabel('Radius [arcmin]', fontsize=40, labelpad=20)
+            ax2.set_xlabel('Radius [arcmin]', fontsize=fontsize, labelpad=20)
             for item in (ax2.get_xticklabels() + ax2.get_yticklabels()):
                 item.set_fontsize(18)
 
@@ -1575,7 +1676,7 @@ class Deproject(object):
         self.sb_hi = pmch
         self.bkg = bfit
 
-    def CSB(self,rin=40.,rout=400.,plot=True,outfile=None):
+    def CSB(self,rin=40.,rout=400.,plot=True,outfile=None, figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
         """
         Compute the surface brightness concentration from a loaded brightness profile reconstruction. The surface brightness concentration is defined as the ratio of fluxes computed within two apertures.
 
@@ -1587,6 +1688,15 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str
+        :param figsize: Size of figure. Defaults to (13, 10)
+        :type figsize: tuple , optional
+        :param nbins: Number of bins on the X axis to construct the posterior distribution. Defaults to 30
+        :type nbins: int , optional
+        :param fontsize: Font size of the axis labels. Defaults to 40
+        :type fontsize: int , optional
+        :param yscale: Scale on the Y axis. Defaults to 'linear'
+        :type yscale: str , optional
+        :param kwargs: Options to be passed to :class:`matplotplib.pyplot.hist`
         :return: Median count rate, 16th and 84th percentiles
         :rtype: float
         """
@@ -1611,7 +1721,7 @@ class Deproject(object):
 
         if plot:
             plt.clf()
-            fig = plt.figure(figsize=(13, 10))
+            fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
             ax = fig.add_axes(ax_size)
@@ -1620,10 +1730,10 @@ class Deproject(object):
             ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
             for item in (ax.get_xticklabels() + ax.get_yticklabels()):
                 item.set_fontsize(22)
-            # plt.yscale('log')
-            plt.hist((allvin[1, :] - allvin[0, :]) / (allvout[1, :] - allvout[0, :]), bins=30)
-            plt.xlabel('$C_{SB}$', fontsize=40)
-            plt.ylabel('Frequency', fontsize=40)
+            plt.yscale(yscale)
+            plt.hist((allvin[1, :] - allvin[0, :]) / (allvout[1, :] - allvout[0, :]), bins=nbins, **kwargs)
+            plt.xlabel('$C_{SB}$', fontsize=fontsize)
+            plt.ylabel('Frequency', fontsize=fontsize)
             if outfile is not None:
                 plt.savefig(outfile)
                 plt.close()

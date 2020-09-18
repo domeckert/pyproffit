@@ -55,7 +55,7 @@ else:
 prof=pyproffit.Profile(dat,center_choice='custom_fk5',maxrad=50.,binsize=30.,center_ra=cra,center_dec=cdec)
 ellrat=1.205958181442464
 ellang=-173.04667140946398
-prof.SBprofile(ellipse_ratio=ellrat,ellipse_angle=ellang+180.)
+prof.SBprofile(ellipse_ratio=ellrat,rotation_angle=ellang+180.)
 
 fsb=fits.open('reference_depr.fits')
 datsb=fsb[1].data

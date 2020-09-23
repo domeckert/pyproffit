@@ -459,6 +459,7 @@ class Profile(object):
         data = self.data
         img = data.img
         errmap = data.errmap
+        expo = data.exposure
         if errmap is None:
             print('Error: No Voronoi map has been loaded')
             return
@@ -477,8 +478,8 @@ class Profile(object):
         rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
         for i in range(self.nbin):
             id = np.where(np.logical_and(
-                np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
-                errmap > 0.0))  # left-inclusive
+                np.logical_and(np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
+                errmap > 0.0),expo>0.0))  # left-inclusive
             profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
             area[i] = len(img[id]) * pixsize ** 2
             effexp[i] = 1. # Dummy, but to be consistent with PSF calculation

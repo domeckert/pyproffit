@@ -1451,17 +1451,27 @@ class Deproject(object):
         # Interpolate at the radius of interest
 
         # Set randomization of the radius if radius_err is not None
+        cov = None
+
         if radius_err is not None:
 
             nsim = len(self.samples)
 
             radii = radius_err * np.random.randn(nsim) + radius
 
+            if np.any(radii < 0.0):
+
+                isneg = np.where(radii < 0.0)
+
+                radii[isneg] = 0.0
+
             mgasdist = np.empty(len(self.samples))
 
             for i in range(len(self.samples)):
 
                 mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
+
+                cov = np.cov(radii, mgasdist)
 
         else:
 
@@ -1491,7 +1501,7 @@ class Deproject(object):
             else:
                 plt.show(block=False)
 
-        return mg,mgl,mgh
+        return mg,mgl,mgh,cov
 
     def PlotMgas(self,rout=None,outfile=None,xunit="kpc", figsize=(13, 10), color='C0', lw=2, fontsize=40, xscale='log', yscale='log'):
         """

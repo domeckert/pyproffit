@@ -224,7 +224,13 @@ class Profile(object):
 
             else:
 
-                gsb = gaussian_filter(data.img, smc)
+                timg = np.copy(data.img)
+
+                zeroexp = np.where(data.exposure<=0.0)
+
+                timg[zeroexp] = 0.0
+
+                gsb = gaussian_filter(timg, smc)
 
             maxval = np.max(gsb)
 

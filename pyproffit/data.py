@@ -62,6 +62,11 @@ class Data(object):
         fimg = fits.open(imglink)
         next = get_extnum(fimg)
         self.img = fimg[next].data.astype(float)
+        self.imglink = imglink
+        self.explink = explink
+        self.bkglink = bkglink
+        self.voronoi = voronoi
+        self.rmsmap = rmsmap
         head = fimg[next].header
         self.header = head
         self.wcs_inp = wcs.WCS(head, relax=False)

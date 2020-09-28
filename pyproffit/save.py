@@ -40,11 +40,12 @@ def Reload(infile, model=None):
             prof.ebins = din['WIDTH']
             prof.profile = din['SB']
             prof.eprof = din['ERR_SB']
-            prof.counts = din['COUNTS']
             prof.area = din['AREA']
             prof.effexp = din['EFFEXP']
-            prof.bkgprof = din['BKG']
-            prof.bkgcounts = din['BKGCOUNTS']
+            if not head['VORONOI']:
+                prof.counts = din['COUNTS']
+                prof.bkgprof = din['BKG']
+                prof.bkgcounts = din['BKGCOUNTS']
             prof.binning = head['BINNING']
             prof.anglow = head['ANGLOW']
             prof.anghigh = head['ANGHIGH']
@@ -57,7 +58,7 @@ def Reload(infile, model=None):
 
         if hduname == 'PSF':
             print('PSF structure found')
-            prof.psfmat = fin[i].dat
+            prof.psfmat = fin[i].data
 
         if hduname == 'MODEL':
             if model is None:

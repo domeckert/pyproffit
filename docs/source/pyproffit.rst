@@ -76,6 +76,14 @@ pyproffit.profextract module
    :undoc-members:
    :show-inheritance:
 
+pyproffit.reload module
+-----------------------
+
+.. automodule:: pyproffit.reload
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------

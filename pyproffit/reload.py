@@ -37,6 +37,7 @@ def Reload(infile, model=None):
                            center_dec=head['DEC_C'], center_ra=head['RA_C'])
 
             prof.bins = din['RADIUS']
+            prof.nbin = len(prof.bins)
             prof.ebins = din['WIDTH']
             prof.profile = din['SB']
             prof.eprof = din['ERR_SB']

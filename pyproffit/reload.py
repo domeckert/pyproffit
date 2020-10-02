@@ -81,5 +81,6 @@ def Reload(infile, model=None):
                 model.params = dmod['VALUE']
                 model.errors = dmod['ERROR']
 
+    fin.close()
 
     return dat, prof

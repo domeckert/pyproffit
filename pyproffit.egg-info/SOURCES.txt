@@ -10,6 +10,7 @@ pyproffit/miscellaneous.py
 pyproffit/models.py
 pyproffit/power_spectrum.py
 pyproffit/profextract.py
+pyproffit/reload.py
 pyproffit.egg-info/PKG-INFO
 pyproffit.egg-info/SOURCES.txt
 pyproffit.egg-info/dependency_links.txt

@@ -1399,7 +1399,7 @@ class Deproject(object):
 
 
     # Compute Mgas within radius in kpc
-    def Mgas(self, radius, radius_err=None, plot=True, outfile=None, figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
+    def Mgas(self, radius, radius_err=None, plot=True, outfile=None, rad_scale='normal', figsize=(13, 10), nbins=30, fontsize=40, yscale='linear', **kwargs):
         """
         Compute the posterior cumulative gas mass within a given radius. Optionally, the posterior distribution can be plotted and saved.
 
@@ -1411,6 +1411,8 @@ class Deproject(object):
         :type plot: bool
         :param outfile: Output file name to save the figure. If outfile=None, plot only to stdout
         :type outfile: str , optional
+        :param rad_scale: If radius_err is not None, specify whether the distribution of radii is drawn from a normal distribution (rad_scale='normal') or a log-normal distribution (rad_scale='lognormal'). Defaults to 'normal'.
+        :type rad_scale: str
         :param figsize: Size of figure. Defaults to (13, 10)
         :type figsize: tuple , optional
         :param nbins: Number of bins on the X axis to construct the posterior distribution. Defaults to 30
@@ -1451,13 +1453,29 @@ class Deproject(object):
         # Interpolate at the radius of interest
 
         # Set randomization of the radius if radius_err is not None
-        cov = None
+        rho = None
 
         if radius_err is not None:
 
             nsim = len(self.samples)
 
-            radii = radius_err * np.random.randn(nsim) + radius
+            if rad_scale == 'normal':
+
+                radii = radius_err * np.random.randn(nsim) + radius
+
+            elif rad_scale == 'lognormal':
+
+                rad_log = np.log(radius)
+
+                err_rad_log = radius_err / radius
+
+                radii = np.exp(err_rad_log * np.random.randn(nsim) + rad_log)
+
+            else:
+
+                print('Unknown value rad_scale=%s , reverting to normal' % (rad_scale))
+
+                radii = radius_err * np.random.randn(nsim) + radius
 
             if np.any(radii < 0.0):
 
@@ -1471,7 +1489,7 @@ class Deproject(object):
 
                 mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
 
-                cov = np.cov(radii, mgasdist)
+                rho = np.corrcoef(radii, mgasdist)[0,1]
 
         else:
 
@@ -1501,7 +1519,7 @@ class Deproject(object):
             else:
                 plt.show(block=False)
 
-        return mg,mgl,mgh,cov
+        return mg,mgl,mgh,rho
 
     def PlotMgas(self,rout=None,outfile=None,xunit="kpc", figsize=(13, 10), color='C0', lw=2, fontsize=40, xscale='log', yscale='log'):
         """

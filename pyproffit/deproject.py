@@ -797,7 +797,7 @@ def OP(deproj,nmc=1000):
         x=MyDeprojVol(rin_cm,rout_cm)
         vol=np.transpose(x.deproj_vol())
         dlum=cosmo.luminosity_distance(deproj.z).value*Mpc
-        K2em=4.*np.pi*1e14*dlum**2/(1+deproj.z)**2/deproj.nhc/deproj.cf
+        K2em=4.*np.pi*1e14*dlum**2/(1+deproj.z)**2/deproj.nhc/deproj.cf[0]
 
         # Projected emission measure profiles
         em0 = prof.profile * K2em * area

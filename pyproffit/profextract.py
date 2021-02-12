@@ -301,6 +301,11 @@ class Profile(object):
         self.anglow = 0.
         self.anghigh = 360.
         self.binning = binning
+        if data.voronoi:
+            self.voronoi = True
+        else:
+            self.voronoi = False
+
         if binning=='log':
             self.islogbin = True
         elif binning=='linear':
@@ -314,7 +319,7 @@ class Profile(object):
             print('Unknown binning option '+binning+', reverting to linear')
             self.islogbin = False
 
-    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., voronoi=False, box=False, width=None):
+    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., box=False, width=None):
         """
         Extract a surface brightness profile and store the results in the input Profile object
 
@@ -335,7 +340,11 @@ class Profile(object):
         """
         data = self.data
         img = data.img
-        exposure = data.exposure
+        voronoi = self.voronoi
+        if not voronoi:
+            exposure = data.exposure
+        else:
+            exposure = data.errmap
         bkg = data.bkg
         pixsize = data.pixsize
         if not self.custom:
@@ -430,8 +439,8 @@ class Profile(object):
             nv = len(img[id])
             if voronoi:
                 errmap = data.errmap
-                profile[i] = np.average(img[id], weights=1. / errmap[id] ** 2)
-                eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
+                profile[i] = np.sum(img[id]) / nv
+                eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
                 area[i] = nv * pixsize ** 2
                 effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
             else:
@@ -475,15 +484,16 @@ class Profile(object):
             print('Error: No Voronoi map has been loaded')
             return
         pixsize = data.pixsize
-        if (self.islogbin):
-            self.bins, self.ebins = logbinning(self.binsize, self.maxrad)
-            nbin = len(self.bins)
-            self.nbin = nbin
-        else:
-            nbin = int(self.maxrad / self.binsize * 60. + 0.5)
-            self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
-            self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
-            self.nbin = nbin
+        if not self.custom:
+            if (self.islogbin):
+                self.bins, self.ebins = logbinning(self.binsize, self.maxrad)
+                nbin = len(self.bins)
+                self.nbin = nbin
+            else:
+                nbin = int(self.maxrad / self.binsize * 60. + 0.5)
+                self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
+                self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
+                self.nbin = nbin
         profile, eprof, area, effexp = np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
@@ -766,8 +776,11 @@ class Profile(object):
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
         ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
-        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        for item in (ax.get_yticklabels()):
             item.set_fontsize(18)
+        for item in (ax.get_xticklabels()):
+            item.set_fontsize(0)
+
         if model is None:
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
             plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)

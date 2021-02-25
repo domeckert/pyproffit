@@ -471,7 +471,7 @@ class Profile(object):
             self.bkgcounts = bkgcounts
 
 
-    def MedianSB(self):
+    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
@@ -496,7 +496,23 @@ class Profile(object):
                 self.nbin = nbin
         profile, eprof, area, effexp = np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
-        rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
+        if rotation_angle is not None:
+            self.ellangle = rotation_angle
+        else:
+            self.ellangle = 0.0
+
+        if ellipse_ratio is not None:
+            self.ellratio = ellipse_ratio
+        else:
+            self.ellratio = 1.0
+        tta = rotation_angle - 90.
+        if tta < -90. or tta > 270.:
+            print('Error: input angle must be between 0 and 360 degrees')
+            return
+        ellang = tta * np.pi / 180.
+        xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
+        ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
+        rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
         for i in range(self.nbin):
             id = np.where(np.logical_and(
                 np.logical_and(np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
@@ -687,11 +703,11 @@ class Profile(object):
                     psfout[n, p] = np.sum(blurred[sn])
             self.psfmat = psfout
 
-    def SaveModelImage(self, model, outfile, vignetting=True):
+    def SaveModelImage(self, outfile, model=None, vignetting=True):
         """
         Compute a model image and output it to a FITS file
 
-        :param model: Object of type :class:`pyproffit.models.Model` including the surface brightness model
+        :param model: Object of type :class:`pyproffit.models.Model` including the surface brightness model. If model=None (default), the azimuthally averaged radial profile is interpolated at each point.
         :type model: class:`pyproffit.models.Model`
         :param outfile: Name of output file
         :type outfile: str
@@ -711,11 +727,14 @@ class Profile(object):
         xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
         ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
-        outmod = lambda x: model.model(x, *model.params)
-        if vignetting:
-            modimg = outmod(rads) * pixsize ** 2 * self.data.exposure
+        if model is not None:
+            outmod = model.model(rads, *model.params)
         else:
-            modimg = outmod(rads) * pixsize ** 2
+            outmod = np.interp(rads, self.bins, self.profile)
+        if vignetting:
+            modimg = outmod * pixsize ** 2 * self.data.exposure
+        else:
+            modimg = outmod * pixsize ** 2
         smoothing_scale=25
         gsb = gaussian_filter(self.data.bkg, smoothing_scale)
         gsexp = gaussian_filter(self.data.exposure, smoothing_scale)

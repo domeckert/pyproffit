@@ -224,7 +224,13 @@ class Profile(object):
 
             else:
 
-                gsb = gaussian_filter(data.img, smc)
+                timg = np.copy(data.img)
+
+                zeroexp = np.where(data.exposure<=0.0)
+
+                timg[zeroexp] = 0.0
+
+                gsb = gaussian_filter(timg, smc)
 
             maxval = np.max(gsb)
 
@@ -292,6 +298,9 @@ class Profile(object):
         self.ccf = None
         self.lumfact = None
         self.box = False
+        self.anglow = 0.
+        self.anghigh = 360.
+        self.binning = binning
         if binning=='log':
             self.islogbin = True
         elif binning=='linear':
@@ -361,6 +370,8 @@ class Profile(object):
         xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
         ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
+        self.anglow = angle_low
+        self.anghigh = angle_high
         # Convert degree to radian and rescale to 0-2pi
         if angle_low != 0.0 and angle_high != 360.:
             if angle_low < 0.0:
@@ -419,8 +430,8 @@ class Profile(object):
             nv = len(img[id])
             if voronoi:
                 errmap = data.errmap
-                profile[i] = np.average(img[id], weights=1. / errmap[id] ** 2)
-                eprof[i] = np.sqrt(1. / np.sum(1. / errmap[id] ** 2))
+                profile[i] = np.sum(img[id]) / nv
+                eprof[i] = np.sqrt(errmap[id] ** 2) / nv
                 area[i] = nv * pixsize ** 2
                 effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
             else:
@@ -459,6 +470,7 @@ class Profile(object):
         data = self.data
         img = data.img
         errmap = data.errmap
+        expo = data.exposure
         if errmap is None:
             print('Error: No Voronoi map has been loaded')
             return
@@ -477,8 +489,8 @@ class Profile(object):
         rads = np.sqrt((x - self.cx) ** 2 + (y - self.cy) ** 2) * pixsize
         for i in range(self.nbin):
             id = np.where(np.logical_and(
-                np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
-                errmap > 0.0))  # left-inclusive
+                np.logical_and(np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
+                errmap > 0.0),expo>0.0))  # left-inclusive
             profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
             area[i] = len(img[id]) * pixsize ** 2
             effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
@@ -507,11 +519,11 @@ class Profile(object):
                 cols.append(fits.Column(name='WIDTH', format='E', unit='arcmin', array=self.ebins))
                 cols.append(fits.Column(name='SB', format='E', unit='cts s-1 arcmin-2', array=self.profile))
                 cols.append(fits.Column(name='ERR_SB', format='E', unit='cts s-1 arcmin-2', array=self.eprof))
+                cols.append(fits.Column(name='AREA', format='E', unit='arcmin2', array=self.area))
+                cols.append(fits.Column(name='EFFEXP', format='E', unit='s', array=self.effexp))
                 if self.counts is not None:
-                    cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.counts))
-                    cols.append(fits.Column(name='AREA', format='E', unit='arcmin2', array=self.area))
-                    cols.append(fits.Column(name='EFFEXP', format='E', unit='s', array=self.effexp))
                     cols.append(fits.Column(name='BKG', format='E', unit='cts s-1 arcmin-2', array=self.bkgprof))
+                    cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.counts))
                     cols.append(fits.Column(name='BKGCOUNTS', format='E', unit='', array=self.bkgcounts))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='DATA')
@@ -524,12 +536,36 @@ class Profile(object):
                 hdr['DEC_C'] = self.cdec
                 hdr.comments['RA_C'] = 'Right ascension of center value'
                 hdr.comments['DEC_C'] = 'Declination of center value'
-                hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2011)'
+                hdr['ROT_ANGLE'] = self.ellangle
+                hdr['ELL_RATIO'] = self.ellratio
+                hdr.comments['ROT_ANGLE'] = 'Ellipse rotation angle'
+                hdr.comments['ELL_RATIO'] = 'Ellipse major-to-minor-axis ratio'
+                hdr['ANGLOW'] = self.anglow
+                hdr['ANGHIGH'] = self.anghigh
+                hdr.comments['ANGLOW'] = 'Lower position angle for sector definition'
+                hdr.comments['ANGHIGH'] = 'Upper position angle for sector definition'
+                hdr['BINSIZE'] = self.binsize
+                hdr['MAXRAD'] = self.maxrad
+                hdr.comments['BINSIZE'] = 'Profile bin size in arcsec'
+                hdr.comments['MAXRAD'] = 'Profile maximum radius in arcmin'
+                hdr['BINNING'] = self.binning
+                hdr.comments['BINNING'] = 'Binning scheme (linear, log or custom)'
+                hdr['IMAGE'] = self.data.imglink
+                hdr.comments['IMAGE'] = 'Path to input image file'
+                hdr['EXPMAP'] = self.data.explink
+                hdr.comments['EXPMAP'] = 'Path to exposure map file'
+                hdr['BKGMAP'] = self.data.bkglink
+                hdr.comments['BKGMAP'] = 'Path to background map file'
+                hdr['RMSMAP'] = self.data.rmsmap
+                hdr.comments['RMSMAP'] = 'Path to RMS file'
+                hdr['VORONOI'] = self.data.voronoi
+                hdr.comments['VORONOI'] = 'Voronoi on/off switch'
+                hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2020)'
                 hdul.append(tbhdu)
             if model is not None:
                 cols = []
                 npar = len(model.params)
-                plist = np.arange(1,npar+1,1)
+                plist = np.arange(1, npar + 1, 1)
                 cols.append(fits.Column(name='PAR', format='1I', array=plist))
                 cols.append(fits.Column(name='NAME', format='16A', array=model.parnames))
                 cols.append(fits.Column(name='VALUE', format='E', array=model.params))
@@ -730,8 +766,11 @@ class Profile(object):
         ax.minorticks_on()
         ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
         ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
-        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        for item in (ax.get_yticklabels()):
             item.set_fontsize(18)
+        for item in (ax.get_xticklabels()):
+            item.set_fontsize(0)
+
         if model is None:
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
             plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)

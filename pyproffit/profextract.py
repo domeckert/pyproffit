@@ -108,7 +108,7 @@ class Profile(object):
     :type bins: class:`numpy.ndarray`
     """
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
-                 binning='linear', centroid_region=None, bins=None, Om0=0.3, H0=70.):
+                 binning='linear', centroid_region=None, bins=None, cosmo=None):
         """
         Constructor of class Profile
         """
@@ -319,7 +319,8 @@ class Profile(object):
             print('Unknown binning option '+binning+', reverting to linear')
             self.islogbin = False
 
-        cosmo = FlatLambdaCDM(Om0=Om0, H0=H0)
+        if cosmo is None:
+            from astropy.cosmology import Planck15 as cosmo
         self.cosmo = cosmo
 
     def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., box=False, width=None):

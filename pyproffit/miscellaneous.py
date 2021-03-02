@@ -243,7 +243,7 @@ def clean_bkg(img,bkg):
     y=yp[id]
     x=xp[id]
     npt=len(img[id])
-    nsm: int=10
+    nsm=10
     ons=np.ones((nsm,nsm))
     timg=generic_filter(img,heaviside,footprint=ons,mode='constant')
     tbkg=generic_filter(np.ones(img.shape)*bkg,heaviside,footprint=ons,mode='constant',cval=0,origin=0)
@@ -252,5 +252,3 @@ def clean_bkg(img,bkg):
     remove=np.where(vals<prob)
     img[y[remove],x[remove]]=0
     return img
-
-

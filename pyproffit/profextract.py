@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from scipy.optimize import brentq
 from .emissivity import *
-from astropy.cosmology import Planck15 as cosmo
+from astropy.cosmology import FlatLambdaCDM
 
 def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
     """
@@ -108,7 +108,7 @@ class Profile(object):
     :type bins: class:`numpy.ndarray`
     """
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
-                 binning='linear', centroid_region=None, bins=None):
+                 binning='linear', centroid_region=None, bins=None, Om0=0.3, H0=70.):
         """
         Constructor of class Profile
         """
@@ -318,6 +318,9 @@ class Profile(object):
         else:
             print('Unknown binning option '+binning+', reverting to linear')
             self.islogbin = False
+
+        cosmo = FlatLambdaCDM(Om0=Om0, H0=H0)
+        self.cosmo = cosmo
 
     def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., box=False, width=None):
         """
@@ -921,7 +924,7 @@ class Profile(object):
         :return: Conversion factor
         :rtype: float
         """
-        self.ccf, self.lumfact = calc_emissivity(cosmo=cosmo,
+        self.ccf, self.lumfact = calc_emissivity(cosmo=self.cosmo,
                                         z=z,
                                         nh=nh,
                                         kt=kt,

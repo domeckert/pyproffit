@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from .profextract import *
 from .miscellaneous import *
 from .data import *

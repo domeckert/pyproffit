@@ -322,6 +322,8 @@ class Profile(object):
         if cosmo is None:
             from astropy.cosmology import Planck15 as cosmo
         self.cosmo = cosmo
+        self.scatter = None
+        self.escat = None
 
     def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., box=False, width=None):
         """
@@ -529,6 +531,85 @@ class Profile(object):
         self.area = area
         self.effexp = effexp
 
+    def AzimuthalScatter(self, nsect=12):
+
+        if self.profile is None:
+            print('Error: please extract a SB profile first')
+            return
+        dat = self.data
+        exposure = dat.exposure
+        img = dat.img
+
+        y, x = np.indices(dat.axes)
+        # Compute angles and set them between 0 and 2pi
+        angles = np.arctan2(y - self.cy, x - self.cx)
+        aneg = np.where(angles < 0.)
+        angles[aneg] = angles[aneg] + 2. * np.pi
+
+        all_sb = np.empty((self.nbin, nsect))
+        all_err = np.empty((self.nbin, nsect))
+
+        ellang = (self.ellangle - 90.) * np.pi / 180.
+        xtil = np.cos(ellang) * (x - self.cx) * dat.pixsize + np.sin(ellang) * (y - self.cy) * dat.pixsize
+        ytil = -np.sin(ellang) * (x - self.cx) * dat.pixsize + np.cos(ellang) * (y - self.cy) * dat.pixsize
+        rads = self.ellratio * np.hypot(xtil, ytil / self.ellratio)
+
+        tol = 1e-5
+        for i in range(self.nbin):
+            anglow = 0.
+            anghigh = 2. * np.pi / nsect
+            for ns in range(nsect):
+                if i == 0:
+                    id = np.where(
+                        np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= 0, rads < np.round(self.bins[i] + self.ebins[i], 5) + tol),
+                                       exposure > 0.0), angles >= anglow), angles <= anghigh))
+                else:
+                    id = np.where(np.logical_and(np.logical_and(np.logical_and(np.logical_and(rads >= np.round(self.bins[i] - self.ebins[i], 5) + tol,
+                                                rads < np.round(self.bins[i] + self.ebins[i], 5) + tol), exposure > 0.0), angles >= anglow), angles <= anghigh))
+            #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
+                nv = len(img[id])
+                if dat.voronoi:
+                    errmap = dat.errmap
+                    all_sb[i, ns] = np.sum(img[id]) / nv
+                    all_err[i, ns] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
+                else:
+                    if nv > 0:
+                        bkgprof = np.sum(dat.bkg[id] / exposure[id]) / nv / dat.pixsize ** 2
+                        all_sb[i, ns] = np.sum(img[id] / exposure[id]) / nv / dat.pixsize ** 2 - bkgprof
+                        all_err[i, ns] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / dat.pixsize ** 2
+                    else:
+                        all_sb[i, ns] = 0.
+                        all_err[i, ns] = 0.
+
+                anglow = anglow + 2. * np.pi / nsect
+                anghigh = anghigh + 2. * np.pi / nsect
+
+        prof_mul = np.repeat(self.profile, nsect).reshape(self.nbin, nsect)
+        statscat = 1./nsect * np.sum(all_err**2 / prof_mul**2, axis=1)
+
+        nsim = 100
+        emul = np.repeat(all_err, nsim).reshape(self.nbin, nsect, nsim)
+        all_sb_mul = np.repeat(all_sb, nsim).reshape(self.nbin, nsect, nsim)
+
+        realiz = all_sb_mul + emul * np.random.randn(self.nbin, nsect, nsim)
+
+        profsect = np.repeat(self.profile, nsect).reshape(self.nbin, nsect)
+
+        profmul = np.repeat(profsect, nsim).reshape(self.nbin, nsect, nsim)
+
+        totscat_mul = 1. / nsect * np.sum((realiz - profmul) ** 2 / profmul ** 2, axis=1)
+
+        statscat_mul = np.repeat(statscat, nsim).reshape(self.nbin, nsim)
+
+        allvars = totscat_mul - statscat_mul
+        negscat = np.where(allvars < 0.)
+        allvars[negscat] = 0.
+
+        self.scatter = np.median(np.sqrt(allvars), axis=1)
+
+        self.err_scat = np.std(np.sqrt(allvars), axis=1)
+
+
     def Save(self, outfile=None, model=None):
         """
         Save the data loaded in the Profile class into an output FITS file.
@@ -555,6 +636,9 @@ class Profile(object):
                     cols.append(fits.Column(name='BKG', format='E', unit='cts s-1 arcmin-2', array=self.bkgprof))
                     cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.counts))
                     cols.append(fits.Column(name='BKGCOUNTS', format='E', unit='', array=self.bkgcounts))
+                if self.scatter is not None:
+                    cols.append(fits.Column(name='SCATTER', format='E', array=self.scatter))
+                    cols.append(fits.Column(name='ERR_SCATTER', format='E', array=self.err_scat))
                 cols = fits.ColDefs(cols)
                 tbhdu = fits.BinTableHDU.from_columns(cols, name='DATA')
                 hdr = tbhdu.header

@@ -539,7 +539,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
     """
     Run the multiscale deprojection optimization using the PyMC3 backend
 
@@ -625,7 +625,7 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     print('Running MCMC...')
     with basic_model:
         tm = pm.find_MAP()
-        trace = pm.sample(nmcmc, start=tm)
+        trace = pm.sample(nmcmc, tune=tune, start=tm)
         #trace = pm.sample(nmcmc)
     print('Done.')
     tend = time.time()
@@ -903,7 +903,7 @@ class Deproject(object):
         self.mu_e=mu_e
 
 
-    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
+    def Multiscale(self,backend='pymc3',nmcmc=1000,tune=500,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
         """
         Run Multiscale deprojection using the method described in Eckert+20
 
@@ -936,7 +936,7 @@ class Deproject(object):
         self.min_beta=min_beta
         self.depth=depth
         if backend=='pymc3':
-            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,tune=tune,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth,min_beta=min_beta)
         else:

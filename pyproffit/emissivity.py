@@ -8,7 +8,7 @@ def is_tool(name):
     return find_executable(name) is not None
 
 
-def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr', lum_elow=0.5, lum_ehigh=2.0):
+def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr', lum_elow=0.5, lum_ehigh=2.0, abund='aspl'):
     """
 
     Function calc_emissivity. The function computes the scaling factor between count rate and APEC/MEKAL norm using XSPEC, which is needed to extract density profiles.
@@ -66,7 +66,7 @@ def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None,
 
     fsim.write('cosmo %g 0 %g\n' % (H0, Ode))
 
-    fsim.write('abund angr\n')
+    fsim.write('abund %s\n' %(abund))
 
     fsim.write('model phabs(apec)\n')
 
@@ -115,6 +115,8 @@ def calc_emissivity(cosmo, z, nh, kt, rmf, Z=0.3, elow=0.5, ehigh=2.0, arf=None,
         fsim.write('flux %1.2lf %1.2lf\n' % (elow, ehigh))
 
     fsim.write('log none\n')
+
+    fsim.write('delcomp 1')
 
     fsim.write('log lumin.txt\n')
 

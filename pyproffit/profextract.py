@@ -531,7 +531,7 @@ class Profile(object):
         self.area = area
         self.effexp = effexp
 
-    def AzimuthalScatter(self, nsect=12):
+    def AzimuthalScatter(self, nsect=12, model=None):
 
         if self.profile is None:
             print('Error: please extract a SB profile first')
@@ -554,6 +554,16 @@ class Profile(object):
         ytil = -np.sin(ellang) * (x - self.cx) * dat.pixsize + np.cos(ellang) * (y - self.cy) * dat.pixsize
         rads = self.ellratio * np.hypot(xtil, ytil / self.ellratio)
 
+        skybkg = 0.
+        skybkg_err = 0.
+        if model is not None:
+            tp = 0
+            for p in range(model.npar):
+                if model.parnames[p] == 'bkg':
+                    tp = p
+            skybkg = np.power(10., model.params[tp])
+            skybkg_err = skybkg * np.log(10.) * model.errors[tp]
+
         tol = 1e-5
         for i in range(self.nbin):
             anglow = 0.
@@ -575,8 +585,9 @@ class Profile(object):
                 else:
                     if nv > 0:
                         bkgprof = np.sum(dat.bkg[id] / exposure[id]) / nv / dat.pixsize ** 2
-                        all_sb[i, ns] = np.sum(img[id] / exposure[id]) / nv / dat.pixsize ** 2 - bkgprof
+                        all_sb[i, ns] = np.sum(img[id] / exposure[id]) / nv / dat.pixsize ** 2 - bkgprof - skybkg
                         all_err[i, ns] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / dat.pixsize ** 2
+                        all_err[i, ns] = np.sqrt(all_err[i, ns]**2 + skybkg_err**2)
                     else:
                         all_sb[i, ns] = 0.
                         all_err[i, ns] = 0.

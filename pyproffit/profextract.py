@@ -917,13 +917,7 @@ class Profile(object):
         if model is not None:
             tmod = model.model(rads, *model.params)
             if self.psfmat is not None:
-                rminus = rads - self.ebins
-
-                rplus = rads + self.ebins
-
-                area = np.pi * (rplus ** 2 - rminus ** 2)
-
-                tmod = np.dot(np.transpose(self.psfmat),tmod * area) / area
+                tmod = np.dot(self.psfmat, tmod)
 
             plt.plot(rads, tmod, color=model_color, lw=lw, label='Model')
         xmin = rads[0] * 0.9

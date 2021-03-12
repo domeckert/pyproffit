@@ -48,7 +48,7 @@ class ChiSquared:
         self.region = np.where(np.logical_and(x>=fitl,x<=fith))
         self.nonz = np.where(dy[self.region]>0.)
         if psfmat is not None:
-            self.psfmat = psfmat
+            self.psfmat = psfmat.T
         else:
             self.psfmat = None
         self.func_code = iminuit.util.make_func_code(iminuit.util.describe(self.model)[1:])
@@ -62,15 +62,16 @@ class ChiSquared:
         :rtype: float
         """
         ym = self.model(self.x, *par)
-        if self.psfmat is not None:
-            rminus = self.x - self.dx
+        # if self.psfmat is not None:
+        #     rminus = self.x - self.dx
+        #
+        #     rplus = self.x + self.dx
+        #
+        #     area = np.pi * (rplus ** 2 - rminus ** 2)
+        #
+        #     ym = np.dot(self.psfmat,ym * area) / area
 
-            rplus = self.x + self.dx
-
-            area = np.pi * (rplus ** 2 - rminus ** 2)
-
-            ym = np.dot(self.psfmat,ym * area) / area
-
+        ym = np.dot(self.psfmat, ym)
         reg = self.region
         nonz = self.nonz
         chi2 = np.sum((self.y[reg][nonz] - ym[reg][nonz])**2/self.dy[reg][nonz]**2)

@@ -477,7 +477,7 @@ class Profile(object):
             self.bkgcounts = bkgcounts
 
 
-    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0):
+    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, outsamples=None):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
@@ -500,7 +500,7 @@ class Profile(object):
                 self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
                 self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
                 self.nbin = nbin
-        profile, eprof, area, effexp = np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
+        #profile, eprof, area, effexp = np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         if rotation_angle is not None:
             self.ellangle = rotation_angle
@@ -519,17 +519,27 @@ class Profile(object):
         xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
         ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
-        for i in range(self.nbin):
-            id = np.where(np.logical_and(
-                np.logical_and(np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
-                errmap > 0.0),expo>0.0))  # left-inclusive
-            profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
-            area[i] = len(img[id]) * pixsize ** 2
-            effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
+        #for i in range(self.nbin):
+        #    id = np.where(np.logical_and(
+        #        np.logical_and(np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
+        #        errmap > 0.0),expo>0.0))  # left-inclusive
+        #    profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
+        #    area[i] = len(img[id]) * pixsize ** 2
+        #    effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
+
+        all_prof, area = median_all_cov(data, self.bins, self.ebins, rads, nsim=1000)
+        profile, eprof = np.median(all_prof, axis=1), np.std(all_prof, axis=1)
+        effexp = np.ones(self.nbin) # Dummy, but to be consistent with PSF calculation
+        cov = np.cov(all_prof)
         self.profile = profile
         self.eprof = eprof
         self.area = area
         self.effexp = effexp
+        self.cov = cov
+
+        if outsamples is not None:
+            hdu = fits.PrimaryHDU(all_prof)
+            hdu.writeto(outsamples)
 
     def AzimuthalScatter(self, nsect=12, model=None):
 

@@ -1,4 +1,3 @@
-from astropy.cosmology import Planck15 as cosmo
 import numpy as np
 import pymc3 as pm
 import time
@@ -77,7 +76,7 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None, xunit='kpc', figs
         prof = profs[i]
 
 
-        kpcp = cosmo.kpc_proper_per_arcmin(dep.z).value
+        kpcp = prof.cosmo.kpc_proper_per_arcmin(dep.z).value
 
         sourcereg = np.where(prof.bins < dep.bkglim)
 
@@ -97,7 +96,7 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None, xunit='kpc', figs
         plt.savefig(outfile)
 
 
-def fbul19(R,z,Runit='kpc'):
+def fbul19(R,z,cosmo,Runit='kpc'):
     """
     Compute Mgas from input R500 using Bulbul+19 M-Mgas scaling relation
 
@@ -330,7 +329,7 @@ def calc_int_operator(a, b, pars):
     return Kint
 
 
-def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
+def list_params_density(rad,sourcereg,z,cosmo,nrc=None,nbetas=6,min_beta=0.6):
     """
     Define a list of parameters to transform the basis functions into gas density profiles
 
@@ -368,7 +367,7 @@ def list_params_density(rad,sourcereg,z,nrc=None,nbetas=6,min_beta=0.6):
 
 # Linear operator to transform parameters into density
 
-def calc_density_operator(rad,pars,z):
+def calc_density_operator(rad,pars,z,cosmo):
     """
     Compute linear operator to transform parameters into gas density profiles
 
@@ -540,7 +539,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
     
     
-def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
+def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
     """
     Run the multiscale deprojection optimization using the PyMC3 backend
 
@@ -626,7 +625,7 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,back=None,samplefil
     print('Running MCMC...')
     with basic_model:
         tm = pm.find_MAP()
-        trace = pm.sample(nmcmc, start=tm)
+        trace = pm.sample(nmcmc, tune=tune, start=tm)
         #trace = pm.sample(nmcmc)
     print('Done.')
     tend = time.time()
@@ -788,6 +787,7 @@ def OP(deproj,nmc=1000):
     rinam=prof.bins - prof.ebins
     routam=prof.bins + prof.ebins
     area=np.pi*(routam**2-rinam**2) # full area in arcmin^2
+    cosmo = prof.cosmo
 
     # Projection volumes
     if deproj.z is not None and deproj.cf is not None:
@@ -903,7 +903,7 @@ class Deproject(object):
         self.mu_e=mu_e
 
 
-    def Multiscale(self,backend='pymc3',nmcmc=1000,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
+    def Multiscale(self,backend='pymc3',nmcmc=1000,tune=500,bkglim=None,back=None,samplefile=None,nrc=None,nbetas=6,depth=10,min_beta=0.6):
         """
         Run Multiscale deprojection using the method described in Eckert+20
 
@@ -936,7 +936,7 @@ class Deproject(object):
         self.min_beta=min_beta
         self.depth=depth
         if backend=='pymc3':
-            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
+            Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,tune=tune,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
         elif backend=='stan':
             Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth,min_beta=min_beta)
         else:
@@ -979,6 +979,8 @@ class Deproject(object):
             return
         if xunit not in ['arcmin','kpc','both']:
             xunit='kpc'
+
+        cosmo = self.profile.cosmo
 
         sourcereg_out = np.where(self.rout <= self.bkglim)
 
@@ -1045,7 +1047,8 @@ class Deproject(object):
 
         if z is not None and cf is not None:
             transf = 4. * (1. + z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-            pardens = list_params_density(rad, sourcereg, z, self.nrc, self.nbetas, self.min_beta)
+            pardens = list_params_density(rad, sourcereg, z, prof.cosmo,
+                                          nrc=self.nrc, nbetas=self.nbetas, min_beta=self.min_beta)
             if rout is None:
                 sourcereg_out=sourcereg
                 rout=rad
@@ -1053,7 +1056,7 @@ class Deproject(object):
                 sourcereg_out=np.where(rout < self.bkglim)
 
             rd = rout[sourcereg_out]
-            Kdens = calc_density_operator(rd, pardens, z)
+            Kdens = calc_density_operator(rd, pardens, z, prof.cosmo)
             alldens = np.sqrt(np.dot(Kdens, np.exp(samples.T)) / cf * transf)  # [0:nptfit, :]
             covmat = np.cov(alldens)
             self.covmat = covmat
@@ -1429,6 +1432,8 @@ class Deproject(object):
             print('Error: no gas density profile found')
             return
         prof = self.profile
+        cosmo = prof.cosmo
+
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         rkpc = prof.bins * kpcp
         erkpc = prof.ebins * kpcp
@@ -1438,8 +1443,8 @@ class Deproject(object):
         sourcereg = np.where(rad < self.bkglim)
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-        pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
-        Kdens = calc_density_operator(rad, pardens, self.z)
+        pardens = list_params_density(rad, sourcereg, self.z, cosmo, self.nrc, self.nbetas, self.min_beta)
+        Kdens = calc_density_operator(rad, pardens, self.z, cosmo)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
@@ -1553,6 +1558,7 @@ class Deproject(object):
 
 
         prof = self.profile
+        cosmo = prof.cosmo
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
         if rout is None:
             rkpc = prof.bins * kpcp
@@ -1566,14 +1572,14 @@ class Deproject(object):
         sourcereg = np.where(rad < self.bkglim)
 
         transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
-        pardens = list_params_density(rad, sourcereg, self.z, self.nrc, self.nbetas, self.min_beta)
+        pardens = list_params_density(rad, sourcereg, self.z, cosmo, self.nrc, self.nbetas, self.min_beta)
         if rout is None:
             sourcereg_out = sourcereg
             rout = rad
         else:
             sourcereg_out = np.where(rout < self.bkglim)
 
-        Kdens = calc_density_operator(rout, pardens, self.z)
+        Kdens = calc_density_operator(rout, pardens, self.z, cosmo)
 
         # All gas density profiles
         alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
@@ -1596,7 +1602,7 @@ class Deproject(object):
         #now compute mtot from mgas-mtot scaling relation
         rho_cz = cosmo.critical_density(self.z).to(u.Msun / u.kpc ** 3).value
 
-        Mgas = fbul19(rkpc,self.z,Runit='kpc')
+        Mgas = fbul19(rkpc,self.z,cosmo,Runit='kpc')
 
         Mgasdist = np.repeat(Mgas, alldens.shape[1]).reshape(len(rout), alldens.shape[1])
 
@@ -1732,6 +1738,7 @@ class Deproject(object):
             print('Error: no profile reconstruction found')
             return
         prof = self.profile
+        cosmo = prof.cosmo
         kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
 
         sourcereg = np.where(prof.bins < self.bkglim)

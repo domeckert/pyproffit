@@ -49,6 +49,72 @@ def logbinning(binsize,maxrad):
     ebn=ebins[:newnbin]
     return bn,ebn
 
+
+def median_all_cov(dat, bins, ebins, rads, nsim=1000):
+    """
+    Generate Monte Carlo simulations of a Voronoi image and compute the median profile for each of them. The function returns an array of size (nbin, nsim) with nbin the number of bins in the profile and nsim the number of Monte Carlo simulations.
+
+    :param dat: Pyproffit Data object containing the input Voronoi image and error map
+    :type dat: class:`pyproffit.data.Data`
+    :param bins: Central value of radial binning
+    :type bins: class:`numpy.ndarray`
+    :param ebins: Half-width of radial binning
+    :type ebins: class:`numpy.ndarray`
+    :param rads: Array containing the distance to the center, in arcmin, for each pixel
+    :type rads: class:`numpy.ndarray`
+    :param nsim: Number of Monte Carlo simulations to generate
+    :type nsim: int
+    :return:
+        - Samples of median profiles
+        - Area of each bin
+    :rtype: class:`numpy.ndarray`
+    """
+    if not dat.voronoi:
+        print('This routine is meant to work with Voronoi images, aborting')
+        return
+
+    img, errmap = dat.img, dat.errmap
+    expo = dat.exposure
+
+    rad = bins
+    erad = ebins
+    nbin = len(rad)
+
+    tol = 0.5e-5
+    sort_list = []
+    for n in range(nbin):
+        if n == 0:
+            sort_list.append(np.where(
+                np.logical_and(np.logical_and(
+                    np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol), errmap > 0.0), expo > 0.0)))
+        else:
+            sort_list.append(np.where(np.logical_and(np.logical_and(np.logical_and(
+                rads >= np.round(rad[n] - erad[n], 5) + tol,
+                rads < np.round(rad[n] + erad[n], 5) + tol), errmap > 0.0), expo > 0.0)))
+
+    shape = (dat.axes[0], dat.axes[1], nsim)
+
+    imgmul = np.repeat(img, nsim).reshape(shape)
+    errmul = np.repeat(errmap, nsim).reshape(shape)
+
+    gen_img = imgmul + errmul * np.random.randn(shape[0], shape[1], shape[2])
+
+    all_prof = np.empty((nbin, nsim))
+
+    area = np.empty(nbin)
+
+    for i in range(nbin):
+        tid = sort_list[i]
+
+        gen_bin = gen_img[tid]
+
+        all_prof[i, :] = np.median(gen_bin, axis=0)
+
+        area[i] = len(img[tid]) * dat.pixsize ** 2
+
+    return all_prof, area
+
+
 def medianval(vals,errs,nsim):
     """
     Compute the median value of a sample of values and compute its uncertainty using Monte Carlo simulations

@@ -361,6 +361,7 @@ class Profile(object):
             else:
                 nbin = int(self.maxrad / self.binsize * 60. + 0.5)
                 self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
+                self.bins = self.bins[self.bins<self.maxrad]
                 self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
                 self.nbin = nbin
         else:

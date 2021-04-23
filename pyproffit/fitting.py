@@ -62,16 +62,9 @@ class ChiSquared:
         :rtype: float
         """
         ym = self.model(self.x, *par)
-        # if self.psfmat is not None:
-        #     rminus = self.x - self.dx
-        #
-        #     rplus = self.x + self.dx
-        #
-        #     area = np.pi * (rplus ** 2 - rminus ** 2)
-        #
-        #     ym = np.dot(self.psfmat,ym * area) / area
+        if self.psfmat is not None:
+            ym = np.dot(self.psfmat, ym)
 
-        ym = np.dot(self.psfmat, ym)
         reg = self.region
         nonz = self.nonz
         chi2 = np.sum((self.y[reg][nonz] - ym[reg][nonz])**2/self.dy[reg][nonz]**2)

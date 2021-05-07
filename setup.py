@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
       name='pyproffit',    # This is the name of your PyPI-package.
-      version='0.5.3',
+      version='0.6.0',
       description='Python package for PROFFIT',
       author='Dominique Eckert',
       author_email='Dominique.Eckert@unige.ch',

@@ -480,7 +480,7 @@ class Profile(object):
             self.bkgcounts = bkgcounts
 
 
-    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, outsamples=None):
+    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, outsamples=None, fitter=None):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
@@ -488,8 +488,12 @@ class Profile(object):
         :type ellipse_ratio: float
         :param rotation_angle: Rotation angle of the ellipse or box respective to the R.A. axis. Defaults 0.
         :type rotation_angle: float
+        :param nsim: Number of Monte Carlo realizations of the Voronoi image to be performed
+        :type nsim: int
         :param outsamples: Name of output FITS file to store the bootstrap realizations of the median profile. Defaults to None
         :type outsamples: str
+        :param fitter: A :class:`pyproffit.fitter.Fitter` object containing the result of a fit to the background region, for subtraction of the background to the resulting profile
+        :type fitter: class:`pyproffit.fitter.Fitter`
         """
         data = self.data
         img = data.img
@@ -536,7 +540,7 @@ class Profile(object):
         #    area[i] = len(img[id]) * pixsize ** 2
         #    effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
 
-        all_prof, area = median_all_cov(data, self.bins, self.ebins, rads, nsim=1000)
+        all_prof, area = median_all_cov(data, self.bins, self.ebins, rads, nsim=nsim, fitter=fitter)
         profile, eprof = np.median(all_prof, axis=1), np.std(all_prof, axis=1)
         effexp = np.ones(self.nbin) # Dummy, but to be consistent with PSF calculation
         cov = np.cov(all_prof)
@@ -548,7 +552,7 @@ class Profile(object):
 
         if outsamples is not None:
             hdu = fits.PrimaryHDU(all_prof)
-            hdu.writeto(outsamples)
+            hdu.writeto(outsamples, overwrite=True)
 
     def AzimuthalScatter(self, nsect=12, model=None):
         '''

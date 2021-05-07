@@ -854,7 +854,7 @@ class Profile(object):
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self, model=None, hmcmod=None, outfile=None, axes=None, figsize=(13, 10),
+    def Plot(self, model=None, hmcmod=None, outfile=None, axes=None, scatter=False, figsize=(13, 10),
              fontsize=40., xscale='log', yscale='log', fmt='o', markersize=7, lw=2,
              data_color='black', bkg_color='green', model_color='blue', **kwargs):
         """
@@ -908,11 +908,17 @@ class Profile(object):
         for item in (ax.get_yticklabels()):
             item.set_fontsize(18)
         for item in (ax.get_xticklabels()):
-            item.set_fontsize(0)
+            if model is not None:
+                item.set_fontsize(0)
+            else:
+                item.set_fontsize(18)
 
         if model is None:
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
-            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+            if not scatter:
+                plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+            else:
+                plt.ylabel('$\Sigma_{X}$', fontsize=fontsize)
         else:
             plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
         plt.yscale(yscale)
@@ -921,16 +927,20 @@ class Profile(object):
             rads = self.bins
         else:
             rads = self.bins - self.maxrad/2.
-        plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt=fmt, color=data_color, elinewidth=2,
-                     markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
-        if self.bkgprof is not None:
-            plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
-        if model is not None:
-            tmod = model(rads, *model.params)
-            if self.psfmat is not None:
-                tmod = np.dot(self.psfmat, tmod)
+        if not scatter:
+            plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt=fmt, color=data_color, elinewidth=2,
+                         markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
+            if self.bkgprof is not None:
+                plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
+            if model is not None:
+                tmod = model(rads, *model.params)
+                if self.psfmat is not None:
+                    tmod = np.dot(self.psfmat, tmod)
 
-            plt.plot(rads, tmod, color=model_color, lw=lw, label='Model')
+                plt.plot(rads, tmod, color=model_color, lw=lw, label='Model')
+        else:
+            plt.errorbar(rads, self.scatter, xerr=self.ebins, yerr=self.escat, fmt=fmt, color=data_color, elinewidth=2,
+                         markersize=markersize, capsize=0, mec=data_color, label='Scatter', **kwargs)
         xmin = rads[0] * 0.9
         xmax = rads[len(self.bins) - 1] * 1.1
         ylim = ax.get_ylim()

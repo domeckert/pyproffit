@@ -106,6 +106,8 @@ class Profile(object):
     :type centroid_region: float
     :param bins: in case binning is set to 'custom', a numpy array containing the binning definition. For an input array of length N, the binning will contain N-1 bins with boundaries set as the values of the input array.
     :type bins: class:`numpy.ndarray`
+    :param cosmo: An :class:`astropy.cosmology` object containing the definition of the cosmological model. If cosmo=None, Planck 2015 cosmology is used.
+    :type cosmo: class:`astropy.cosmology`
     """
     def __init__(self, data=None, center_choice=None, maxrad=None, binsize=None, center_ra=None, center_dec=None,
                  binning='linear', centroid_region=None, bins=None, cosmo=None):
@@ -482,6 +484,12 @@ class Profile(object):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
+        :param ellipse_ratio: Ratio a/b of major to minor axis in the case of an elliptical annulus definition. Defaults to 1.0, i.e. circular annuli.
+        :type ellipse_ratio: float
+        :param rotation_angle: Rotation angle of the ellipse or box respective to the R.A. axis. Defaults 0.
+        :type rotation_angle: float
+        :param outsamples: Name of output FITS file to store the bootstrap realizations of the median profile. Defaults to None
+        :type outsamples: str
         """
         data = self.data
         img = data.img
@@ -543,6 +551,20 @@ class Profile(object):
             hdu.writeto(outsamples)
 
     def AzimuthalScatter(self, nsect=12, model=None):
+        '''
+        Compute the azimuthal scatter profile around the loaded profile. The azimuthal scatter is defined as the standard deviation of the surface brightness in equispaced sectors with respect to the azimuthal mean,
+
+        .. math::
+
+            \\Sigma_X(r) = \\frac{1}{N} \\sum_{i=1}^N \\frac{(S_i(r) - \\langle S(r) \\rangle)^2}{\\langle S(r) \\rangle^2}
+
+        with N the number of sectors and :math:`\\langle S(r) \\rangle` the loaded mean surface brightness profile.
+
+        :param nsect: Number of sectors from which the azimuthal scatter will be computed. Defaults to nsect=12
+        :type nsect: int
+        :param model: A :class:`pyproffit.models.Model` object containing the background to be subtracted, in case the scatter is to be computed on background-subtracted profiles. Defaults to None (i.e. no background subtraction).
+        :type model: class:`pyproffit.models.Model`
+        '''
 
         if self.profile is None:
             print('Error: please extract a SB profile first')
@@ -868,6 +890,8 @@ class Profile(object):
         :type outfile: str , optional
         :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
         :type axes: list , optional
+        :param scatter: Set whether the azimuthal scatter profile will be displayed instead of the surface brightness profile. Defaults to False.
+        :type scatter: bool
         :param figsize: Size of figure. Defaults to (13, 10)
         :type figsize: tuple , optional
         :param fontsize: Font size of the axis labels. Defaults to 40

@@ -361,6 +361,7 @@ class Profile(object):
             else:
                 nbin = int(self.maxrad / self.binsize * 60. + 0.5)
                 self.bins = np.arange(self.binsize / 60. / 2., (nbin + 0.5) * self.binsize / 60., self.binsize / 60.)
+                self.bins = self.bins[self.bins<self.maxrad]
                 self.ebins = np.ones(nbin) * self.binsize / 60. / 2.
                 self.nbin = nbin
         else:
@@ -837,7 +838,7 @@ class Profile(object):
         ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
         if model is not None:
-            outmod = model.model(rads, *model.params)
+            outmod = model(rads, *model.params)
         else:
             outmod = np.interp(rads, self.bins, self.profile)
         if vignetting:
@@ -925,7 +926,7 @@ class Profile(object):
         if self.bkgprof is not None:
             plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
         if model is not None:
-            tmod = model.model(rads, *model.params)
+            tmod = model(rads, *model.params)
             if self.psfmat is not None:
                 tmod = np.dot(self.psfmat, tmod)
 

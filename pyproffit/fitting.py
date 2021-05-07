@@ -29,6 +29,9 @@ class ChiSquared:
     :param fithigh: Upper fitting boundary in arcmin. If fithigh=None the entire radial range is used, default to None
     :type fithigh: float , optional
     """
+
+    errordef = iminuit.Minuit.LEAST_SQUARES
+
     def __init__(self, model, x , dx, y, dy, psfmat=None, fitlow=None, fithigh=None):
         """
         Constructor of class ChiSquared
@@ -102,6 +105,9 @@ class Cstat:
     :param fithigh: Upper fitting boundary in arcmin. If fithigh=None (default) the entire radial range is used
     :type fithigh: float
     """
+
+    errordef = iminuit.Minuit.LEAST_SQUARES
+
     def __init__(self, model, x, dx, counts, area, effexp, bkgc, psfmat=None, fitlow=None, fithigh=None):
         """
         Constructor of class Cstat
@@ -164,60 +170,90 @@ class Fitter:
     :type model: class:`pyproffit.models.Model`
     :param profile: Object of type :class:`pyproffit.profextract.Profile` containing the surface brightness profile to be fitted
     :type profile: class:`pyproffit.profextract.Profile`
+    :param method: Likelihood function to be optimized. Available likelihoods are 'chi2' (chi-squared) and 'cstat' (C statistic). Defaults to 'chi2'.
+    :type method: str
+    :param fitlow: Lower boundary of the active fitting radial range. If fitlow=None the entire range is used. Defaults to None
+    :type fitlow: float
+    :param fithigh: Upper boundary of the active fitting radial range. If fithigh=None the entire range is used. Defaults to None
+    :type fithigh: float
+    :param kwargs: List of arguments to be passed to the iminuit library. For instance, setting parameter boundaries, optimization options or fixing parameters.
+        See the iminuit documentation: https://iminuit.readthedocs.io/en/stable/index.html
     """
-    def __init__(self, model, profile):
+
+    def __init__(self, model, profile, method='chi2', fitlow=None, fithigh=None, **kwargs):
         """
         Constructor of class Fitter
         """
-        self.mod=model
-        self.profile=profile
-        self.mlike=None
-        self.params=None
-        self.errors=None
-        self.minuit=None
-        self.out=None
-
-    def Migrad(self, method='chi2', fitlow=None, fithigh=None, **kwargs):
-        """
-        Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.
-
-        :param method: Likelihood function to be optimized. Available likelihoods are 'chi2' (chi-squared) and 'cstat' (C statistic). Defaults to 'chi2'.
-        :type method: str
-        :param fitlow: Lower boundary of the active fitting radial range. If fitlow=None the entire range is used. Defaults to None
-        :type fitlow: float
-        :param fithigh: Upper boundary of the active fitting radial range. If fithigh=None the entire range is used. Defaults to None
-        :type fithigh: float
-        :param kwargs: List of arguments to be passed to the iminuit library. For instance, setting parameter boundaries, optimization options or fixing parameters.
-            See the iminuit documentation: https://iminuit.readthedocs.io/en/stable/index.html
-        """
-        prof=self.profile
-        if prof.profile is None:
+        self.mod = model
+        self.profile = profile
+        if profile is None:
             print('Error: No valid profile exists in provided object')
             return
-        model=self.mod.model
-        if prof.psfmat is not None:
-            psfmat = np.transpose(prof.psfmat)
+
+        if profile.psfmat is not None:
+            psfmat = np.transpose(profile.psfmat)
         else:
             psfmat = None
-        if method=='chi2':
-             # Define the fitting algorithm
-            chi2=ChiSquared(model,prof.bins,prof.ebins,prof.profile,prof.eprof,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
+        if method == 'chi2':
+            # Define the fitting algorithm
+            chi2 = ChiSquared(model=model.model,
+                              x=profile.bins,
+                              dx=profile.ebins,
+                              y=profile.profile,
+                              dy=profile.eprof,
+                              psfmat=psfmat,
+                              fitlow=fitlow,
+                              fithigh=fithigh)
+
             # Construct iminuit object
-            minuit=iminuit.Minuit(chi2,**kwargs)
-        elif method=='cstat':
-            if prof.counts is None:
+            minuit = iminuit.Minuit(chi2, **kwargs)
+        elif method == 'cstat':
+            if profile.counts is None:
                 print('Error: No count profile exists')
                 return
             # Define the fitting algorithm
-            cstat=Cstat(model,prof.bins,prof.ebins,prof.counts,prof.area,prof.effexp,prof.bkgcounts,psfmat=psfmat,fitlow=fitlow,fithigh=fithigh)
+            cstat = Cstat(model=model.model,
+                          x=profile.bins,
+                          dx=profile.ebins,
+                          counts=profile.counts,
+                          area=profile.area,
+                          effexp=profile.effexp,
+                          bkgc=profile.bkgcounts,
+                          psfmat=psfmat,
+                          fitlow=fitlow,
+                          fithigh=fithigh)
+
             # Construct iminuit object
-            minuit=iminuit.Minuit(cstat,**kwargs)
+            minuit = iminuit.Minuit(cstat, **kwargs)
         else:
-            print('Unknown method ',method)
+            print('Unknown method ', method)
             return
-        fmin, param=minuit.migrad()
-        print(fmin)
-        print(param)
+        self.minuit = minuit
+        self.mlike = None
+        self.params = None
+        self.errors = None
+        self.out = None
+        self.method = method
+
+    def Migrad(self):
+        """
+        Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.
+
+        """
+        minuit = self.minuit
+        out = minuit.migrad()
+        print(out)
+        freepars = self.mod.npar - len(np.where(minuit.fixed)[0])
+        dof = self.profile.nbin - freepars
+        self.mlike = out.fval
+
+        if self.method == 'chi2':
+            print('Best fit chi-squared: %g for %d bins and %d d.o.f' % (out.fval, self.profile.nbin, dof))
+            print('Reduced chi-squared: %g' % (out.fval / dof))
+        else:
+            print('Best fit C-statistic: %g for %d bins and %d d.o.f' % (out.fval, self.profile.nbin, dof))
+            print('Reduced C-statistic: %g' % (out.fval / dof))
+
         npar = len(minuit.values)
         outval = np.empty(npar)
         outerr = np.empty(npar)
@@ -227,9 +263,8 @@ class Fitter:
         self.mod.SetParameters(outval)
         self.mod.SetErrors(outerr)
         self.mod.parnames = minuit.parameters
-        self.params=minuit.values
-        self.errors=minuit.errors
-        self.mlike=fmin
-        self.minuit=minuit
-        self.out=param
+        self.params = minuit.values
+        self.errors = minuit.errors
+        self.minuit = minuit
+        self.out = out
 

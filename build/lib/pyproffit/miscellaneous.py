@@ -50,11 +50,11 @@ def logbinning(binsize,maxrad):
     return bn,ebn
 
 
-def median_all_cov(dat, bins, ebins, rads, nsim=1000):
+def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
     """
     Generate Monte Carlo simulations of a Voronoi image and compute the median profile for each of them. The function returns an array of size (nbin, nsim) with nbin the number of bins in the profile and nsim the number of Monte Carlo simulations.
 
-    :param dat: Pyproffit Data object containing the input Voronoi image and error map
+    :param dat:  A :class:`pyproffit.data.Data` object containing the input Voronoi image and error map
     :type dat: class:`pyproffit.data.Data`
     :param bins: Central value of radial binning
     :type bins: class:`numpy.ndarray`
@@ -64,6 +64,8 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000):
     :type rads: class:`numpy.ndarray`
     :param nsim: Number of Monte Carlo simulations to generate
     :type nsim: int
+    :param fitter: A :class:`pyproffit.fitter.Fitter` object containing the result of a fit to the background region, for subtraction of the background to the resulting profile
+    :type fitter: class:`pyproffit.fitter.Fitter`
     :return:
         - Samples of median profiles
         - Area of each bin
@@ -97,6 +99,11 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000):
     imgmul = np.repeat(img, nsim).reshape(shape)
     errmul = np.repeat(errmap, nsim).reshape(shape)
 
+    if fitter is not None:
+        bkg = np.power(10., fitter.minuit.values['bkg'])
+    else:
+        bkg = 0.
+
     gen_img = imgmul + errmul * np.random.randn(shape[0], shape[1], shape[2])
 
     all_prof = np.empty((nbin, nsim))
@@ -108,7 +115,7 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000):
 
         gen_bin = gen_img[tid]
 
-        all_prof[i, :] = np.median(gen_bin, axis=0)
+        all_prof[i, :] = np.median(gen_bin, axis=0) - bkg
 
         area[i] = len(img[tid]) * dat.pixsize ** 2
 

@@ -911,6 +911,8 @@ class Deproject(object):
         :type backend: str
         :param nmcmc: Number of HMC points in the output sample
         :type nmcmc: int
+        :param tune: Number of HMC tuning steps
+        :type tune: int
         :param bkglim: Limit beyond which it is assumed that the background dominates, i.e. the source is set to 0. If bkglim=None (default), the entire radial range is used
         :type bkglim: float
         :param back: Input value for the background, around which a gaussian prior is set. If back=None (default), the input background value will be computed as the average of the source-free region

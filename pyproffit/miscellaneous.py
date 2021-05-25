@@ -50,7 +50,7 @@ def logbinning(binsize,maxrad):
     return bn,ebn
 
 
-def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
+def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None, thin=10):
     """
     Generate Monte Carlo simulations of a Voronoi image and compute the median profile for each of them. The function returns an array of size (nbin, nsim) with nbin the number of bins in the profile and nsim the number of Monte Carlo simulations.
 
@@ -94,7 +94,11 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
                 rads >= np.round(rad[n] - erad[n], 5) + tol,
                 rads < np.round(rad[n] + erad[n], 5) + tol), errmap > 0.0), expo > 0.0)))
 
-    shape = (dat.axes[0], dat.axes[1], nsim)
+    nsimthin = int(nsim / thin)
+
+    print(nsimthin)
+
+    shape = (dat.axes[0], dat.axes[1], nsimthin)
 
     imgmul = np.repeat(img, nsim).reshape(shape)
     errmul = np.repeat(errmap, nsim).reshape(shape)
@@ -104,20 +108,28 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
     else:
         bkg = 0.
 
-    gen_img = imgmul + errmul * np.random.randn(shape[0], shape[1], shape[2])
-
     all_prof = np.empty((nbin, nsim))
 
     area = np.empty(nbin)
 
-    for i in range(nbin):
-        tid = sort_list[i]
+    for th in range(thin):
 
-        gen_bin = gen_img[tid]
+        gen_img = imgmul + errmul * np.random.randn(shape[0], shape[1], shape[2])
 
-        all_prof[i, :] = np.median(gen_bin, axis=0) - bkg
+        nth1 = th * nsimthin
 
-        area[i] = len(img[tid]) * dat.pixsize ** 2
+        nth2 = (th + 1) * nsimthin - 1
+
+        for i in range(nbin):
+            tid = sort_list[i]
+
+            gen_bin = gen_img[tid]
+
+            all_prof[i, nth1:nth2] = np.median(gen_bin, axis=0) - bkg
+
+            if th == 0:
+
+                area[i] = len(img[tid]) * dat.pixsize ** 2
 
     return all_prof, area
 

@@ -66,6 +66,8 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None, thin=10):
     :type nsim: int
     :param fitter: A :class:`pyproffit.fitter.Fitter` object containing the result of a fit to the background region, for subtraction of the background to the resulting profile
     :type fitter: class:`pyproffit.fitter.Fitter`
+    :param thin: Number of blocks into which the calculation of the bootstrap will be divided. Increasing thin reduces memory usage drastically, at the cost of a modest increase in computation time.
+    :type thin: int
     :return:
         - Samples of median profiles
         - Area of each bin

@@ -96,12 +96,10 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None, thin=10):
 
     nsimthin = int(nsim / thin)
 
-    print(nsimthin)
-
     shape = (dat.axes[0], dat.axes[1], nsimthin)
 
-    imgmul = np.repeat(img, nsim).reshape(shape)
-    errmul = np.repeat(errmap, nsim).reshape(shape)
+    imgmul = np.repeat(img, nsimthin).reshape(shape)
+    errmul = np.repeat(errmap, nsimthin).reshape(shape)
 
     if fitter is not None:
         bkg = np.power(10., fitter.minuit.values['bkg'])
@@ -118,7 +116,7 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None, thin=10):
 
         nth1 = th * nsimthin
 
-        nth2 = (th + 1) * nsimthin - 1
+        nth2 = (th + 1) * nsimthin
 
         for i in range(nbin):
             tid = sort_list[i]

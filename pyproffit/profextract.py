@@ -480,7 +480,7 @@ class Profile(object):
             self.bkgcounts = bkgcounts
 
 
-    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, outsamples=None, fitter=None):
+    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, outsamples=None, fitter=None, thin=10):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
@@ -540,7 +540,7 @@ class Profile(object):
         #    area[i] = len(img[id]) * pixsize ** 2
         #    effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
 
-        all_prof, area = median_all_cov(data, self.bins, self.ebins, rads, nsim=nsim, fitter=fitter)
+        all_prof, area = median_all_cov(data, self.bins, self.ebins, rads, nsim=nsim, fitter=fitter, thin=thin)
         profile, eprof = np.median(all_prof, axis=1), np.std(all_prof, axis=1)
         effexp = np.ones(self.nbin) # Dummy, but to be consistent with PSF calculation
         cov = np.cov(all_prof)

@@ -234,7 +234,7 @@ class Data(object):
         """
         self.exposure = self.defaultexpo
 
-    def dmfilth(self, outfile=None, smoothing_scale=25):
+    def dmfilth(self, outfile=None, smoothing_scale=8):
         '''
         Mask the regions provided in a region file and fill in the holes by interpolating the smoothed image into the gaps and generating a Poisson realization
 

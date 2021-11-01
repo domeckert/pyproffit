@@ -194,9 +194,11 @@ class Fitter:
             psfmat = np.transpose(profile.psfmat)
         else:
             psfmat = None
+
+        loglike = None
         if method == 'chi2':
             # Define the fitting algorithm
-            chi2 = ChiSquared(model=model.model,
+            loglike = ChiSquared(model=model.model,
                               x=profile.bins,
                               dx=profile.ebins,
                               y=profile.profile,
@@ -205,14 +207,12 @@ class Fitter:
                               fitlow=fitlow,
                               fithigh=fithigh)
 
-            # Construct iminuit object
-            minuit = iminuit.Minuit(chi2, **kwargs)
         elif method == 'cstat':
             if profile.counts is None:
                 print('Error: No count profile exists')
                 return
             # Define the fitting algorithm
-            cstat = Cstat(model=model.model,
+            loglike = Cstat(model=model.model,
                           x=profile.bins,
                           dx=profile.ebins,
                           counts=profile.counts,
@@ -222,29 +222,43 @@ class Fitter:
                           psfmat=psfmat,
                           fitlow=fitlow,
                           fithigh=fithigh)
-
-            # Construct iminuit object
-            minuit = iminuit.Minuit(cstat, **kwargs)
         else:
             print('Unknown method ', method)
             return
+
+        # Construct iminuit object
+        minuit = iminuit.Minuit(loglike, **kwargs)
+
         self.minuit = minuit
+        self.loglike = loglike
         self.mlike = None
         self.params = None
         self.errors = None
         self.out = None
+        self.npar = model.npar
+        self.fixed = np.zeros(self.npar, dtype=bool)
         self.method = method
 
-    def Migrad(self):
+    def Migrad(self, fixed=None):
         """
         Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.
 
         """
         minuit = self.minuit
+
+        if fixed is not None:
+            self.fixed = fixed
+
+        for i in range(self.mod.npar):
+
+            if self.fixed[i]:
+                minuit.fixed[i] = True
+
         out = minuit.migrad()
         print(out)
+        reg = self.loglike.region
         freepars = self.mod.npar - len(np.where(minuit.fixed)[0])
-        dof = self.profile.nbin - freepars
+        dof = len(self.profile.profile[reg]) - freepars
         self.mlike = out.fval
 
         if self.method == 'chi2':
@@ -267,4 +281,90 @@ class Fitter:
         self.errors = minuit.errors
         self.minuit = minuit
         self.out = out
+
+    def Emcee(self, nmcmc=5000, start=None, prior=None, walkers=32):
+
+        try:
+            import emcee
+
+        except ImportError as e:
+            print('Error: package emcee not installed, please install it to run emcee')
+            return
+
+        import emcee
+
+        npar = len(self.minuit.values)
+
+        if start is None and self.params is None:
+
+            print('Please provide initial values or run a maximum likelihood fit first')
+            return
+
+        elif start is None and self.params is not None:
+
+            start = np.empty(npar)
+            for i in range(npar):
+                start[i] = self.params[i]
+
+        is_fixed = np.where(self.fixed)
+
+        if prior is None:
+
+            if self.errors is None:
+
+                print('No prior provided and no available errors, please provide a custom prior or run a maximum likelihood fit first')
+                return
+
+            def prior(pars):
+
+                errors = np.empty(npar)
+
+                for i in range(npar):
+
+                    if not self.fixed[i]:
+                        errors[i] = self.errors[i]
+
+                    else:
+                        errors[i] = 1.
+
+                # Gaussian prior with width +/- 5 sigma
+
+                tot_prior = - 0.5 * np.sum( (pars - start)**2 / (5.*errors)**2)
+
+                return tot_prior
+
+        def log_like(pars):
+
+            log_prior = prior(pars)
+
+            pars[is_fixed] = start[is_fixed]
+
+            loglike = -0.5 * self.loglike(*pars)
+
+            return loglike + log_prior
+
+        pos = start + 1e-4 * np.random.randn(walkers, npar)
+
+        nwalkers, ndim = pos.shape
+
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, log_like
+        )
+        sampler.run_mcmc(pos, nmcmc, progress=True)
+
+        samples = sampler.get_chain()
+
+        return samples
+
+
+
+
+
+
+
+
+
+
+
+
 

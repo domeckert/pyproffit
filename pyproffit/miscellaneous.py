@@ -337,3 +337,32 @@ def clean_bkg(img,bkg):
     remove=np.where(vals<prob)
     img[y[remove],x[remove]]=0
     return img
+
+
+def model_from_samples(x, model, samples):
+    '''
+    Compute the median model and 1-sigma model envelope from a loaded chain, either from HMC or Emcee
+
+    :param x: Vector containing the X axis definition
+    :type x: class:`numpy.ndarray`
+    :param model: Fitted model
+    :type model:  class:`pyproffit.models.Model`
+    :param samples: 2-dimensional array containing the parameter samples
+    :type samples: class:`numpy.ndarray`
+    :return:
+            - median (class:`numpy.ndarray`): Median model array
+            - model_lo (class:`numpy.ndarray`): Lower 1-sigma envelope array
+            - model_hi (class:`numpy.ndarray`): Upper 1-sigma envelope array
+    '''
+    nsamp = len(samples)
+
+    npt = len(x)
+
+    all_mod = np.empty((nsamp, npt))
+
+    for i in range(nsamp):
+        all_mod[i] = model(x, *samples[i])
+
+    mod_med, mod_lo, mod_hi = np.percentile(all_mod, [50., 50. - 68.3 / 2., 50. + 68.3 / 2.], axis=0)
+
+    return mod_med, mod_lo, mod_hi

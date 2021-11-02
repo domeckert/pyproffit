@@ -882,7 +882,7 @@ class Profile(object):
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self, model=None, hmcmod=None, outfile=None, axes=None, scatter=False, figsize=(13, 10),
+    def Plot(self, model=None, samples=None, outfile=None, axes=None, scatter=False, figsize=(13, 10),
              fontsize=40., xscale='log', yscale='log', fmt='o', markersize=7, lw=2,
              data_color='black', bkg_color='green', model_color='blue', **kwargs):
         """
@@ -890,8 +890,8 @@ class Profile(object):
 
         :param model: If model is not None, plot the provided model of type :class:`pyproffit.models.Model` together with the data. Defaults to None
         :type model: class:`pyproffit.models.Model` , optional
-        :param hmcmod: If hmcmod is not None, use the provided HMC trace of type :class:`pyproffit.hmc.HMCModel` to compute the median optimized models and upper and lower envelopes. Defaults to None
-        :type hmcmod: class:`pyproffit.hmc.HMCModel`
+        :param samples: Use parameter samples outputted either by Emcee or HMC optimization to compute the median optimized models and upper and lower envelopes. Defaults to None
+        :type samples: class:`numpy.ndarray`
         :param outfile: If outfile is not None, name of output file to save the plot. Defaults to None
         :type outfile: str , optional
         :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
@@ -943,6 +943,14 @@ class Profile(object):
             else:
                 item.set_fontsize(18)
 
+        mod_med, mod_lo, mod_hi = None, None, None
+        xmod = None
+        if samples is not None and model is not None:
+
+            xmod = np.logspace(np.log10(np.min(self.bins)), np.log10(np.max(self.bins)), 100)
+
+            mod_med, mod_lo, mod_hi = model_from_samples(xmod, model, samples)
+
         if model is None:
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
             if not scatter:
@@ -962,12 +970,18 @@ class Profile(object):
                          markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
             if self.bkgprof is not None:
                 plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
-            if model is not None:
+            if model is not None and samples is None:
                 tmod = model(rads, *model.params)
                 if self.psfmat is not None:
                     tmod = np.dot(self.psfmat, tmod)
 
                 plt.plot(rads, tmod, color=model_color, lw=lw, label='Model')
+
+            elif mod_med is not None:
+
+                plt.plot(xmod, mod_med, color=model_color, lw=lw, label='Model')
+                plt.fill_between(xmod, mod_lo, mod_hi, color=model_color, alpha=0.4)
+
         else:
             plt.errorbar(rads, self.scatter, xerr=self.ebins, yerr=self.escat, fmt=fmt, color=data_color, elinewidth=2,
                          markersize=markersize, capsize=0, mec=data_color, label='Scatter', **kwargs)
@@ -983,9 +997,16 @@ class Profile(object):
             gs1 = gridspec.GridSpec(1, 1)
             gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
             ax2 = plt.subplot(gs1[0])
-            chi = (self.profile-tmod)/self.eprof
+
+            if mod_med is None:
+                chi = (self.profile-tmod)/self.eprof
+
+            else:
+                chi = (self.profile - np.interp(self.bins, xmod, mod_med)) / self.eprof
+
             plt.errorbar(rads, chi, yerr=np.ones(len(rads)), fmt=fmt, color=data_color, elinewidth=2,
                      markersize=markersize, capsize=0, mec=data_color)
+
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
             plt.ylabel('$\chi$', fontsize=fontsize)
             plt.xscale(xscale)

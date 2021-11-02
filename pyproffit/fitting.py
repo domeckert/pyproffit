@@ -245,6 +245,8 @@ class Fitter:
         """
         Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.
 
+        :param fixed: A boolean array setting up whether parameters are fixed (True) or left free (False) while fitting. If None, all parameters are fitted. Defaults to None.
+        :type fixed: class:`numpy.ndarray`
         """
         minuit = self.minuit
 
@@ -285,7 +287,22 @@ class Fitter:
         self.out = out
 
     def Emcee(self, nmcmc=5000, burnin=100, start=None, prior=None, walkers=32, thin=15):
+        '''
+        Run a Markov Chain Monte Carlo optimization using the affine-invariant ensemble sampler emcee. See https://emcee.readthedocs.io/en/stable/ for details.
 
+        :param nmcmc: Number of MCMC samples. Defaults to 5000
+        :type nmcmc: int
+        :param burnin: Size of the burn-in phase that will eventually be ignored. Defaults to 100
+        :type burnin: int
+        :param start: Array of input parameter values. If None, the code will look for the results of a previous Migrad optimization and use the corresponding parameters as starting values. Defaults to None
+        :type start: class:`numpy.ndarray`
+        :param prior: Function defining the priors on the parameters. The function should take the parameter set as input and return the log prior probability. If None, the code will search for the results of a previous Migrad optimization and set up broad Gaussian priors on each parameter with sigma set to 5 times the Migrad errors. Defaults to None.
+        :type prior: function
+        :param walkers: Number of emcee walkers. Defaults to 32.
+        :type walkers: int
+        :param thin: Thinning number for the output samples. The total number of sample values will be nmcmc*walkers/thin. Defaults to 15.
+        :type thin: int
+        '''
         try:
             import emcee
 
@@ -370,7 +387,15 @@ class Fitter:
 
         self.samples = samples
 
-    def Corner(self, labels=None):
+    def Corner(self, labels=None, **kwargs):
+        '''
+        Produce a parameter corner plot from a loaded set of samples. Uses the corner library: https://corner.readthedocs.io/en/latest/
+
+        :param labels: List of names to be used
+        :type labels: list
+        :param kwargs: Any additional parameter to be passed to the corner library. See https://corner.readthedocs.io/en/latest/api.html
+        :return: Output matplotlib figure
+        '''
 
         try:
             import corner
@@ -386,7 +411,7 @@ class Fitter:
             labels = self.mod.parnames
 
         fig = corner.corner(
-            self.samples, labels=labels
+            self.samples, labels=labels, **kwargs
         )
 
         return fig

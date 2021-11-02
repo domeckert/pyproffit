@@ -91,7 +91,9 @@ class Data(object):
                 print('Error: Image and exposure map sizes do not match')
                 return
             self.exposure = expo
+            self.defaultexpo = np.copy(expo)
             fexp.close()
+
         if bkglink is None:
             self.bkg = np.zeros(self.axes)
         else:
@@ -225,12 +227,21 @@ class Data(object):
         print('Excluded %d sources' % (nsrc))
         self.exposure = expo
 
-    def dmfilth(self,outfile=None):
+    def reset_exposure(self):
+        """
+        Revert to the original exposure map and ignore the current region file
+
+        """
+        self.exposure = self.defaultexpo
+
+    def dmfilth(self, outfile=None, smoothing_scale=8):
         '''
         Mask the regions provided in a region file and fill in the holes by interpolating the smoothed image into the gaps and generating a Poisson realization
 
         :param outfile: If outfile is not None, file name to output the dmfilth image into a FITS file
         :type outfile: str , optional
+        :param smoothing_scale: Size of smoothing scale (in pixel) to estimate the surface brightness distribution outside of the masked areas
+        :type smoothing_scale: int
         '''
         if self.img is None:
             print('No data given')
@@ -242,10 +253,11 @@ class Data(object):
 
         # High-pass filter
         print('Applying high-pass filter')
-        smoothing_scale = 25
         gsb = gaussian_filter(imgc, smoothing_scale)
         gsexp = gaussian_filter(self.exposure, smoothing_scale)
-        img_smoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.exposure
+        #img_smoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.exposure
+        img_smoothed = np.nan_to_num(np.divide(gsb, gsexp))
+        img_smoothed[chimg] = 0.
 
         # Interpolate
         print('Interpolating in the masked regions')
@@ -259,7 +271,7 @@ class Data(object):
         print('Filling holes')
         area_to_fill = np.where(np.logical_and(int_vals > 0., self.exposure == 0))
         dmfilth = np.copy(self.img)
-        dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill])
+        dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill] * self.defaultexpo[area_to_fill])
 
         self.filth = dmfilth
 

@@ -1,5 +1,6 @@
 import numpy as np
 import iminuit
+import matplotlib.pyplot as plt
 
 # Generic class to fit data with chi-square
 class ChiSquared:
@@ -194,9 +195,11 @@ class Fitter:
             psfmat = np.transpose(profile.psfmat)
         else:
             psfmat = None
+
+        loglike = None
         if method == 'chi2':
             # Define the fitting algorithm
-            chi2 = ChiSquared(model=model.model,
+            loglike = ChiSquared(model=model.model,
                               x=profile.bins,
                               dx=profile.ebins,
                               y=profile.profile,
@@ -205,14 +208,12 @@ class Fitter:
                               fitlow=fitlow,
                               fithigh=fithigh)
 
-            # Construct iminuit object
-            minuit = iminuit.Minuit(chi2, **kwargs)
         elif method == 'cstat':
             if profile.counts is None:
                 print('Error: No count profile exists')
                 return
             # Define the fitting algorithm
-            cstat = Cstat(model=model.model,
+            loglike = Cstat(model=model.model,
                           x=profile.bins,
                           dx=profile.ebins,
                           counts=profile.counts,
@@ -222,29 +223,46 @@ class Fitter:
                           psfmat=psfmat,
                           fitlow=fitlow,
                           fithigh=fithigh)
-
-            # Construct iminuit object
-            minuit = iminuit.Minuit(cstat, **kwargs)
         else:
             print('Unknown method ', method)
             return
+
+        # Construct iminuit object
+        minuit = iminuit.Minuit(loglike, **kwargs)
+
         self.minuit = minuit
+        self.loglike = loglike
         self.mlike = None
         self.params = None
         self.errors = None
         self.out = None
+        self.npar = model.npar
+        self.fixed = np.zeros(self.npar, dtype=bool)
         self.method = method
+        self.samples = None
 
-    def Migrad(self):
+    def Migrad(self, fixed=None):
         """
         Perform maximum-likelihood optimization of the model using the MIGRAD routine from the MINUIT library.
 
+        :param fixed: A boolean array setting up whether parameters are fixed (True) or left free (False) while fitting. If None, all parameters are fitted. Defaults to None.
+        :type fixed: class:`numpy.ndarray`
         """
         minuit = self.minuit
+
+        if fixed is not None:
+            self.fixed = fixed
+
+        for i in range(self.mod.npar):
+
+            if self.fixed[i]:
+                minuit.fixed[i] = True
+
         out = minuit.migrad()
         print(out)
+        reg = self.loglike.region
         freepars = self.mod.npar - len(np.where(minuit.fixed)[0])
-        dof = self.profile.nbin - freepars
+        dof = len(self.profile.profile[reg]) - freepars
         self.mlike = out.fval
 
         if self.method == 'chi2':
@@ -267,4 +285,144 @@ class Fitter:
         self.errors = minuit.errors
         self.minuit = minuit
         self.out = out
+
+    def Emcee(self, nmcmc=5000, burnin=100, start=None, prior=None, walkers=32, thin=15):
+        '''
+        Run a Markov Chain Monte Carlo optimization using the affine-invariant ensemble sampler emcee. See https://emcee.readthedocs.io/en/stable/ for details.
+
+        :param nmcmc: Number of MCMC samples. Defaults to 5000
+        :type nmcmc: int
+        :param burnin: Size of the burn-in phase that will eventually be ignored. Defaults to 100
+        :type burnin: int
+        :param start: Array of input parameter values. If None, the code will look for the results of a previous Migrad optimization and use the corresponding parameters as starting values. Defaults to None
+        :type start: class:`numpy.ndarray`
+        :param prior: Function defining the priors on the parameters. The function should take the parameter set as input and return the log prior probability. If None, the code will search for the results of a previous Migrad optimization and set up broad Gaussian priors on each parameter with sigma set to 5 times the Migrad errors. Defaults to None.
+        :type prior: function
+        :param walkers: Number of emcee walkers. Defaults to 32.
+        :type walkers: int
+        :param thin: Thinning number for the output samples. The total number of sample values will be nmcmc*walkers/thin. Defaults to 15.
+        :type thin: int
+        '''
+        try:
+            import emcee
+
+        except ImportError as e:
+            print('Error: package emcee not installed, please install it to run emcee')
+            return
+
+        import emcee
+
+        npar = len(self.minuit.values)
+
+        if start is None and self.params is None:
+
+            print('Please provide initial values or run a maximum likelihood fit first')
+            return
+
+        elif start is None and self.params is not None:
+
+            start = np.empty(npar)
+            for i in range(npar):
+                start[i] = self.params[i]
+
+        is_fixed = np.where(self.fixed)
+
+        if prior is None:
+
+            if self.errors is None:
+
+                print('No prior provided and no available errors, please provide a custom prior or run a maximum likelihood fit first')
+                return
+
+            def prior(pars):
+
+                errors = np.empty(npar)
+
+                for i in range(npar):
+
+                    if not self.fixed[i]:
+                        errors[i] = self.errors[i]
+
+                    else:
+                        errors[i] = 1.
+
+                # Gaussian prior with width +/- 5 sigma
+
+                tot_prior = - 0.5 * np.sum( (pars - start)**2 / (5.*errors)**2)
+
+                return tot_prior
+
+        def log_like(pars):
+
+            log_prior = prior(pars)
+
+            pars[is_fixed] = start[is_fixed]
+
+            loglike = -0.5 * self.loglike(*pars)
+
+            return loglike + log_prior
+
+        pos = start + 1e-4 * np.random.randn(walkers, npar)
+
+        nwalkers, ndim = pos.shape
+
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, log_like
+        )
+        sampler.run_mcmc(pos, nmcmc, progress=True)
+
+        samples = sampler.get_chain(discard=burnin, thin=thin, flat=True)
+
+        fig, axes = plt.subplots(npar, figsize=(10, 7), sharex=True)
+        samp_plot = sampler.get_chain()
+        labels = self.mod.parnames
+        for i in range(ndim):
+            ax = axes[i]
+            ax.plot(samp_plot[:, :, i], "k", alpha=0.3)
+            ax.set_xlim(0, len(samp_plot))
+            ax.set_ylabel(labels[i])
+            ax.yaxis.set_label_coords(-0.1, 0.5)
+
+        axes[-1].set_xlabel("step number")
+
+        self.samples = samples
+
+    def Corner(self, labels=None, **kwargs):
+        '''
+        Produce a parameter corner plot from a loaded set of samples. Uses the corner library: https://corner.readthedocs.io/en/latest/
+
+        :param labels: List of names to be used
+        :type labels: list
+        :param kwargs: Any additional parameter to be passed to the corner library. See https://corner.readthedocs.io/en/latest/api.html
+        :return: Output matplotlib figure
+        '''
+
+        try:
+            import corner
+
+        except ImportError as e:
+            print('Error: package corner not installed, please install it to extract corner plot')
+            return
+
+        import corner
+
+        if labels is None:
+
+            labels = self.mod.parnames
+
+        fig = corner.corner(
+            self.samples, labels=labels, **kwargs
+        )
+
+        return fig
+
+
+
+
+
+
+
+
+
+
 

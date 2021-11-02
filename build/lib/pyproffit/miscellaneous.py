@@ -50,7 +50,7 @@ def logbinning(binsize,maxrad):
     return bn,ebn
 
 
-def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
+def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None, thin=10):
     """
     Generate Monte Carlo simulations of a Voronoi image and compute the median profile for each of them. The function returns an array of size (nbin, nsim) with nbin the number of bins in the profile and nsim the number of Monte Carlo simulations.
 
@@ -66,6 +66,8 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
     :type nsim: int
     :param fitter: A :class:`pyproffit.fitter.Fitter` object containing the result of a fit to the background region, for subtraction of the background to the resulting profile
     :type fitter: class:`pyproffit.fitter.Fitter`
+    :param thin: Number of blocks into which the calculation of the bootstrap will be divided. Increasing thin reduces memory usage drastically, at the cost of a modest increase in computation time.
+    :type thin: int
     :return:
         - Samples of median profiles
         - Area of each bin
@@ -94,30 +96,40 @@ def median_all_cov(dat, bins, ebins, rads, nsim=1000, fitter=None):
                 rads >= np.round(rad[n] - erad[n], 5) + tol,
                 rads < np.round(rad[n] + erad[n], 5) + tol), errmap > 0.0), expo > 0.0)))
 
-    shape = (dat.axes[0], dat.axes[1], nsim)
+    nsimthin = int(nsim / thin)
 
-    imgmul = np.repeat(img, nsim).reshape(shape)
-    errmul = np.repeat(errmap, nsim).reshape(shape)
+    shape = (dat.axes[0], dat.axes[1], nsimthin)
+
+    imgmul = np.repeat(img, nsimthin).reshape(shape)
+    errmul = np.repeat(errmap, nsimthin).reshape(shape)
 
     if fitter is not None:
         bkg = np.power(10., fitter.minuit.values['bkg'])
     else:
         bkg = 0.
 
-    gen_img = imgmul + errmul * np.random.randn(shape[0], shape[1], shape[2])
-
     all_prof = np.empty((nbin, nsim))
 
     area = np.empty(nbin)
 
-    for i in range(nbin):
-        tid = sort_list[i]
+    for th in range(thin):
 
-        gen_bin = gen_img[tid]
+        gen_img = imgmul + errmul * np.random.randn(shape[0], shape[1], shape[2])
 
-        all_prof[i, :] = np.median(gen_bin, axis=0) - bkg
+        nth1 = th * nsimthin
 
-        area[i] = len(img[tid]) * dat.pixsize ** 2
+        nth2 = (th + 1) * nsimthin
+
+        for i in range(nbin):
+            tid = sort_list[i]
+
+            gen_bin = gen_img[tid]
+
+            all_prof[i, nth1:nth2] = np.median(gen_bin, axis=0) - bkg
+
+            if th == 0:
+
+                area[i] = len(img[tid]) * dat.pixsize ** 2
 
     return all_prof, area
 
@@ -325,3 +337,32 @@ def clean_bkg(img,bkg):
     remove=np.where(vals<prob)
     img[y[remove],x[remove]]=0
     return img
+
+
+def model_from_samples(x, model, samples):
+    '''
+    Compute the median model and 1-sigma model envelope from a loaded chain, either from HMC or Emcee
+
+    :param x: Vector containing the X axis definition
+    :type x: class:`numpy.ndarray`
+    :param model: Fitted model
+    :type model:  class:`pyproffit.models.Model`
+    :param samples: 2-dimensional array containing the parameter samples
+    :type samples: class:`numpy.ndarray`
+    :return:
+            - median (class:`numpy.ndarray`): Median model array
+            - model_lo (class:`numpy.ndarray`): Lower 1-sigma envelope array
+            - model_hi (class:`numpy.ndarray`): Upper 1-sigma envelope array
+    '''
+    nsamp = len(samples)
+
+    npt = len(x)
+
+    all_mod = np.empty((nsamp, npt))
+
+    for i in range(nsamp):
+        all_mod[i] = model(x, *samples[i])
+
+    mod_med, mod_lo, mod_hi = np.percentile(all_mod, [50., 50. - 68.3 / 2., 50. + 68.3 / 2.], axis=0)
+
+    return mod_med, mod_lo, mod_hi

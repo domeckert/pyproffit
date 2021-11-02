@@ -1,5 +1,6 @@
 import numpy as np
 import iminuit
+import matplotlib.pyplot as plt
 
 # Generic class to fit data with chi-square
 class ChiSquared:
@@ -238,6 +239,7 @@ class Fitter:
         self.npar = model.npar
         self.fixed = np.zeros(self.npar, dtype=bool)
         self.method = method
+        self.samples = None
 
     def Migrad(self, fixed=None):
         """
@@ -282,7 +284,7 @@ class Fitter:
         self.minuit = minuit
         self.out = out
 
-    def Emcee(self, nmcmc=5000, start=None, prior=None, walkers=32):
+    def Emcee(self, nmcmc=5000, burnin=100, start=None, prior=None, walkers=32, thin=15):
 
         try:
             import emcee
@@ -352,11 +354,42 @@ class Fitter:
         )
         sampler.run_mcmc(pos, nmcmc, progress=True)
 
-        samples = sampler.get_chain()
+        samples = sampler.get_chain(discard=burnin, thin=thin, flat=True)
 
-        return samples
+        fig, axes = plt.subplots(npar, figsize=(10, 7), sharex=True)
+        samp_plot = sampler.get_chain()
+        labels = self.mod.parnames
+        for i in range(ndim):
+            ax = axes[i]
+            ax.plot(samp_plot[:, :, i], "k", alpha=0.3)
+            ax.set_xlim(0, len(samp_plot))
+            ax.set_ylabel(labels[i])
+            ax.yaxis.set_label_coords(-0.1, 0.5)
 
+        axes[-1].set_xlabel("step number")
 
+        self.samples = samples
+
+    def Corner(self, labels=None):
+
+        try:
+            import corner
+
+        except ImportError as e:
+            print('Error: package corner not installed, please install it to extract corner plot')
+            return
+
+        import corner
+
+        if labels is None:
+
+            labels = self.mod.parnames
+
+        fig = corner.corner(
+            self.samples, labels=labels
+        )
+
+        return fig
 
 
 

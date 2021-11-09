@@ -339,7 +339,7 @@ def clean_bkg(img,bkg):
     return img
 
 
-def model_from_samples(x, model, samples):
+def model_from_samples(x, model, samples, psfmat=None):
     '''
     Compute the median model and 1-sigma model envelope from a loaded chain, either from HMC or Emcee
 
@@ -361,7 +361,10 @@ def model_from_samples(x, model, samples):
     all_mod = np.empty((nsamp, npt))
 
     for i in range(nsamp):
-        all_mod[i] = model(x, *samples[i])
+        tmod = model(x, *samples[i])
+
+        if psfmat is not None:
+            all_mod[i] = np.dot(psfmat, tmod)
 
     mod_med, mod_lo, mod_hi = np.percentile(all_mod, [50., 50. - 68.3 / 2., 50. + 68.3 / 2.], axis=0)
 

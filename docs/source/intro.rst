@@ -5,7 +5,8 @@ Introduction
 
 - Extraction of surface brightness profiles in circular and elliptical annuli, over the entire azimuth or any given sector
 - Fitting of profiles with a number of built-in model or any given user-defined model, using chi-squared or C statistic
-- Deprojection and extraction of gas density profiles and gas masses
+- Bayesian fitting using Emcee and/or PyMC3 with automatic or custom priors
+- Non-parametric deprojection and extraction of gas density profiles and gas masses
 - PSF deconvolution, count rate and luminosity reconstruction in any user defined radial range, surface brightness concentration
 - Two-dimensional model images and surface brightness deviations
 - Surface brightness fluctuation power spectra and conversion into 3D density power spectra
@@ -19,7 +20,5 @@ While the original PROFFIT package has attracted a substantial number of users, 
 
 Limitations
 ***********
-
-- The current fitting process uses a maximum-likelihood optimization through the iminuit library. While this is fine for simple cases, it is difficult to sample the entire parameter space and provide accurate uncertainties through this method. I am currently working on replacing the iminuit optimizer with the powerful PyMC3 optimization package.
 
 - The computation of the PSF mixing matrix currently only works with PSF images that have the same pixel size as the provided image.

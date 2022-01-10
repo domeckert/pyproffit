@@ -943,13 +943,15 @@ class Profile(object):
             else:
                 item.set_fontsize(18)
 
+        if not self.box:
+            rads = self.bins
+        else:
+            rads = self.bins - self.maxrad/2.
+
         mod_med, mod_lo, mod_hi = None, None, None
-        xmod = None
         if samples is not None and model is not None:
 
-            xmod = np.logspace(np.log10(np.min(self.bins)), np.log10(np.max(self.bins)), 100)
-
-            mod_med, mod_lo, mod_hi = model_from_samples(xmod, model, samples)
+            mod_med, mod_lo, mod_hi = model_from_samples(rads, model, samples, self.psfmat)
 
         if model is None:
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
@@ -961,10 +963,7 @@ class Profile(object):
             plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
         plt.yscale(yscale)
         plt.xscale(xscale)
-        if not self.box:
-            rads = self.bins
-        else:
-            rads = self.bins - self.maxrad/2.
+
         if not scatter:
             plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt=fmt, color=data_color, elinewidth=2,
                          markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
@@ -979,8 +978,8 @@ class Profile(object):
 
             elif mod_med is not None:
 
-                plt.plot(xmod, mod_med, color=model_color, lw=lw, label='Model')
-                plt.fill_between(xmod, mod_lo, mod_hi, color=model_color, alpha=0.4)
+                plt.plot(rads, mod_med, color=model_color, lw=lw, label='Model')
+                plt.fill_between(rads, mod_lo, mod_hi, color=model_color, alpha=0.4)
 
         else:
             plt.errorbar(rads, self.scatter, xerr=self.ebins, yerr=self.escat, fmt=fmt, color=data_color, elinewidth=2,
@@ -1002,7 +1001,7 @@ class Profile(object):
                 chi = (self.profile-tmod)/self.eprof
 
             else:
-                chi = (self.profile - np.interp(self.bins, xmod, mod_med)) / self.eprof
+                chi = (self.profile - mod_med) / self.eprof
 
             plt.errorbar(rads, chi, yerr=np.ones(len(rads)), fmt=fmt, color=data_color, elinewidth=2,
                      markersize=markersize, capsize=0, mec=data_color)

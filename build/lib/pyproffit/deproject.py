@@ -1526,7 +1526,7 @@ class Deproject(object):
             else:
                 plt.show(block=False)
 
-        return mg,mgl,mgh,rho
+        return mg,mgl,mgh
 
     def PlotMgas(self,rout=None,outfile=None,xunit="kpc", figsize=(13, 10), color='C0', lw=2, fontsize=40, xscale='log', yscale='log'):
         """

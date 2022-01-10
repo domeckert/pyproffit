@@ -238,7 +238,7 @@ class Model(object):
 
         if vals is not None:
 
-            if len(vals) != npar:
+            if len(vals) != self.npar:
 
                 print('Wrong number of parameters in input parameter vector, the provided function requires %d but the vector contains %d. Ignoring.' % (npar, len(vals)))
 

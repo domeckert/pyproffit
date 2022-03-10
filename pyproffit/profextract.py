@@ -794,7 +794,7 @@ class Profile(object):
                 # psfmin = 0.
                 frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
                 if frmax(exposure.shape[0] / 2) < 0.:
-                    rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize  # pixsize
+                    rmax = brentq(frmax, 0., exposure.shape[0]) / self.data.pixsize  # pixsize
                     npix = int(rmax)
                 else:
                     npix = int(exposure.shape[0] / 2)

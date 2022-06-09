@@ -327,7 +327,7 @@ class Profile(object):
         self.scatter = None
         self.escat = None
 
-    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., box=False, width=None):
+    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., minexp=0.05, box=False, width=None):
         """
         Extract a surface brightness profile and store the results in the input Profile object
 
@@ -350,7 +350,14 @@ class Profile(object):
         img = data.img
         voronoi = self.voronoi
         if not voronoi:
-            exposure = data.exposure
+            exposure = np.copy(data.exposure)
+
+            maxexp = np.max(exposure)
+
+            lowexp = np.where(exposure <= minexp * maxexp)
+
+            exposure[lowexp] = 0.0
+
         else:
             exposure = data.errmap
         bkg = data.bkg

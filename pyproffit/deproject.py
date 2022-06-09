@@ -473,7 +473,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     norm0=np.append(np.repeat(testval,npt),testbkg)
 
-    import pystan
+    import stan
     import stan_utility as su
 
     stan_dir = os.path.expanduser('~/.stan_cache')

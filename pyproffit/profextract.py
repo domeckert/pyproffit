@@ -749,7 +749,7 @@ class Profile(object):
                 hdul.append(psfhdu)
             hdul.writeto(outfile, overwrite=True)
 
-    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None):
+    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None, psfmin = 1e-7):
         """
         Function to calculate a PSF convolution matrix given an input PSF image or function.
         To compute the PSF mixing matrix, images of each annuli are convolved with the PSF image using FFT and determine the fraction of photons leaking into neighbouring annuli. FFT-convolved images are then used to determine a mixing matrix. See Eckert et al. 2020 for more details.
@@ -795,7 +795,7 @@ class Profile(object):
             rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
             kernel = None
             if psffunc is not None:
-                psfmin = 1e-7 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
+                 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
                 kernel = psffunc(rads)
                 norm = np.sum(kernel)
                 # psfmin = 0.

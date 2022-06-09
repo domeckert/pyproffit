@@ -801,7 +801,7 @@ class Profile(object):
                 # psfmin = 0.
                 frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
                 if frmax(exposure.shape[0] / 2) < 0.:
-                    rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize  # pixsize
+                    rmax = brentq(frmax, 0., exposure.shape[0]) / self.data.pixsize  # pixsize
                     npix = int(rmax)
                 else:
                     npix = int(exposure.shape[0] / 2)
@@ -974,7 +974,7 @@ class Profile(object):
         if not scatter:
             plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt=fmt, color=data_color, elinewidth=2,
                          markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
-            if self.bkgprof is not None:
+            if self.data.bkglink is not None:
                 plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
             if model is not None and samples is None:
                 tmod = model(rads, *model.params)

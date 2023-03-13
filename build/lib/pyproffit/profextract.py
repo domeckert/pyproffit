@@ -327,7 +327,7 @@ class Profile(object):
         self.scatter = None
         self.escat = None
 
-    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., box=False, width=None):
+    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., minexp=0.05, box=False, width=None):
         """
         Extract a surface brightness profile and store the results in the input Profile object
 
@@ -350,7 +350,14 @@ class Profile(object):
         img = data.img
         voronoi = self.voronoi
         if not voronoi:
-            exposure = data.exposure
+            exposure = np.copy(data.exposure)
+
+            maxexp = np.max(exposure)
+
+            lowexp = np.where(exposure <= minexp * maxexp)
+
+            exposure[lowexp] = 0.0
+
         else:
             exposure = data.errmap
         bkg = data.bkg
@@ -742,7 +749,7 @@ class Profile(object):
                 hdul.append(psfhdu)
             hdul.writeto(outfile, overwrite=True)
 
-    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None):
+    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None, psfmin = 1e-7):
         """
         Function to calculate a PSF convolution matrix given an input PSF image or function.
         To compute the PSF mixing matrix, images of each annuli are convolved with the PSF image using FFT and determine the fraction of photons leaking into neighbouring annuli. FFT-convolved images are then used to determine a mixing matrix. See Eckert et al. 2020 for more details.
@@ -788,13 +795,13 @@ class Profile(object):
             rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
             kernel = None
             if psffunc is not None:
-                psfmin = 1e-7 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
+                 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
                 kernel = psffunc(rads)
                 norm = np.sum(kernel)
                 # psfmin = 0.
                 frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
                 if frmax(exposure.shape[0] / 2) < 0.:
-                    rmax = brentq(frmax, 1., exposure.shape[0]) / self.data.pixsize  # pixsize
+                    rmax = brentq(frmax, 0., exposure.shape[0]) / self.data.pixsize  # pixsize
                     npix = int(rmax)
                 else:
                     npix = int(exposure.shape[0] / 2)
@@ -967,7 +974,7 @@ class Profile(object):
         if not scatter:
             plt.errorbar(rads, self.profile, xerr=self.ebins, yerr=self.eprof, fmt=fmt, color=data_color, elinewidth=2,
                          markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
-            if self.bkgprof is not None:
+            if self.data.bkglink is not None:
                 plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
             if model is not None and samples is None:
                 tmod = model(rads, *model.params)

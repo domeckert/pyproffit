@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.spatial.distance import  cdist
 from scipy.stats import poisson
+import  copy
 
 def logbinning(binsize,maxrad):
     """
@@ -369,3 +370,166 @@ def model_from_samples(x, model, samples, psfmat=None):
     mod_med, mod_lo, mod_hi = np.percentile(all_mod, [50., 50. - 68.3 / 2., 50. + 68.3 / 2.], axis=0)
 
     return mod_med, mod_lo, mod_hi
+
+
+def Rebin(prof, minc=None, snr=None, fitter=None):
+    '''
+    Rebin an existing surface brightness profile to reach a given target number of counts per bin (minc) or a minimum S/N (snr).
+
+    :param prof: A :class:`pyproffit.profextract.Profile` object including the current profile to be rebinned
+    :type prof: :class:`pyproffit.profextract.Profile`
+    :param minc: Minimum number of counts per bin for the output profile. If None, a minimum S/N is used. Defaults to None.
+    :type minc: int
+    :param snr: Minimum signal-to-noise ratio of the output profile. If None, a minimum number of counts is used. Defaults to None.
+    :type snr: float
+    :param fitter: Object of type :class:`pyproffit.fitting.Fitter` containing a model and optimization results to subtract the sky background. If None, no sky background subtraction is performed. Defaults to None.
+    :type fitter: :class:`pyproffit.fitting.Fitter`
+    :return: A new :class:`pyproffit.profextract.Profile` object with the rebinned surface brightness profile.
+    :rtype: :class:`pyproffit.profextract.Profile`
+    '''
+
+    is_minc = True
+    if minc is None and snr is None:
+        print('No target number of counts or S/N provided, aborting')
+        return
+
+    if minc is not None and snr is not None:
+        print('Both a target number of counts and a target S/N provided, just pick one')
+        return
+
+    if minc is not None:
+        print('We will rebin the profile to reach a minimum of %d counts per bin' % (minc))
+
+    if snr is not None:
+        print('We will rebin the profile to reach a minimum S/N of %g' % (snr))
+        is_minc = False
+
+    prof_new, eprof_new, counts_new, bins_new, ebins_new = np.array([]), np.array([]), np.array([]), np.array(
+        []), np.array([])
+
+    back_new, area_new, exp_new, bkgcounts_new = np.array([]), np.array([]), np.array([]), np.array([])
+
+    nbin = prof.nbin
+
+    skybkg, eskybkg = 0., 0.
+
+    if fitter is not None:
+        skybkg = np.power(10., fitter.minuit.values['bkg'])
+        eskybkg = skybkg * np.log(10.) * fitter.minuit.errors['bkg']
+
+    i = 0
+    while i < nbin:
+        if is_minc:
+            if prof.counts[i] >= minc:
+                prof_new = np.append(prof_new, prof.profile[i])
+                bins_new = np.append(bins_new, prof.bins[i])
+                ebins_new = np.append(ebins_new, prof.ebins[i])
+                eprof_new = np.append(eprof_new, prof.eprof[i])
+                back_new = np.append(back_new, prof.bkgprof[i])
+                area_new = np.append(area_new, prof.area[i])
+                exp_new = np.append(exp_new, prof.effexp[i])
+                bkgcounts_new = np.append(bkgcounts_new, prof.bkgcounts[i])
+                counts_new = np.append(counts_new, prof.counts[i])
+                i = i + 1
+
+            else:
+                if i < nbin - 1:
+                    l = 1
+                    tcounts = prof.counts[i]
+                    tarea = prof.area[i]
+                    texp = prof.effexp[i]
+                    tbkgc = prof.bkgcounts[i]
+                    bin_low = prof.bins[i] - prof.ebins[i]
+                    bin_high = prof.bins[i] + prof.ebins[i]
+
+                    while tcounts < minc and i + l < nbin:
+                        tcounts = tcounts + prof.counts[i + l]
+                        tarea = tarea + prof.area[i + l]
+                        texp = texp + prof.effexp[i + l]
+                        tbkgc = tbkgc + prof.bkgcounts[i + l]
+                        bin_high = prof.bins[i + l] + prof.ebins[i + l]
+                        l = l + 1
+
+                    # if i + l < nbin:
+                    bins_new = np.append(bins_new, (bin_low + bin_high) / 2.)
+                    ten = texp / (l + 1)
+                    exp_new = np.append(exp_new, ten)
+                    counts_new = np.append(counts_new, tcounts)
+                    area_new = np.append(area_new, tarea)
+                    bkgcounts_new = np.append(bkgcounts_new, tbkgc)
+                    ebins_new = np.append(ebins_new, (bin_high - bin_low) / 2.)
+                    sb_new = (tcounts - tbkgc) / tarea / ten - skybkg
+                    prof_new = np.append(prof_new, sb_new)
+                    bnew = tbkgc / tarea / ten
+                    back_new = np.append(back_new, bnew)
+                    epnew = np.sqrt(tcounts / (ten * tarea) ** 2 + eskybkg ** 2)
+                    eprof_new = np.append(eprof_new, epnew)
+
+                    i = i + l
+
+        else:
+            if prof.profile[i] / prof.eprof[i] >= snr:
+                prof_new = np.append(prof_new, prof.profile[i])
+                bins_new = np.append(bins_new, prof.bins[i])
+                ebins_new = np.append(ebins_new, prof.ebins[i])
+                eprof_new = np.append(eprof_new, prof.eprof[i])
+                back_new = np.append(back_new, prof.bkgprof[i])
+                area_new = np.append(area_new, prof.area[i])
+                exp_new = np.append(exp_new, prof.effexp[i])
+                bkgcounts_new = np.append(bkgcounts_new, prof.bkgcounts[i])
+                counts_new = np.append(counts_new, prof.counts[i])
+                i = i + 1
+
+            else:
+                if i < nbin - 1:
+                    l = 1
+                    tcounts = prof.counts[i]
+                    tarea = prof.area[i]
+                    texp = prof.effexp[i]
+                    tbkgc = prof.bkgcounts[i]
+                    bin_low = prof.bins[i] - prof.ebins[i]
+                    bin_high = prof.bins[i] + prof.ebins[i]
+                    tsn = prof.profile[i] / prof.eprof[i]
+
+                    while tsn < snr and i + l < nbin:
+                        tcounts = tcounts + prof.counts[i + l]
+                        tarea = tarea + prof.area[i + l]
+                        texp = texp + prof.effexp[i + l]
+                        tbkgc = tbkgc + prof.bkgcounts[i + l]
+                        bin_high = prof.bins[i + l] + prof.ebins[i + l]
+                        l = l + 1
+                        ten = texp / l
+                        tprof = (tcounts - tbkgc) / tarea / ten - skybkg
+                        terr = np.sqrt(tcounts / (tarea * ten) ** 2 + eskybkg ** 2)
+                        tsn = tprof / terr
+
+                    # if i + l < nbin:
+                    bins_new = np.append(bins_new, (bin_low + bin_high) / 2.)
+                    exp_new = np.append(exp_new, ten)
+                    counts_new = np.append(counts_new, tcounts)
+                    area_new = np.append(area_new, tarea)
+                    bkgcounts_new = np.append(bkgcounts_new, tbkgc)
+                    ebins_new = np.append(ebins_new, (bin_high - bin_low) / 2.)
+                    sb_new = (tcounts - tbkgc) / tarea / ten - skybkg
+                    prof_new = np.append(prof_new, sb_new)
+                    bnew = tbkgc / tarea / ten
+                    back_new = np.append(back_new, bnew)
+                    epnew = np.sqrt(tcounts / (ten * tarea) ** 2 + eskybkg ** 2)
+                    eprof_new = np.append(eprof_new, epnew)
+
+                    i = i + l
+
+    prof_out = copy.copy(prof)
+    prof_out.nbin = len(prof_new)
+    prof_out.profile = prof_new
+    prof_out.bins = bins_new
+    prof_out.ebins = ebins_new
+    prof_out.eprof = eprof_new
+    prof_out.area = area_new
+    prof_out.effexp = exp_new
+    prof_out.counts = counts_new
+    prof_out.bkgcounts = bkgcounts_new
+    prof_out.bkgprof = back_new
+
+    return prof_out
+

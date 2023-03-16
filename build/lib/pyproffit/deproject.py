@@ -1,5 +1,5 @@
 import numpy as np
-import pymc3 as pm
+import pymc as pm
 import time
 from scipy.special import gamma
 import matplotlib.pyplot as plt
@@ -473,7 +473,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
 
     norm0=np.append(np.repeat(testval,npt),testbkg)
 
-    import pystan
+    import stan
     import stan_utility as su
 
     stan_dir = os.path.expanduser('~/.stan_cache')
@@ -742,21 +742,10 @@ def medsmooth(prof):
     return  smoothed
 
 def EdgeCorr(nbin,rin_cm,rout_cm,em0):
-    """
-    For Onion Peeling deprojection, correct for edge effects by estimating the contribution of flux beyond the edge, using McLaughlin+99 method
-
-    :param nbin: Number of bins in input profile
-    :type nbin: int
-    :param rin_cm: Inner radii of the bins in cm
-    :type rin_cm: numpy.ndarray
-    :param rout_cm: Outer radii of the bins in cm
-    :type rout_cm: numpy.ndarray
-    :param em0: Deprojected emissivity profile before edge correction
-    :type em0: numpy.ndarray
-    :return: Edge-corrected deprojected profile
-    :rtype: numpy.ndarray
-    """
     # edge correction
+    rin_kpc = rin_cm / kpc
+    rout_kpc = rout_cm / kpc
+
     mrad = [rin_cm[nbin - 1], rout_cm[nbin - 1]]
     edge0 = (mrad[0] + mrad[1]) * mrad[0] * mrad[1] / rout_cm ** 3
     edge1 = 2. * rout_cm / mrad[1] + np.arccos(rout_cm / mrad[1])
@@ -773,14 +762,6 @@ def EdgeCorr(nbin,rin_cm,rout_cm,em0):
     return corr
 
 def OP(deproj,nmc=1000):
-    """
-    Run standard Onion Peeling deprojection including edge correction
-
-    :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the input data
-    :type deproj: class:`pyproffit.deproject.Deproject`
-    :param nmc: Number of Monte Carlo realizations of the profile to compute the uncertainties (default=1000)
-    :type nmc: int
-    """
     # Standard onion peeling
     prof=deproj.profile
     nbin=prof.nbin
@@ -792,8 +773,8 @@ def OP(deproj,nmc=1000):
     # Projection volumes
     if deproj.z is not None and deproj.cf is not None:
         amin2kpc = cosmo.kpc_proper_per_arcmin(deproj.z).value
-        rin_cm = (prof.bins - prof.ebins)*amin2kpc*Mpc/1e3
-        rout_cm = (prof.bins + prof.ebins)*amin2kpc*Mpc/1e3
+        rin_cm = rinam * amin2kpc * kpc
+        rout_cm = routam * amin2kpc * kpc
         x=MyDeprojVol(rin_cm,rout_cm)
         vol=np.transpose(x.deproj_vol())
         dlum=cosmo.luminosity_distance(deproj.z).value*Mpc
@@ -802,7 +783,7 @@ def OP(deproj,nmc=1000):
         # Projected emission measure profiles
         em0 = prof.profile * K2em * area
         e_em0 = prof.eprof * K2em * area
-        corr = EdgeCorr(nbin, rin_cm, rout_cm, em0)
+        corr = EdgeCorr(nbin, rinam, routam, em0)
     else:
         x=MyDeprojVol(rinam,routam)
         vol=np.transpose(x.deproj_vol()).T
@@ -813,6 +794,7 @@ def OP(deproj,nmc=1000):
     # Deproject and propagate error using Monte Carlo
     emres = np.repeat(e_em0,nmc).reshape(nbin,nmc) * np.random.randn(nbin,nmc) + np.repeat(em0,nmc).reshape(nbin,nmc)
     ct = np.repeat(corr,nmc).reshape(nbin,nmc)
+    #print(ct)
     allres = np.linalg.solve(vol, emres * (1. - ct))
     ev0 = np.std(allres,axis=1)
     v0 = np.median(allres,axis=1)
@@ -827,9 +809,6 @@ def OP(deproj,nmc=1000):
     edens = 0.5/np.sqrt(np.abs(bsm))*ev0
     deproj.dens_lo = deproj.dens - edens
     deproj.dens_hi = deproj.dens + edens
-
-    deproj.bkglim = np.max(routam)
-
 
 class Deproject(object):
     """

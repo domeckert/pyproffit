@@ -1,10 +1,8 @@
-Metadata-Version: 1.0
+Metadata-Version: 2.1
 Name: pyproffit
-Version: 0.7.0
+Version: 0.7.1
 Summary: Python package for PROFFIT
 Home-page: https://github.com/domeckert/pyproffit
 Author: Dominique Eckert
 Author-email: Dominique.Eckert@unige.ch
-License: UNKNOWN
-Description: UNKNOWN
-Platform: UNKNOWN
+License-File: LICENSE

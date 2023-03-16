@@ -1,6 +1,6 @@
-astropy
-iminuit
-matplotlib
 numpy
-pymc3
 scipy
+astropy
+matplotlib
+iminuit
+pymc

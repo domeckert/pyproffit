@@ -453,8 +453,11 @@ class Profile(object):
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
-            if voronoi:
-                errmap = data.errmap
+            if voronoi or data.rmsmap is not None:
+                if voronoi:
+                    errmap = data.errmap
+                else:
+                    errmap = data.rmsmap
                 profile[i] = np.sum(img[id]) / nv
                 eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
                 area[i] = nv * pixsize ** 2
@@ -889,7 +892,7 @@ class Profile(object):
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 
-    def Plot(self, model=None, samples=None, outfile=None, axes=None, scatter=False, figsize=(13, 10),
+    def Plot(self, model=None, samples=None, outfile=None, axes=None, scatter=False, offset=None, figsize=(13, 10),
              fontsize=40., xscale='log', yscale='log', fmt='o', markersize=7, lw=2,
              data_color='black', bkg_color='green', model_color='blue', **kwargs):
         """
@@ -953,7 +956,10 @@ class Profile(object):
         if not self.box:
             rads = self.bins
         else:
-            rads = self.bins - self.maxrad/2.
+            if offset is None:
+                rads = self.bins - self.maxrad/2.
+
+            else: rads = self.bins - offset
 
         mod_med, mod_lo, mod_hi = None, None, None
         if samples is not None and model is not None:
@@ -1063,7 +1069,8 @@ class Profile(object):
         self.eprof = np.sqrt(self.eprof**2 + eval**2)
 
 
-    def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr', lum_elow=0.5, lum_ehigh=2.0):
+    def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr',
+                   lum_elow=0.5, lum_ehigh=2.0, abund='angr'):
         """
         Use XSPEC to compute the conversion from count rate to emissivity using the pyproffit.calc_emissivity routine (see its description)
 
@@ -1103,6 +1110,7 @@ class Profile(object):
                                         arf=arf,
                                         type=type,
                                         lum_elow=lum_elow,
-                                        lum_ehigh=lum_ehigh)
+                                        lum_ehigh=lum_ehigh,
+                                        abund=abund)
 
         return self.ccf

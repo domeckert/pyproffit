@@ -349,6 +349,11 @@ class Profile(object):
         data = self.data
         img = data.img
         voronoi = self.voronoi
+
+        rmsmap = False
+        if data.rmsmap is not None:
+            rmsmap = True
+
         if not voronoi:
             exposure = np.copy(data.exposure)
 
@@ -453,7 +458,7 @@ class Profile(object):
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
-            if voronoi or data.rmsmap is not None:
+            if voronoi or rmsmap:
                 if voronoi:
                     errmap = data.errmap
                 else:

@@ -20,7 +20,7 @@ While the original PROFFIT package has attracted a substantial number of users, 
 
 Citation
 ********
-If you find the software useful, please cite [Eckert et al. 2020](https://ui.adsabs.harvard.edu/abs/2020OJAp....3E..12E/abstract)
+If you find the software useful, please cite `Eckert et al. 2020 <https://ui.adsabs.harvard.edu/abs/2020OJAp....3E..12E/abstract>`_
 
 Limitations
 ***********

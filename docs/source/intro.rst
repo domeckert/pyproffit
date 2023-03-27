@@ -18,6 +18,10 @@ Motivation
 
 While the original PROFFIT package has attracted a substantial number of users, its structure was extremely rigid and outdated, making it difficult to maintain and very difficult for the user to add any custom features. ``pyproffit`` aims at providing all the popular features of PROFFIT in the form of an easy-to-use Python package. The modular structure of pyproffit allows the user to easily interface with other Python packages and develop additional features and models. The ultimate goal is to allow the user to perform any type of analysis directly within a Jupyter notebook.
 
+Citation
+********
+If you find the software useful, please cite [Eckert et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020OJAp....3E..12E/abstract)
+
 Limitations
 ***********
 

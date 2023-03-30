@@ -515,9 +515,13 @@ class Profile(object):
         data = self.data
         img = data.img
         errmap = data.errmap
+
+        if data.rmsmap is not None:
+            errmap = data.rmsmap
+
         expo = data.exposure
         if errmap is None:
-            print('Error: No Voronoi map has been loaded')
+            print('Error: No Voronoi or RMS map has been loaded')
             return
         pixsize = data.pixsize
         if not self.custom:

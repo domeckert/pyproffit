@@ -3,8 +3,4 @@ scipy
 astropy
 matplotlib
 iminuit
-<<<<<<< HEAD
-pymc3
-=======
 pymc
->>>>>>> origin/pymc4

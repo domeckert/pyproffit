@@ -372,6 +372,9 @@ def model_from_samples(x, model, samples, psfmat=None):
     return mod_med, mod_lo, mod_hi
 
 
+import copy
+
+
 def Rebin(prof, minc=None, snr=None, fitter=None):
     '''
     Rebin an existing surface brightness profile to reach a given target number of counts per bin (minc) or a minimum S/N (snr).
@@ -466,6 +469,19 @@ def Rebin(prof, minc=None, snr=None, fitter=None):
                     eprof_new = np.append(eprof_new, epnew)
 
                     i = i + l
+                if i == nbin - 1:
+                    prof_new = np.append(prof_new, prof.profile[i])
+                    bins_new = np.append(bins_new, prof.bins[i])
+                    ebins_new = np.append(ebins_new, prof.ebins[i])
+                    eprof_new = np.append(eprof_new, prof.eprof[i])
+                    back_new = np.append(back_new, prof.bkgprof[i])
+                    area_new = np.append(area_new, prof.area[i])
+                    exp_new = np.append(exp_new, prof.effexp[i])
+                    bkgcounts_new = np.append(bkgcounts_new, prof.bkgcounts[i])
+                    counts_new = np.append(counts_new, prof.counts[i])
+                    i = i + 1
+
+
 
         else:
             if prof.profile[i] / prof.eprof[i] >= snr:
@@ -518,6 +534,18 @@ def Rebin(prof, minc=None, snr=None, fitter=None):
                     eprof_new = np.append(eprof_new, epnew)
 
                     i = i + l
+
+                if i == nbin - 1:
+                    prof_new = np.append(prof_new, prof.profile[i])
+                    bins_new = np.append(bins_new, prof.bins[i])
+                    ebins_new = np.append(ebins_new, prof.ebins[i])
+                    eprof_new = np.append(eprof_new, prof.eprof[i])
+                    back_new = np.append(back_new, prof.bkgprof[i])
+                    area_new = np.append(area_new, prof.area[i])
+                    exp_new = np.append(exp_new, prof.effexp[i])
+                    bkgcounts_new = np.append(bkgcounts_new, prof.bkgcounts[i])
+                    counts_new = np.append(counts_new, prof.counts[i])
+                    i = i + 1
 
     prof_out = copy.copy(prof)
     prof_out.nbin = len(prof_new)

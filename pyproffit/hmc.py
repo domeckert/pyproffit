@@ -1,4 +1,4 @@
-import pymc3 as pm
+import pymc as pm
 import numpy as np
 import time
 from .models import IntFunc

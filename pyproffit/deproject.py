@@ -1,5 +1,5 @@
 import numpy as np
-import pymc3 as pm
+import pymc as pm
 import time
 from scipy.special import gamma
 import matplotlib.pyplot as plt
@@ -625,16 +625,22 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,
     print('Running MCMC...')
     with basic_model:
         tm = pm.find_MAP()
-        trace = pm.sample(nmcmc, tune=tune, start=tm)
+        trace = pm.sample(nmcmc, tune=tune, initvals=tm)
         #trace = pm.sample(nmcmc)
     print('Done.')
     tend = time.time()
     print(' Total computing time is: ', (tend - tinit) / 60., ' minutes')
 
     # Get chains and save them to file
-    sampc = trace.get_values('coefs')
-    sampb = trace.get_values('bkg')
-    samples = np.append(sampc, sampb, axis=1)
+    chain_coefs = trace.posterior['coefs'].to_numpy()
+    sc_coefs = chain_coefs.shape
+    sampc = chain_coefs.reshape(sc_coefs[0] * sc_coefs[1], sc_coefs[2])
+
+    sampb = trace.posterior['bkg'].to_numpy().flatten()
+
+    spb = np.array([sampb]).T
+
+    samples = np.append(sampc, spb, axis=1)
     if samplefile is not None:
         np.savetxt(samplefile, samples)
         np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='pymc3')

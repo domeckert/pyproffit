@@ -349,6 +349,11 @@ class Profile(object):
         data = self.data
         img = data.img
         voronoi = self.voronoi
+
+        rmsmap = False
+        if data.rmsmap is not None:
+            rmsmap = True
+
         if not voronoi:
             exposure = np.copy(data.exposure)
 
@@ -453,8 +458,11 @@ class Profile(object):
 
             #            id=np.where(np.logical_and(np.logical_and(rads>=self.bins[i]-self.ebins[i],rads<self.bins[i]+self.ebins[i]),exposure>0.0)) #left-inclusive
             nv = len(img[id])
-            if voronoi:
-                errmap = data.errmap
+            if voronoi or rmsmap:
+                if voronoi:
+                    errmap = data.errmap
+                else:
+                    errmap = data.rmsmap
                 profile[i] = np.sum(img[id]) / nv
                 eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
                 area[i] = nv * pixsize ** 2
@@ -507,9 +515,13 @@ class Profile(object):
         data = self.data
         img = data.img
         errmap = data.errmap
+
+        if data.rmsmap is not None:
+            errmap = data.rmsmap
+
         expo = data.exposure
         if errmap is None:
-            print('Error: No Voronoi map has been loaded')
+            print('Error: No Voronoi or RMS map has been loaded')
             return
         pixsize = data.pixsize
         if not self.custom:

@@ -610,8 +610,8 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,
 
     with basic_model:
         # Priors for unknown model parameters
-        coefs = pm.Normal('coefs', mu=testval, sd=20, shape=npt)
-        bkgd = pm.Normal('bkg', mu=testbkg, sd=0.05, shape=1)
+        coefs = pm.Normal('coefs', mu=testval, sigma=20, shape=npt)
+        bkgd = pm.Normal('bkg', mu=testbkg, sigma=0.05, shape=1)
         ctot = pm.math.concatenate((coefs, bkgd), axis=0)
 
         # Expected value of outcome
@@ -1412,6 +1412,7 @@ class Deproject(object):
         if self.samples is None or self.z is None or self.cf is None:
             print('Error: no gas density profile found')
             return
+
         prof = self.profile
         cosmo = prof.cosmo
 
@@ -1475,7 +1476,7 @@ class Deproject(object):
 
                 mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
 
-                rho = np.corrcoef(radii, mgasdist)[0,1]
+            rho = np.corrcoef(radii, mgasdist)[0,1]
 
         else:
 
@@ -1505,7 +1506,122 @@ class Deproject(object):
             else:
                 plt.show(block=False)
 
-        return mg,mgl,mgh
+        return mg,mgl,mgh,rho
+
+    def Cov_Mgas_Lx(self, radius, radius_err=None, rad_scale='normal'):
+
+        if self.samples is None or self.z is None or self.cf is None:
+            print('Error: no gas density profile found')
+            return
+        prof = self.profile
+        cosmo = prof.cosmo
+
+        kpcp = cosmo.kpc_proper_per_arcmin(self.z).value
+        rkpc = prof.bins * kpcp
+        erkpc = prof.ebins * kpcp
+        nhconv =  mh * self.mu_e * self.nhc * kpc ** 3 / msun  # Msun/kpc^3
+
+        rad = prof.bins
+        sourcereg = np.where(rad < self.bkglim)
+
+        transf = 4. * (1. + self.z) ** 2 * (180. * 60.) ** 2 / np.pi / 1e-14 / self.nhc / Mpc * 1e3
+        pardens = list_params_density(rad, sourcereg, self.z, cosmo, self.nrc, self.nbetas, self.min_beta)
+        Kdens = calc_density_operator(rad, pardens, self.z, cosmo)
+
+        # All gas density profiles
+        alldens = np.sqrt(np.dot(Kdens, np.exp(self.samples.T)) / self.cf * transf)  # [0:nptfit, :]
+
+        # Matrix containing integration volumes
+        volmat = np.repeat(4. * np.pi * rkpc ** 2 * 2. * erkpc, alldens.shape[1]).reshape(len(prof.bins),alldens.shape[1])
+
+        # Compute Mgas profile as cumulative sum over the volume
+        mgas = np.cumsum(alldens * nhconv * volmat, axis=0)
+
+        # Interpolate at the radius of interest
+        # Avoid diverging profiles in the center by cutting to the innermost points, if necessary
+        a = prof.bins[0]/2.
+
+        # Set vector with list of parameters
+        pars = list_params(rad, sourcereg, self.nrc, self.nbetas, self.min_beta)
+
+        # Set randomization of the radius if radius_err is not None
+        rho = None
+
+        if radius_err is not None:
+
+            nsim = len(self.samples)
+
+            if rad_scale == 'normal':
+
+                radii = radius_err * np.random.randn(nsim) + radius
+
+            elif rad_scale == 'lognormal':
+
+                rad_log = np.log(radius)
+
+                err_rad_log = radius_err / radius
+
+                radii = np.exp(err_rad_log * np.random.randn(nsim) + rad_log)
+
+            else:
+
+                print('Unknown value rad_scale=%s , reverting to normal' % (rad_scale))
+
+                radii = radius_err * np.random.randn(nsim) + radius
+
+            if np.any(radii < 0.0):
+
+                isneg = np.where(radii < 0.0)
+
+                radii[isneg] = 0.0
+
+            mgasdist = np.empty(len(self.samples))
+            allint = np.empty(len(self.samples))
+
+            b = radii / kpcp
+
+            for i in range(len(self.samples)):
+
+                mgasdist[i] = np.interp(radii[i], rkpc, mgas[:, i])
+
+                # Compute linear combination of basis functions in the source region
+                Kint = calc_int_operator(a, b[i], pars)
+                tal = np.dot(Kint, np.exp(self.samples.T)) * self.lumfact
+                allint[i] = tal[1, i] - tal[0, i]
+
+        else:
+
+            f = interp1d(rkpc, mgas, axis=0)
+
+            Kint = calc_int_operator(a, radius/kpcp, pars)
+
+            tal = np.dot(Kint, np.exp(self.samples.T)) * self.lumfact
+            allint = tal[1, :] - tal[0, :]
+
+            mgasdist = f(radius)
+
+        rho_lxmg = np.corrcoef(allint, mgasdist)[0,1]
+
+        mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
+        medint, intlo, inthi = np.percentile(allint, [50.,50.-68.3/2.,50.+68.3/2.])
+
+        outdict = {'MGAS': mg,
+                   'MGAS_LO': mgl,
+                   'MGAS_HI': mgh,
+                   'LX': medint,
+                   'LX_LO': intlo,
+                   'LX_HI': inthi,
+                   'RHO_LXMG': rho_lxmg
+                   }
+        if radius_err is not None:
+            rho_rlx =  np.corrcoef(radii, allint)[0,1]
+            rho_rmg =  np.corrcoef(radii, mgasdist)[0,1]
+
+            outdict['RHO_RLX'] = rho_rlx
+            outdict['RHO_RMG'] = rho_rmg
+
+        return outdict
+
 
     def PlotMgas(self,rout=None,outfile=None,xunit="kpc", figsize=(13, 10), color='C0', lw=2, fontsize=40, xscale='log', yscale='log'):
         """

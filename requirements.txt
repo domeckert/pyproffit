@@ -10,3 +10,5 @@ iminuit>=2.0.0
 pymc
 emcee
 docutils<0.18
+aesara
+corner

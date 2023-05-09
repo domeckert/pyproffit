@@ -488,6 +488,8 @@ class Profile(object):
         self.eprof = eprof
         self.area = area
         self.effexp = effexp
+        self.bkgval = None
+        self.bkgerr = None
 
         if not voronoi:
             self.counts = counts
@@ -761,7 +763,7 @@ class Profile(object):
                 hdul.append(psfhdu)
             hdul.writeto(outfile, overwrite=True)
 
-    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None, psfmin = 1e-7):
+    def PSF(self, psffunc=None, psffile=None, psfimage=None, psfpixsize=None, sourcemodel=None, psfmin = 0):
         """
         Function to calculate a PSF convolution matrix given an input PSF image or function.
         To compute the PSF mixing matrix, images of each annuli are convolved with the PSF image using FFT and determine the fraction of photons leaking into neighbouring annuli. FFT-convolved images are then used to determine a mixing matrix. See Eckert et al. 2020 for more details.
@@ -1076,6 +1078,8 @@ class Profile(object):
         eval=val*np.log(10.)*fitter.minuit.errors['bkg']
         self.profile = self.profile - val
         self.eprof = np.sqrt(self.eprof**2 + eval**2)
+        self.bkgval = val
+        self.bkgerr = eval
 
 
     def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr',

@@ -488,6 +488,8 @@ class Profile(object):
         self.eprof = eprof
         self.area = area
         self.effexp = effexp
+        self.bkgval = None
+        self.bkgerr = None
 
         if not voronoi:
             self.counts = counts
@@ -1076,6 +1078,8 @@ class Profile(object):
         eval=val*np.log(10.)*fitter.minuit.errors['bkg']
         self.profile = self.profile - val
         self.eprof = np.sqrt(self.eprof**2 + eval**2)
+        self.bkgval = val
+        self.bkgerr = eval
 
 
     def Emissivity(self, z=None, nh=None, kt=6.0, rmf=None, Z=0.3, elow=0.5, ehigh=2.0, arf=None, type='cr',

@@ -541,7 +541,7 @@ def Deproject_Multiscale_Stan(deproj,bkglim=None,nmcmc=1000,back=None,samplefile
     
 def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,samplefile=None,nrc=None,nbetas=6,min_beta=0.6):
     """
-    Run the multiscale deprojection optimization using the PyMC3 backend
+    Run the multiscale deprojection optimization using the PyMC backend
 
     :param deproj: Object of type :class:`pyproffit.deproject.Deproject` containing the data and parameters
     :type deproj: class:`pyproffit.deproject.Deproject`
@@ -622,11 +622,31 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,
         Y_obs = pm.Poisson('counts', mu=pred, observed=counts)
 
     tinit = time.time()
+
+    isjax = False
+
+    try:
+        import pymc.sampling.jax as pmjax
+
+    except ImportError:
+        print('JAX not found, using default sampler')
+
+    else:
+        isjax = True
+        import pymc.sampling.jax as pmjax
+
     print('Running MCMC...')
     with basic_model:
         tm = pm.find_MAP()
-        trace = pm.sample(nmcmc, tune=tune, initvals=tm)
-        #trace = pm.sample(nmcmc)
+
+        if not isjax:
+
+            trace = pm.sample(nmcmc, initvals=tm, tune=tune)
+
+        else:
+
+            trace = pmjax.sample_numpyro_nuts(nmcmc, initvals=tm, tune=tune)
+
     print('Done.')
     tend = time.time()
     print(' Total computing time is: ', (tend - tinit) / 60., ' minutes')

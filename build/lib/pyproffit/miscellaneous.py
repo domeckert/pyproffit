@@ -375,7 +375,7 @@ def model_from_samples(x, model, samples, psfmat=None):
 import copy
 
 
-def Rebin(prof, minc=None, snr=None, fitter=None):
+def Rebin(prof, minc=None, snr=None):
     '''
     Rebin an existing surface brightness profile to reach a given target number of counts per bin (minc) or a minimum S/N (snr).
 
@@ -385,8 +385,6 @@ def Rebin(prof, minc=None, snr=None, fitter=None):
     :type minc: int
     :param snr: Minimum signal-to-noise ratio of the output profile. If None, a minimum number of counts is used. Defaults to None.
     :type snr: float
-    :param fitter: Object of type :class:`pyproffit.fitting.Fitter` containing a model and optimization results to subtract the sky background. If None, no sky background subtraction is performed. Defaults to None.
-    :type fitter: :class:`pyproffit.fitting.Fitter`
     :return: A new :class:`pyproffit.profextract.Profile` object with the rebinned surface brightness profile.
     :rtype: :class:`pyproffit.profextract.Profile`
     '''
@@ -416,9 +414,9 @@ def Rebin(prof, minc=None, snr=None, fitter=None):
 
     skybkg, eskybkg = 0., 0.
 
-    if fitter is not None:
-        skybkg = np.power(10., fitter.minuit.values['bkg'])
-        eskybkg = skybkg * np.log(10.) * fitter.minuit.errors['bkg']
+    if prof.bkgval is not None:
+        skybkg = prof.bkgval
+        eskybkg = prof.bkgerr
 
     i = 0
     while i < nbin:

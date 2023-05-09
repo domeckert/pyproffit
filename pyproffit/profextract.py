@@ -82,11 +82,10 @@ class Profile(object):
     :param data: Object of type :class:`pyproffit.data.Data` containing the data to be used
     :type data: class:`pyproffit.Data`
     :param center_choice: Choice of the center of the surface brightness profile. Available options are "centroid", "peak", "custom_ima" and "custom_fk5".
-        Args:
-            - 'centroid': Compute image centroid and ellipticity. This is done by performing principle component analysis on the count image. If a dmfilth image exists, it will be used instead of the original count image.
-            - 'peak': Compute the surface brightness peak, The peak is computed as the maximum of the count image after a light smoothing. If a dmfilth image exists, it will be used instead of the original count image.
-            - 'custom_fk5': Use any custom center in FK5 coordinates, provided by the "center_ra" and "center_dec" arguments
-            - 'custom_ima': Similar to 'custom_fk5' but with input coordinates in image pixels
+        - 'centroid': Compute image centroid and ellipticity. This is done by performing principle component analysis on the count image. If a dmfilth image exists, it will be used instead of the original count image.
+        - 'peak': Compute the surface brightness peak, The peak is computed as the maximum of the count image after a light smoothing. If a dmfilth image exists, it will be used instead of the original count image.
+        - 'custom_fk5': Use any custom center in FK5 coordinates, provided by the "center_ra" and "center_dec" arguments
+        - 'custom_ima': Similar to 'custom_fk5' but with input coordinates in image pixels
     :type center_choice: str
     :param maxrad: The maximum radius (in arcmin) out to which the surface brightness profile will be computed
     :type maxrad: float
@@ -97,10 +96,9 @@ class Profile(object):
     :param center_dec: User defined center declination. If center_choice='custom_fk5' this is the declination in degrees. If center_choice='custom_ima' this is the image pixel on the Y axis. If center_choice='peak' or 'centroid' this is not used.
     :type center_dec: float
     :param binning: Binning type. Available types are 'linear', 'log' or 'custom'. Defaults to 'linear'.
-        Args:
-            - 'linear': Use a linear radial binning with bin size equal to 'binsize'
-            - 'log': Use logarithmic binning, i.e. bin size increasing logarithmically with radius with a minimum bin size given by 'binsize'
-            - 'custom': Any user-defined binning in the form of an input numpy array provided through the 'bins' option
+        - 'linear': Use a linear radial binning with bin size equal to 'binsize'
+        - 'log': Use logarithmic binning, i.e. bin size increasing logarithmically with radius with a minimum bin size given by 'binsize'
+        - 'custom': Any user-defined binning in the form of an input numpy array provided through the 'bins' option
     :type binning: str
     :param centroid_region: If center_choice='centroid', this option defines the radius of the region (in arcmin), centered on the center of the image, within which the centroid will be calculated. If centroid_region=None the entire image is used. Defaults to None.
     :type centroid_region: float

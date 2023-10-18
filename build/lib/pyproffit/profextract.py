@@ -326,6 +326,8 @@ class Profile(object):
         self.cosmo = cosmo
         self.scatter = None
         self.escat = None
+        self.bkgval = 0.
+        self.bkgerr = 0.
 
     def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., minexp=0.05, box=False, width=None):
         """
@@ -488,8 +490,6 @@ class Profile(object):
         self.eprof = eprof
         self.area = area
         self.effexp = effexp
-        self.bkgval = None
-        self.bkgerr = None
 
         if not voronoi:
             self.counts = counts
@@ -735,6 +735,10 @@ class Profile(object):
                 hdr.comments['MAXRAD'] = 'Profile maximum radius in arcmin'
                 hdr['BINNING'] = self.binning
                 hdr.comments['BINNING'] = 'Binning scheme (linear, log or custom)'
+                hdr['BKGVAL'] = self.bkgval
+                hdr.comments['BKGVAL'] = 'Subtracted sky background count rate'
+                hdr['BKGERR'] = self.bkgerr
+                hdr.comments['BKGERR'] = 'Error on subtracted sky background'
                 hdr['IMAGE'] = self.data.imglink
                 hdr.comments['IMAGE'] = 'Path to input image file'
                 hdr['EXPMAP'] = self.data.explink
@@ -747,6 +751,7 @@ class Profile(object):
                 hdr.comments['VORONOI'] = 'Voronoi on/off switch'
                 hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2020)'
                 hdul.append(tbhdu)
+
             if model is not None:
                 cols = []
                 npar = len(model.params)

@@ -56,6 +56,9 @@ def Reload(infile, model=None):
                 prof.custom = True
             prof.ellangle = head['ROT_ANGLE']
             prof.ellratio = head['ELL_RATIO']
+            if 'BKGVAL' in head:
+                prof.bkgval = head['BKGVAL']
+                prof.bkgerr = head['BKGERR']
 
         if hduname == 'PSF':
             print('PSF structure found')
@@ -80,6 +83,7 @@ def Reload(infile, model=None):
 
                 model.params = dmod['VALUE']
                 model.errors = dmod['ERROR']
+
 
     fin.close()
 

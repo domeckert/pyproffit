@@ -327,7 +327,7 @@ class Profile(object):
         self.scatter = None
         self.escat = None
 
-    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., minexp=0.05, box=False, width=None):
+    def SBprofile(self, ellipse_ratio=1.0, rotation_angle=0.0, angle_low=0., angle_high=360., minexp=0.05, box=False, width=None, show_region=False):
         """
         Extract a surface brightness profile and store the results in the input Profile object
 
@@ -345,6 +345,8 @@ class Profile(object):
         :type box: bool
         :param width: In case box=True, set the full width of the box (in arcmin)
         :type width: float
+        :param show_region: In case show_region=True create and show region of the corresponding used photons. Used for the user to check, especially in jupyter if the region chosen correctly corresponds to their region of interest
+        :type show_region: bool
         """
         data = self.data
         img = data.img
@@ -403,7 +405,7 @@ class Profile(object):
         self.anglow = angle_low
         self.anghigh = angle_high
         # Convert degree to radian and rescale to 0-2pi
-        if angle_low != 0.0 and angle_high != 360.:
+        if angle_low != 0.0 or angle_high != 360.:
             if angle_low < 0.0:
                 anglow = np.deg2rad(np.fmod(angle_low, 360.) + 360.)
             else:
@@ -424,13 +426,12 @@ class Profile(object):
             anghigh = anghigh + 2.*np.pi - anglow
         else:
             anghigh = anghigh - anglow
-        if angle_high < angle_low:
-            zcross = np.where(angles < np.deg2rad(angle_low))
-            angles[zcross] = angles[zcross] + 2.*np.pi - anglow
-            zgr = np.where(angles >= np.deg2rad(angle_low))
-            angles[zgr] = angles[zgr] - anglow
-        else:
-            angles = angles - anglow
+        #
+        zcross = np.where(angles < anglow)
+        zgr = np.where(angles >= anglow)
+        angles[zcross] = angles[zcross] + 2.*np.pi - anglow
+        angles[zgr] = angles[zgr] - anglow
+        #
         tol = 0.5e-5
         for i in range(nbin):
             if not box:
@@ -496,6 +497,49 @@ class Profile(object):
             self.bkgprof = bkgprof
             self.bkgcounts = bkgcounts
 
+        if show_region:
+            self.show_photons()
+
+    def show_photons(self):
+        data = self.data
+        y, x = np.indices(data.axes)
+        angle_low, angle_high = self.anglow, self.anghigh
+        # Convert degree to radian and rescale to 0-2pi
+        if angle_low != 0.0 or angle_high != 360.:
+            if angle_low < 0.0:
+                anglow = np.deg2rad(np.fmod(angle_low, 360.) + 360.)
+            else:
+                anglow = np.deg2rad(np.fmod(angle_low, 360.))
+            if angle_high < 0.0:
+                anghigh = np.deg2rad(np.fmod(angle_high, 360.) + 360.)
+            else:
+                anghigh = np.deg2rad(np.fmod(angle_high, 360.))
+        else:
+            anglow = 0.
+            anghigh = 2. * np.pi
+        # Compute angles and set them between 0 and 2pi
+        angles = np.arctan2(y - self.cy , x - self.cx)
+        aneg = np.where( angles < 0.)
+        angles[aneg] = angles[aneg] + 2. * np.pi
+        # Now set angles relative to anglow
+        if anghigh<anglow: #We cross the zero
+            anghigh = anghigh + 2.*np.pi - anglow
+        else:
+            anghigh = anghigh - anglow
+    
+        zcross = np.where(angles < anglow)
+        zgr = np.where(angles >= anglow)
+        angles[zcross] = angles[zcross] + 2.*np.pi - anglow
+        angles[zgr] = angles[zgr] - anglow
+    
+    
+        mask = np.zeros(data.img.shape)
+        mask[np.where(np.logical_and(np.logical_and((data.exposure > 0), (angles >= 0.)), (angles <= anghigh)))] = 1
+        fig = plt.figure(figsize=(10,10))
+        s1=plt.subplot(111)
+        plt.imshow(mask * data.img, aspect='auto', origin='lower', vmin=0, vmax=1)
+        plt.scatter(self.cx, self.cy, color='r', marker='x')
+        return
 
     def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, outsamples=None, fitter=None, thin=10):
         """

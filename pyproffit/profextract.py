@@ -832,7 +832,7 @@ class Profile(object):
                 fpsf = fits.open(psffile)
                 psfimage = fpsf[0].data.astype(float)
                 if psfpixsize is not None:
-                    if fpsf[0].header.has_key('CDELT2'):
+                    if 'CDELT2' in fpsf[0].header:
                         print('Warning: overwriting passed \'psfpixsize\' parameters with \'CDELT2\' found in \'psffile\' header')
                         psfpixsize = float(fpsf[0].header['CDELT2'])
                         CUNIT1 = fpsf[0].header['CUNIT1'] # can be deg arcmin arcsec: # convert in arcmin to be consistent with data

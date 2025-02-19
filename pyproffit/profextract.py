@@ -883,6 +883,9 @@ class Profile(object):
             if psfimage is not None:
                 norm = np.sum(psfimage)
                 kernel = psfimage / norm
+                if psfpixsize != self.data.pixsize:
+                    print('Error: pixel size in PSF image different from the one in the dataset')
+                    return
             if kernel is None:
                 print('No kernel provided, bye bye')
                 return

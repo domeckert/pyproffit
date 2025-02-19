@@ -832,7 +832,19 @@ class Profile(object):
                 fpsf = fits.open(psffile)
                 psfimage = fpsf[0].data.astype(float)
                 if psfpixsize is not None:
-                    psfpixsize = float(fpsf[0].header['CDELT2'])
+                    if fpsf[0].header.has_key('CDELT2'):
+                        print('Warning: overwriting passed \'psfpixsize\' parameters with \'CDELT2\' found in \'psffile\' header')
+                        psfpixsize = float(fpsf[0].header['CDELT2'])
+                        CUNIT1 = fpsf[0].header['CUNIT1'] # can be deg arcmin arcsec: # convert in arcmin to be consistent with data
+                        if CUNIT1.lower() == 'deg':
+                            psfpixsize = psfpixsize * 60
+                        elif CUNIT1.lower() == 'arcmin':
+                            psfpixsize = psfpixsize
+                        elif CUNIT1.lower() == 'arcsec':
+                            psfpixsize = psfpixsize / 60
+                        else:
+                            raise ValueError(f'{CUNIT1} not recognised: use [\'deg\', \'arcmin\', \'arcsec\']')
+                        #
                     if psfpixsize == 0.0:
                         print('Error: no pixel size is provided for the PSF image and the CDELT2 keyword is not set')
                         return

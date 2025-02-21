@@ -7,6 +7,7 @@ import matplotlib.gridspec as gridspec
 from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import FlatLambdaCDM
+import math
 
 def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
     """
@@ -814,97 +815,125 @@ class Profile(object):
 
         :param psffunc: Function describing the radial shape of the PSF, with the radius in arcmin
         :type psffunc: function
-        :param psffile: Path to file containing an image of the PSF. The pixel size must be equal to the pixel size of the image.
+        :param psffile: Path to file containing an image of the PSF. The pixel size \must be equal to the pixel size of the image.
         :type psffile: str
-        :param psfimage: Array containing an image of the PSF. The pixel size must be equal to the pixel size of the image.
+        :param psfimage: Array containing an image of the PSF. The pixel size should be passed with psfpixsize parameter and must be equal to the
+        pixel size of the image.
         :type psfimage: class:`numpy.ndarray`
-        :param psfpixsize: (currently inactive) Pixel size of the PSF image in arcsec. Currently not implemented.
+        :param psfpixsize: Pixel size of the PSF image in arcsec.
         :type psfpixsize: float
         :param sourcemodel: Object of type :class:`pyproffit.models.Model` including a surface brightness model to account for surface brightness gradients across the bins. If sourcemodel=None a flat distribution is assumed across each bin. Defaults to None
         :type sourcemodel: class:`pyproffit.models.Model`
         """
-        if psffile is None and psfimage is None and psffunc is None:
-            print('No PSF image given')
-            return
-        else:
-            data = self.data
-            if psffile is not None:
-                fpsf = fits.open(psffile)
-                psfimage = fpsf[0].data.astype(float)
-                if psfpixsize is not None:
-                    psfpixsize = float(fpsf[0].header['CDELT2'])
-                    if psfpixsize == 0.0:
-                        print('Error: no pixel size is provided for the PSF image and the CDELT2 keyword is not set')
-                        return
-                fpsf.close()
-            if psfimage is not None:
-                if psfpixsize is None or psfpixsize <= 0.0:
-                    print('Error: no pixel size is provided for the PSF image')
-                    return
-            if self.bins is None:
-                print('No radial profile extracted')
-                return
-            rad = self.bins
-            erad = self.ebins
-            nbin = self.nbin
-            psfout = np.zeros((nbin, nbin))
-            exposure = data.exposure
-            y, x = np.indices(exposure.shape)
-            rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
-            kernel = None
-            if psffunc is not None:
-                 # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
-                kernel = psffunc(rads)
-                norm = np.sum(kernel)
-                # psfmin = 0.
-                frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
-                if frmax(exposure.shape[0] / 2) < 0.:
-                    rmax = brentq(frmax, 0., exposure.shape[0]) / self.data.pixsize  # pixsize
-                    npix = int(rmax)
-                else:
-                    npix = int(exposure.shape[0] / 2)
-                yp, xp = np.indices((2 * npix + 1, 2 * npix + 1))
-                rpix = np.sqrt((xp - npix) ** 2 + (yp - npix) ** 2) * self.data.pixsize
-                kernel = psffunc(rpix)
-                norm = np.sum(kernel)
-                kernel = kernel / norm
-            if psfimage is not None:
-                norm = np.sum(psfimage)
-                kernel = psfimage / norm
-            if kernel is None:
-                print('No kernel provided, bye bye')
-                return
+        settable_parameters = [psffile, psfimage, psffunc]  # Put all parameters that can be set between psffile, psfimage, psffunc in a list
+        n_set_parameters = sum(p is not None for p in settable_parameters)  # Count non-None values
 
-            # Sort pixels into radial bins
-            tol = 0.5e-5
-            sort_list = []
-            for n in range(nbin):
-                if n == 0:
-                    sort_list.append(np.where(
-                        np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol)))
+        if n_set_parameters != 1:
+            raise ValueError("You must set exactly one of 'psffile', 'psffunc', or 'psfimage'.")
+        if self.bins is None:
+            print('No radial profile extracted')
+            return
+        #
+        rad = self.bins
+        erad = self.ebins
+        nbin = self.nbin
+        psfout = np.zeros((nbin, nbin))
+        exposure = self.data.exposure
+        y, x = np.indices(exposure.shape)
+        rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
+        kernel = None
+        #
+        if psffile is not None:
+            print(f'Using {psffile = }')
+            with fits.open(psffile) as fpsf:
+                psfFITSimage = fpsf[0].data.astype(float)
+                psfFITSheader = fpsf[0].header
+            #
+            if 'CDELT2' in psfFITSheader:
+                psfFITSpixsize = np.abs(float(psfFITSheader['CDELT2']))
+                if 'CUNIT1' in psfFITSheader:
+                    CUNIT1 = psfFITSheader['CUNIT1'] # can be deg arcmin arcsec: # convert in arcmin to be consistent with data
+                    if CUNIT1.lower() == 'deg':
+                        psfFITSpixsize = psfFITSpixsize * 60
+                    elif CUNIT1.lower() == 'arcmin':
+                        psfFITSpixsize = psfFITSpixsize
+                    elif CUNIT1.lower() == 'arcsec':
+                        psfFITSpixsize = psfFITSpixsize / 60
+                    else:
+                        raise ValueError(f'{CUNIT1} not recognised: use [\'deg\', \'arcmin\', \'arcsec\']')
                 else:
-                    sort_list.append(np.where(np.logical_and(rads >= np.round(rad[n] - erad[n], 5) + tol,
-                                                                    rads < np.round(rad[n] + erad[n], 5) + tol)))
-            # Calculate average of PSF image pixel-by-pixel and sort it by radial bins
-            for n in range(nbin):
-                # print('Working with bin',n+1)
-                region = sort_list[n]
-                npt = len(x[region])
-                imgt = np.zeros(exposure.shape)
-                if sourcemodel is None or sourcemodel.params is None:
-                    imgt[region] = 1. / npt
-                else:
-                    imgt[region] = sourcemodel.model(rads[region],*sourcemodel.params)
-                    norm = np.sum(imgt[region])
-                    imgt[region] = imgt[region]/norm
-                # FFT-convolve image with kernel
-                blurred = convolve(imgt, kernel, mode='same')
-                numnoise = np.where(blurred<1e-15)
-                blurred[numnoise]=0.0
-                for p in range(nbin):
-                    sn = sort_list[p]
-                    psfout[n, p] = np.sum(blurred[sn])
-            self.psfmat = psfout
+                    print('CUNIT1 not found in header. Assuming it is deg')
+                    psfFITSpixsize = psfFITSpixsize * 60
+            else:
+                raise IndexError('CDELT2 not found in psffile')
+            #
+            psfpixsize = psfFITSpixsize
+            psfimage = psfFITSimage
+            # from here onward it becomes identical to have set psfimage=np.ndarray + psfpixsize=value
+            if not math.isclose(psfpixsize, self.data.pixsize, rel_tol=1e-9):
+                print('Error: pixel size in PSF image different from the one in the dataset')
+                return
+            norm = np.sum(psfimage)
+            kernel = psfimage / norm
+        elif psfimage is not None:
+            if psfpixsize is None or psfpixsize <= 0.0:
+                print('Error: no pixel size is provided for the PSF image')
+                return
+            if not math.isclose(psfpixsize, self.data.pixsize, rel_tol=1e-9):
+                print('Error: pixel size in PSF image different from the one in the dataset')
+                return
+            norm = np.sum(psfimage)
+            kernel = psfimage / norm
+        else: # then it means psffunc must have been not None
+            # truncation radius, i.e. we exclude the regions where the PSF signal is less than this value
+            kernel = psffunc(rads)
+            norm = np.sum(kernel)
+            # psfmin = 0.
+            frmax = lambda x: psffunc(x) * 2. * np.pi * x / norm - psfmin
+            if frmax(exposure.shape[0] / 2) < 0.:
+                rmax = brentq(frmax, 0., exposure.shape[0]) / self.data.pixsize  # pixsize
+                npix = int(rmax)
+            else:
+                npix = int(exposure.shape[0] / 2)
+            yp, xp = np.indices((2 * npix + 1, 2 * npix + 1))
+            rpix = np.sqrt((xp - npix) ** 2 + (yp - npix) ** 2) * self.data.pixsize
+            kernel = psffunc(rpix)
+            norm = np.sum(kernel)
+            kernel = kernel / norm
+        if kernel is None:
+            print('No kernel provided, bye bye')
+            return
+
+        # Sort pixels into radial bins
+        tol = 0.5e-5
+        sort_list = []
+        for n in range(nbin):
+            if n == 0:
+                sort_list.append(np.where(
+                    np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol)))
+            else:
+                sort_list.append(np.where(np.logical_and(rads >= np.round(rad[n] - erad[n], 5) + tol,
+                                                                rads < np.round(rad[n] + erad[n], 5) + tol)))
+        # Calculate average of PSF image pixel-by-pixel and sort it by radial bins
+        for n in range(nbin):
+            # print('Working with bin',n+1)
+            region = sort_list[n]
+            npt = len(x[region])
+            imgt = np.zeros(exposure.shape)
+            if sourcemodel is None or sourcemodel.params is None:
+                imgt[region] = 1. / npt
+            else:
+                imgt[region] = sourcemodel.model(rads[region],*sourcemodel.params)
+                norm = np.sum(imgt[region])
+                imgt[region] = imgt[region]/norm
+            # FFT-convolve image with kernel
+            blurred = convolve(imgt, kernel, mode='same')
+            numnoise = np.where(blurred<1e-15)
+            blurred[numnoise]=0.0
+            for p in range(nbin):
+                sn = sort_list[p]
+                psfout[n, p] = np.sum(blurred[sn])
+        self.psfmat = psfout
 
     def SaveModelImage(self, outfile, model=None, vignetting=True):
         """

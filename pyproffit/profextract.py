@@ -867,7 +867,7 @@ class Profile(object):
                     psfout[n, p] = np.sum(blurred[sn])
             self.psfmat = psfout
 
-    def SaveModelImage(self, outfile, model=None, vignetting=True):
+    def SaveModelImage(self, outfile, model=None, vignetting=True, residual=False, residual_type='sub'):
         """
         Compute a model image and output it to a FITS file
 
@@ -904,7 +904,15 @@ class Profile(object):
         gsexp = gaussian_filter(self.data.exposure, smoothing_scale)
         bkgsmoothed = np.nan_to_num(np.divide(gsb, gsexp)) * self.data.exposure
  #       bkgsmoothed = bkg_smooth(self.data,smoothing_scale)
-        hdu = fits.PrimaryHDU(modimg+bkgsmoothed)
+        if residual:
+            if residual_type == 'sub':
+                outimage =  self.data.img - modimg - bkgsmoothed
+            else:
+                outimage = self.data.img / (modimg + bkgsmoothed)
+        else:
+            outimage =  modimg + bkgsmoothed
+
+        hdu = fits.PrimaryHDU(outimage)
         hdu.header = head
         hdu.writeto(outfile, overwrite=True)
 

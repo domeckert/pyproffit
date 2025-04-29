@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: pyproffit
 Version: 0.8
 Summary: Python package for PROFFIT
@@ -6,3 +6,15 @@ Home-page: https://github.com/domeckert/pyproffit
 Author: Dominique Eckert
 Author-email: Dominique.Eckert@unige.ch
 License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: astropy
+Requires-Dist: matplotlib
+Requires-Dist: iminuit
+Requires-Dist: pymc
+Dynamic: author
+Dynamic: author-email
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: summary

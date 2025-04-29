@@ -968,7 +968,7 @@ class Profile(object):
             outmod = model(rads, *model.params)
         else:
             outmod = np.interp(rads, self.bins, self.profile)
-        if vignetting:
+        if vignetting or residual:
             modimg = outmod * pixsize ** 2 * self.data.exposure
         else:
             modimg = outmod * pixsize ** 2

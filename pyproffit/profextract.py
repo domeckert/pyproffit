@@ -139,7 +139,7 @@ class Profile(object):
             self.cy = center_dec - 1.
             self.ellangle = None
             self.ellratio = None
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            pixcrd = np.array([[self.cx, self.cy]], np.float64)
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
             self.cra = world[0][0]
             self.cdec = world[0][1]
@@ -207,7 +207,7 @@ class Profile(object):
             print('Centroid position:', x_c + 1, y_c + 1)
             self.cx = x_c
             self.cy = y_c
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            pixcrd = np.array([[self.cx, self.cy]], np.float64)
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
             self.cra = world[0][0]
             self.cdec = world[0][1]
@@ -255,7 +255,7 @@ class Profile(object):
 
             print('Coordinates of surface-brightness peak:', self.cx + 1, self.cy + 1)
 
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            pixcrd = np.array([[self.cx, self.cy]], np.float64)
 
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
 

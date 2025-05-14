@@ -75,6 +75,8 @@ def plot_multi_methods(profs, deps, labels=None, outfile=None, xunit='kpc', figs
         dep = deps[i]
         prof = profs[i]
 
+        if dep.bkglim is None:
+            dep.bkglim = prof.bins[-1] + prof.ebins[-1]        
 
         kpcp = prof.cosmo.kpc_proper_per_arcmin(dep.z).value
 

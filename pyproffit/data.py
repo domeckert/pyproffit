@@ -87,10 +87,12 @@ class Data(object):
     :type voronoi: bool , optional
     :param rmsmap: Path to error map if the data is not Poisson distributed
     :type rmsmap: str , optional
+    :param rmsval: Value of rms in Jy/beam, assumed constant. Used only if radio=True.
+    :type rmsval: float , optional
     :param radio: Define whether the input image is a radio image or not (default=False)
     :type radio: bool , optional
     '''
-    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None, radio=False):
+    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None, rmsval=None, radio=False):
         '''
         Constructor of class Data
 
@@ -136,6 +138,17 @@ class Data(object):
             self.beamarea_pix = beamarea_arcmin/(self.pixsize*self.pixsize)
             beamarea_arcsec = self.beamarea_pix*self.pixsize*self.pixsize*3600. #in arcsec^2
             print('The beam area is: {:.2f} arcsec^2'.format(beamarea_arcsec))
+            if rmsval:
+                self.rms_jy_beam = rmsval
+                self.rms_jy_arcmin = rmsval/(self.beamarea_pix*self.pixsize*self.pixsize)
+                print('The noise is: {:.2e} Jy/beam = {:.2e} Jy/arcmin^2'.format(self.rms_jy_beam, self.rms_jy_arcmin))
+            else:
+                print('No rmsval provided, will assume an rms of zero (so no error bars will be displayed)')
+                self.rms_jy_beam = 0.
+                self.rms_jy_arcmin = 0./(self.beamarea_pix*self.pixsize*self.pixsize)
+        else:
+            self.rms_jy_beam = None
+            self.rms_jy_arcmin = None
         self.axes = self.img.shape
         if voronoi:
             self.errmap = fimg[1].data.astype(float)

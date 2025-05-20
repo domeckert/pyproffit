@@ -58,10 +58,10 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
     plt.xlabel('Radius [arcmin]', fontsize=fontsize)
     if profs[0].radio: # check if the first profile is radio to set the correct units (it will assume that all the others are radio too)
         plt.ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
-        rms_values = [prof.data.rms_jy_arcmin for prof in profs if prof.radio]
+        rms_values = [np.nanmean(prof.bkgprof) for prof in profs]
         all_rms_equal = all(r == rms_values[0] for r in rms_values)
-        if all_rms_equal: # plot a single rms line if all rms are the same
-            plt.axhline(y=rms_values[0], color='k', alpha=0.5, lw=1, ls='--', label='Noise')
+        if all_rms_equal: # plot a single rms line if the mean rms is the same for all bkgprof profiles
+            plt.plot(profs[0].bins, profs[0].bkgprof, color='k', lw=2, ls='--', label='Noise')
     else:
         plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
     plt.xscale(xscale)
@@ -71,7 +71,7 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
         plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt, color='C%d' % i, elinewidth=2,
                      markersize=markersize, capsize=3, label=labels[i])
         if prof.radio and not all_rms_equal: # plot different rms lines if the rms are different (e.g. when multi-freq data are used)
-                plt.axhline(y=prof.data.rms_jy_arcmin, color='C%d' % i, alpha=0.5, lw=1, ls='--', label=labels[i] + ' noise')
+            plt.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--', label=labels[i] + ' noise')
 
     plt.legend(loc=0,fontsize=22)
     if axes is not None:
@@ -386,8 +386,8 @@ class Profile(object):
         pixsize = data.pixsize
         if radio:
             beamarea_pix = data.beamarea_pix
-            rms_jy_beam = data.rms_jy_beam
-            rms_jy_arcmin = data.rms_jy_arcmin
+            #rms_jy_beam = data.rms_jy_beam
+            #rms_jy_arcmin = data.rms_jy_arcmin
         if not self.custom:
             if (self.islogbin):
                 self.bins, self.ebins = logbinning(self.binsize, self.maxrad)
@@ -485,35 +485,32 @@ class Profile(object):
                     errmap = data.errmap
                 else:
                     errmap = data.rmsmap
-                profile[i] = np.sum(img[id]) / nv
-                eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
+                if radio:
+                    fluxdensity[i] = np.sum(img[id] / beamarea_pix)
+                    efluxdensity[i] = np.sum(errmap[id]) / np.sqrt(nv * beamarea_pix)
+                    bkgprof[i] = np.sum(errmap[id] / beamarea_pix) / nv / pixsize ** 2
+                    profile[i] = fluxdensity[i] / nv / pixsize ** 2
+                    eprof[i] = efluxdensity[i] / nv / pixsize ** 2
+                else:
+                    profile[i] = np.sum(img[id]) / nv
+                    eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
                 area[i] = nv * pixsize ** 2
                 effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
             else:
                 if nv > 0:
-                    if radio:
-                        fluxdensity[i] = np.sum(img[id] / beamarea_pix)   # do not subtract the noise
-                        efluxdensity[i] = rms_jy_beam * np.sqrt(nv / beamarea_pix)
-                        profile[i] = fluxdensity[i] / nv / pixsize ** 2
-                        eprof[i] = efluxdensity[i] / nv / pixsize ** 2
-                    else:
-                        bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
-                        profile[i] = np.sum(img[id] / exposure[id]) / nv / pixsize ** 2 - bkgprof[i]
-                        eprof[i] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / pixsize ** 2
-                        counts[i] = np.sum(img[id])
-                        bkgcounts[i] = np.sum(bkg[id])
+                    bkgprof[i] = np.sum(bkg[id] / exposure[id]) / nv / pixsize ** 2
+                    profile[i] = np.sum(img[id] / exposure[id]) / nv / pixsize ** 2 - bkgprof[i]
+                    eprof[i] = np.sqrt(np.sum(img[id] / exposure[id] ** 2)) / nv / pixsize ** 2
+                    counts[i] = np.sum(img[id])
+                    bkgcounts[i] = np.sum(bkg[id])
                     area[i] = nv * pixsize ** 2
                     effexp[i] = np.sum(exposure[id]) / nv
                 else:
-                    if radio:
-                        fluxdensity[i] =0.
-                        efluxdensity[i] = 0.
-                    else:
-                        bkgprof[i] = 0.
-                        profile[i] = 0.
-                        eprof[i] = 0.
-                        counts[i] = 0.
-                        bkgcounts[i] = 0.
+                    bkgprof[i] = 0.
+                    profile[i] = 0.
+                    eprof[i] = 0.
+                    counts[i] = 0.
+                    bkgcounts[i] = 0.
                     area[i] = 0.
                     effexp[i] = 0.
         self.profile = profile
@@ -525,6 +522,7 @@ class Profile(object):
             if radio:
                 self.fluxdensity = fluxdensity
                 self.efluxdensity = efluxdensity
+                self.bkgprof = bkgprof
             else:
                 self.counts = counts
                 self.bkgprof = bkgprof
@@ -569,12 +567,20 @@ class Profile(object):
         mask = np.zeros(data.img.shape)
         mask[np.where(np.logical_and(np.logical_and((data.exposure > 0), (angles >= 0.)), (angles <= anghigh)))] = 1
         fig = plt.figure(figsize=(10,10))
-        s1=plt.subplot(111)
+        s1=plt.subplot(121)
+        s1.set_title('Original image')
         if self.radio:
-            plt.imshow(mask * data.img, aspect='auto', origin='lower', vmin=-6*data.rms_jy_beam, vmax=16*data.rms_jy_beam)
+            plt.imshow(np.log10(data.img), aspect='auto', origin='lower')
+        else:
+            plt.imshow(data.img, aspect='auto', origin='lower', vmin=0, vmax=1)
+        s2=plt.subplot(122)
+        s2.set_title('Sector applied')
+        if self.radio:
+            plt.imshow(np.log10(mask * data.img), aspect='auto', origin='lower')
         else:
             plt.imshow(mask * data.img, aspect='auto', origin='lower', vmin=0, vmax=1)
         plt.scatter(self.cx, self.cy, color='r', marker='x')
+
         return
 
     def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, outsamples=None, fitter=None, thin=10):
@@ -835,7 +841,7 @@ class Profile(object):
                 hdr['RMSMAP'] = self.data.rmsmap
                 hdr.comments['RMSMAP'] = 'Path to RMS file'
                 hdr['RMSVAL'] = self.data.rms_jy_beam
-                hdr.comments['RMSVAL'] = 'Value of RMS in Jy/beam'
+                hdr.comments['RMSVAL'] = 'Value of RMS, if provided'
                 hdr['VORONOI'] = self.data.voronoi
                 hdr.comments['VORONOI'] = 'Voronoi on/off switch'
                 hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2020)'
@@ -1133,8 +1139,8 @@ class Profile(object):
                          markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
             if self.data.bkglink is not None:
                 plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
-            if self.data.rms_jy_arcmin:
-                plt.axhline(y=self.data.rms_jy_arcmin, color=bkg_color, lw=lw, ls='--', label='Noise')
+            if self.data.rmsmap is not None:
+                plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Noise')
             if model is not None and samples is None:
                 tmod = model(rads, *model.params)
                 if self.psfmat is not None:

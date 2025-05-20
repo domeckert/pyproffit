@@ -87,7 +87,7 @@ class Data(object):
     :type voronoi: bool , optional
     :param rmsmap: Path to error map if the data is not Poisson distributed
     :type rmsmap: str , optional
-    :param rmsval: Value of rms in Jy/beam, assumed constant. Used only if radio=True.
+    :param rmsval: Value of rms to make an rmsmap with constant value
     :type rmsval: float , optional
     :param radio: Define whether the input image is a radio image or not (default=False)
     :type radio: bool , optional
@@ -118,6 +118,8 @@ class Data(object):
         self.rmsmap = rmsmap
         self.header = head
         self.wcs_inp = wcs.WCS(head, relax=False)
+        self.axes = self.img.shape
+
         if 'CDELT2' in head:
             self.pixsize = head['CDELT2'] * 60.  # arcmin
         elif 'CD2_2' in head:
@@ -125,6 +127,7 @@ class Data(object):
         else:
             print('No pixel size could be found in header, will assume a pixel size of 2.5 arcsec')
             self.pixsize = 2.5 / 60.
+
         if radio:
             self.bmaj = head['BMAJ'] * 60.  # arcmin
             self.bmin = head['BMIN'] * 60.  # arcmin
@@ -142,14 +145,36 @@ class Data(object):
                 self.rms_jy_beam = rmsval
                 self.rms_jy_arcmin = rmsval/(self.beamarea_pix*self.pixsize*self.pixsize)
                 print('The noise is: {:.2e} Jy/beam = {:.2e} Jy/arcmin^2'.format(self.rms_jy_beam, self.rms_jy_arcmin))
+                self.rmsmap = np.full(self.axes, rmsval)
+            elif rmsmap:
+                frms = flatten(fits.open(rmsmap))
+                rms = frms.data.astype(float)
+                if rms.shape != self.axes:
+                    print('Error: Image and RMS map sizes do not match')
+                    return
+                self.rmsmap = rms
             else:
-                print('No rmsval provided, will assume an rms of zero (so no error bars will be displayed)')
-                self.rms_jy_beam = 0.
-                self.rms_jy_arcmin = 0./(self.beamarea_pix*self.pixsize*self.pixsize)
+                print('No rmsmap nor rmsval provided, will assume an rms of zero (so no error bars will be displayed)')
+                self.rmsmap = np.zeros(self.axes)
+                self.rms_jy_beam = None
+                self.rms_jy_arcmin = None
         else:
-            self.rms_jy_beam = None
-            self.rms_jy_arcmin = None
-        self.axes = self.img.shape
+            if rmsval:
+                self.rmsmap = np.full(self.axes, rmsval)
+            elif rmsmap:
+                frms = fits.open(rmsmap)
+                next = get_extnum(frms)
+                rms = frms[next].data.astype(float)
+                if rms.shape != self.axes:
+                    print('Error: Image and RMS map sizes do not match')
+                    return
+                self.rmsmap = rms
+                frms.close()
+            else:
+                self.rmsmap = None
+                self.rms_jy_beam = None
+                self.rms_jy_arcmin = None
+
         if voronoi:
             self.errmap = fimg[1].data.astype(float)
 
@@ -177,17 +202,7 @@ class Data(object):
                 return
             self.bkg = bkg
             fbkg.close()
-        if rmsmap is not None:
-            frms = fits.open(rmsmap)
-            next = get_extnum(frms)
-            rms = frms[next].data.astype(float)
-            if rms.shape != self.axes:
-                print('Error: Image and RMS map sizes do not match')
-                return
-            self.rmsmap = rms
-            frms.close()
-        else:
-            self.rmsmap = None
+
         self.filth = None
 
     def region(self, regfile):

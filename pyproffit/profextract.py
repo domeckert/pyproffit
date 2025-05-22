@@ -900,15 +900,9 @@ class Profile(object):
         #
         if psffile is not None:
             print(f'Using {psffile = }')
-            if self.radio:
-                from .data import flatten
-                fpsf = flatten(fits.open(psffile))
-                psfFITSimage = fpsf.data.astype(float)
-                psfFITSheader = fpsf.header
-            else:
-                with fits.open(psffile) as fpsf:
-                    psfFITSimage = fpsf[0].data.astype(float)
-                    psfFITSheader = fpsf[0].header
+            with fits.open(psffile) as fpsf:
+                psfFITSimage = fpsf[0].data.astype(float)
+                psfFITSheader = fpsf[0].header
             #
             if 'CDELT2' in psfFITSheader:
                 psfFITSpixsize = np.abs(float(psfFITSheader['CDELT2']))

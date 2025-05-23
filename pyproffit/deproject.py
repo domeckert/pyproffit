@@ -947,7 +947,8 @@ class Deproject(object):
         if backend=='pymc3':
             Deproject_Multiscale_PyMC3(self,bkglim=bkglim,back=back,nmcmc=nmcmc,tune=tune,samplefile=samplefile,nrc=nrc,nbetas=nbetas,min_beta=min_beta)
         elif backend=='stan':
-            Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth,min_beta=min_beta)
+            print('stan is not supported anymore in new pyproffit versions. If you are using an old pyproffit version and want to use stan, uncomment the line below')
+            #Deproject_Multiscale_Stan(self,bkglim=bkglim,back=back,nmcmc=nmcmc,samplefile=samplefile,nrc=nrc,nbetas=nbetas,depth=depth,min_beta=min_beta)
         else:
             print('Unknown method '+backend)
 

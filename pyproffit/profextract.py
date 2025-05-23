@@ -8,6 +8,8 @@ from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import FlatLambdaCDM
 import math
+from astropy.convolution import Gaussian2DKernel
+
 
 def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
     """
@@ -981,6 +983,75 @@ class Profile(object):
                 imgt[region] = sourcemodel.model(rads[region],*sourcemodel.params)
                 norm = np.sum(imgt[region])
                 imgt[region] = imgt[region]/norm
+            # FFT-convolve image with kernel
+            blurred = convolve(imgt, kernel, mode='same')
+            numnoise = np.where(blurred<1e-15)
+            blurred[numnoise]=0.0
+            for p in range(nbin):
+                sn = sort_list[p]
+                psfout[n, p] = np.sum(blurred[sn])
+        self.psfmat = psfout
+
+    def PSF_radio(self):
+        """
+        Function to calculate a 2D Gaussian PSF convolution matrix given the information on the radio beam in the image header.
+        To compute the PSF mixing matrix, images of each annuli are convolved with the PSF image using FFT and determine the fraction of photons leaking into neighbouring annuli. FFT-convolved images are then used to determine a mixing matrix. See Eckert et al. 2020 for more details.
+        """
+
+        #
+        rad = self.bins
+        erad = self.ebins
+        nbin = self.nbin
+        psfout = np.zeros((nbin, nbin))
+        exposure = self.data.exposure
+        y, x = np.indices(exposure.shape)
+        rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
+        kernel = None
+        #
+
+        sigma_maj = self.data.bmaj*60. / (2*np.sqrt(2*np.log(2))) # in arcsec
+        sigma_min = self.data.bmin*60. / (2*np.sqrt(2*np.log(2))) # in arcsec
+        bpa_rad = np.deg2rad(self.data.bpa)
+
+        #print(f'The beam is: {self.data.bmaj*60.:.2f} arcsec x {self.data.bmin*60.:.2f} arcsec, PA {self.data.bpa:.2f} deg')
+        #print(f'Will convolve with a 2D Gaussian with sigma_maj = {sigma_maj:.2f} arcsec, sigma_min = {sigma_min:.2f} arcsec, PA = {bpa_rad:.2f} rad')
+
+        # Size of the kernel array, with check if it is an odd integer
+        size = int(0.5*(sigma_maj+sigma_min)*35)
+        if size % 2:
+            pass
+        else:
+            size = size + 1
+
+        gaussian_2D_kernel = Gaussian2DKernel(x_stddev=sigma_maj, y_stddev=sigma_min, theta=bpa_rad, x_size=size, y_size=size)
+
+        psfimage = gaussian_2D_kernel.array
+        self.psfimage = psfimage
+
+        norm = np.sum(psfimage)
+        kernel = psfimage / norm
+
+        if kernel is None:
+            print('No kernel provided, bye bye')
+            return
+
+        # Sort pixels into radial bins
+        tol = 0.5e-5
+        sort_list = []
+        for n in range(nbin):
+            if n == 0:
+                sort_list.append(np.where(
+                    np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol)))
+            else:
+                sort_list.append(np.where(np.logical_and(rads >= np.round(rad[n] - erad[n], 5) + tol,
+                                                                rads < np.round(rad[n] + erad[n], 5) + tol)))
+        # Calculate average of PSF image pixel-by-pixel and sort it by radial bins
+        for n in range(nbin):
+            # print('Working with bin',n+1)
+            region = sort_list[n]
+            npt = len(x[region])
+            imgt = np.zeros(exposure.shape)
+            imgt[region] = 1. / npt
             # FFT-convolve image with kernel
             blurred = convolve(imgt, kernel, mode='same')
             numnoise = np.where(blurred<1e-15)

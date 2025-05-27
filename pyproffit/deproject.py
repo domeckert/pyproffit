@@ -817,7 +817,7 @@ def OP(deproj,nmc=1000):
         vol=np.transpose(x.deproj_vol()).T
         em0 = prof.profile * area
         e_em0 = prof.profile * area
-        corr = EdgeCorr(nbin,rinam,routam)
+        corr = EdgeCorr(nbin,rinam,routam,em0)
 
     # Deproject and propagate error using Monte Carlo
     emres = np.repeat(e_em0,nmc).reshape(nbin,nmc) * np.random.randn(nbin,nmc) + np.repeat(em0,nmc).reshape(nbin,nmc)
@@ -1118,7 +1118,7 @@ class Deproject(object):
             print('Error: No reconstruction available')
             return
         prof=self.profile
-        plt.clf()
+
         fig = plt.figure(figsize=figsize)
 
         ax=fig.add_axes([0.12,0.2,0.8,0.7])

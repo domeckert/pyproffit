@@ -338,6 +338,10 @@ class Data(object):
         imgc = np.copy(self.img)
         imgc[chimg] = 0.0
 
+        if self.radio:
+            print('!! Working with a radio image: forcing smoothing_scale=0. Use dmfilth at your own risk !!')
+            smoothing_scale = 0
+
         # High-pass filter
         print('Applying high-pass filter')
         gsb = gaussian_filter(imgc, smoothing_scale)
@@ -358,7 +362,10 @@ class Data(object):
         print('Filling holes')
         area_to_fill = np.where(np.logical_and(int_vals > 0., self.exposure == 0))
         dmfilth = np.copy(self.img)
-        dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill] * self.defaultexpo[area_to_fill])
+        if self.radio:
+            dmfilth[area_to_fill] = int_vals[area_to_fill]
+        else:
+            dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill] * self.defaultexpo[area_to_fill])
 
         self.filth = dmfilth
 

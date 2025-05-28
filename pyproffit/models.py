@@ -137,6 +137,62 @@ def Vikhlinin(x,beta,rc,alpha,rs,epsilon,gamma,norm,bkg):
     b2 = np.power(10., bkg)
     return n2 * term1 * term2 + b2
 
+
+def Exp(x, norm, re, bkg):
+    """
+    Single Exponential model
+
+    .. math::
+
+        I(r) = I0 e^(-x/re) + B
+
+    :param x: Radius in arcmin
+    :type x: numpy.ndarray
+    :param norm: log of I0 parameter
+    :type norm: float
+    :param re: re parameter
+    :type re: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
+    """
+    n2 = np.power(10., norm)
+    c2 = np.power(10., bkg)
+    out = n2 * np.exp(-x/re) + c2
+    return out
+
+
+def DoubleExp(x, norm_in, re_in, norm_out, re_out, bkg):
+    """
+    Double Exponential model
+
+    .. math::
+
+        I(r) = I0_in e^(-x/re_in) + I0_out e^(-x/re_out) + B
+
+    :param x: Radius in arcmin
+    :type x: numpy.ndarray
+    :param norm_in: log of I0_in parameter
+    :type norm_in: float
+    :param re_in: re_in parameter
+    :type re_in: float
+    :param norm_out: log of I0_out parameter
+    :type norm_out: float
+    :param re_out: re_out parameter
+    :type re_out: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
+    """
+    n2_in = np.power(10., norm_in)
+    n2_out = np.power(10., norm_out)
+    c2 = np.power(10., bkg)
+    out = n2_in * np.exp(-x/re_in) + n2_out * np.exp(-x/re_out) + c2
+    return out
+
+
 def IntFunc(omega,rf,alpha,xmin,xmax):
     """
     Numerical integration of a power law along the line of sight

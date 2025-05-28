@@ -850,12 +850,15 @@ class Deproject(object):
     :type cf: float
     :param f_abund: Solar abundance table to compute the electron-to-proton ratio and mean molecular weight. Available tables are 'aspl' (Aspling+09, default), 'angr' (Anders & Grevesse 89), and 'grsa' (Grevesse & Sauval 98)
     :type f_abund: str
+    :param radio: Define whether the input profile is from a radio image or not (default=False)
+    :type radio: bool , optional
      """
-    def __init__(self,z=None,profile=None,cf=None,f_abund='aspl'):
+    def __init__(self,z=None,profile=None,cf=None,f_abund='aspl',radio=False):
         """
         Constructor for class pyproffit.Deproject
        """
         self.profile = profile
+        self.radio = radio
         self.z = z
         self.samples = None
         self.cf = cf
@@ -1001,7 +1004,6 @@ class Deproject(object):
         rout = self.rout[sourcereg_out]
         #erkpc = self.profile.ebins * kpcp
 
-        plt.clf()
         fig = plt.figure(figsize=figsize, tight_layout=True)
         ax = fig.add_subplot(111)
         ax.minorticks_on()
@@ -1125,23 +1127,31 @@ class Deproject(object):
         ax_res=fig.add_axes([0.12,0.1,0.8,0.1])
 
         ax_res.set_xlabel('Radius [arcmin]', fontsize=fontsize)
-        ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=fontsize)
+        if self.radio:
+            ax.set_ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
+        else:
+            ax.set_ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=fontsize)
         ax.set_xscale(xscale)
         ax.set_yscale(yscale)
 
         #ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt='o', color='black', elinewidth=2,
         #            markersize=7, capsize=0, mec='black', label='Bkg - subtracted Data')
 
-        ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt,
+        if self.radio:
+            ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt,
                     color=data_color, elinewidth=2,
                     markersize=markersize, capsize=0, label='Data')
-        ax.plot(prof.bins, prof.bkgprof, color=bkg_color, label='Particle background')
+            ax.plot(prof.bins, prof.bkgprof, color=bkg_color, label='Noise')
+        else:
+            ax.errorbar(prof.bins, prof.counts / prof.area / prof.effexp, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt,
+                        color=data_color, elinewidth=2,
+                        markersize=markersize, capsize=0, label='Data')
+            ax.plot(prof.bins, prof.bkgprof, color=bkg_color, label='Particle background')
+            ax.axhline(self.bkg,color=skybkg_color,label='Sky background')
 
         # plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,  markersize=7, capsize=0,mec='blue',label='Reconstruction')
         ax.plot(prof.bins, self.sb, color=model_color, lw=lw, label='Source model')
         ax.fill_between(prof.bins, self.sb_lo, self.sb_hi, color=model_color, alpha=0.5)
-
-        ax.axhline(self.bkg,color=skybkg_color,label='Sky background')
 
         #compute SB profile without bkg subtraction to get residuals on fit
         # Set vector with list of parameters
@@ -1246,7 +1256,6 @@ class Deproject(object):
         inthi = np.percentile(allint[1, :] - allint[0, :], 50. + 68.3 / 2.)
         print('Reconstructed count rate: %g (%g , %g)' % (medint, intlo, inthi))
         if plot:
-            plt.clf()
             fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
@@ -1318,7 +1327,6 @@ class Deproject(object):
         inthi = np.percentile(allint[1, :] - allint[0, :], 50. + 68.3 / 2.)
         print('Reconstructed luminosity: %g (%g , %g)' % (medint, intlo, inthi))
         if plot:
-            plt.clf()
             fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
@@ -1388,7 +1396,6 @@ class Deproject(object):
         pnch = np.percentile(ncv, 50. + 68.3 / 2.)
         print('Reconstructed counts: %g (%g , %g)' % (pnc, pncl, pnch))
         if plot:
-            plt.clf()
             fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
@@ -1515,7 +1522,6 @@ class Deproject(object):
 
         mg, mgl, mgh = np.percentile(mgasdist,[50.,50.-68.3/2.,50.+68.3/2.])
         if plot:
-            plt.clf()
             fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]
@@ -1881,7 +1887,6 @@ class Deproject(object):
         print('Surface brightness concentration: %g (%g , %g)' % (medcsb, csblo, csbhi))
 
         if plot:
-            plt.clf()
             fig = plt.figure(figsize=figsize)
             ax_size = [0.14, 0.12,
                        0.85, 0.85]

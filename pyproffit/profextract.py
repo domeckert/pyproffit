@@ -877,7 +877,7 @@ class Profile(object):
         :param psfimage: Array containing an image of the PSF. The pixel size should be passed with psfpixsize parameter and must be equal to the
         pixel size of the image.
         :type psfimage: class:`numpy.ndarray`
-        :param psfpixsize: Pixel size of the PSF image in arcsec.
+        :param psfpixsize: Pixel size of the PSF image in arcmin.
         :type psfpixsize: float
         :param sourcemodel: Object of type :class:`pyproffit.models.Model` including a surface brightness model to account for surface brightness gradients across the bins. If sourcemodel=None a flat distribution is assumed across each bin. Defaults to None
         :type sourcemodel: class:`pyproffit.models.Model`

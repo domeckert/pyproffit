@@ -611,17 +611,28 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,
         testbkg = np.log(back)
 
     with basic_model:
-        # Priors for unknown model parameters
-        coefs = pm.Normal('coefs', mu=testval, sigma=20, shape=npt)
-        bkgd = pm.Normal('bkg', mu=testbkg, sigma=0.05, shape=1)
-        ctot = pm.math.concatenate((coefs, bkgd), axis=0)
+        if prof.radio:
+            # Priors for unknown model parameters
+            coefs = pm.Normal('coefs', mu=testval, sigma=20, shape=npt)
 
-        # Expected value of outcome
-        al = pm.math.exp(ctot)
-        pred = pm.math.dot(K, al) + bkgcounts
+            # Expected value of outcome
+            al = pm.math.exp(coefs)
+            pred = pm.math.dot(K[:, :npt], al)
 
-        # Likelihood (sampling distribution) of observations
-        Y_obs = pm.Poisson('counts', mu=pred, observed=counts)
+            # Likelihood (sampling distribution) of observations
+            Y_obs = pm.Normal('flux', mu=pred, sigma=prof.efluxdensity, observed=prof.fluxdensity)
+        else:
+            # Priors for unknown model parameters
+            coefs = pm.Normal('coefs', mu=testval, sigma=20, shape=npt)
+            bkgd = pm.Normal('bkg', mu=testbkg, sigma=0.05, shape=1)
+            ctot = pm.math.concatenate((coefs, bkgd), axis=0)
+
+            # Expected value of outcome
+            al = pm.math.exp(ctot)
+            pred = pm.math.dot(K, al) + bkgcounts
+
+            # Likelihood (sampling distribution) of observations
+            Y_obs = pm.Poisson('counts', mu=pred, observed=counts)
 
     tinit = time.time()
 
@@ -658,28 +669,48 @@ def Deproject_Multiscale_PyMC3(deproj,bkglim=None,nmcmc=1000,tune=500,back=None,
     sc_coefs = chain_coefs.shape
     sampc = chain_coefs.reshape(sc_coefs[0] * sc_coefs[1], sc_coefs[2])
 
-    sampb = trace.posterior['bkg'].to_numpy().flatten()
+    if prof.radio:
+        samples = sampc
 
-    spb = np.array([sampb]).T
+        if samplefile is not None:
+            np.savetxt(samplefile, samples)
+            np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='pymc3')
 
-    samples = np.append(sampc, spb, axis=1)
-    if samplefile is not None:
-        np.savetxt(samplefile, samples)
-        np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='pymc3')
+        # Compute output deconvolved brightness profile
+        Ksb = calc_sb_operator(rad, sourcereg, pars)
+        allsb = np.dot(Ksb[:, :npt], np.exp(samples.T))
+        pmc = np.median(allsb, axis=1)
+        pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1)
+        pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1)
 
-    # Compute output deconvolved brightness profile
-    Ksb = calc_sb_operator(rad, sourcereg, pars)
-    allsb = np.dot(Ksb, np.exp(samples.T))
-    bfit = np.median(np.exp(samples[:, npt]))
-    pmc = np.median(allsb, axis=1)
-    pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1)
-    pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1)
+        deproj.samples = samples
+        deproj.sb = pmc
+        deproj.sb_lo = pmcl
+        deproj.sb_hi = pmch
+        deproj.bkg = None
+    else:
+        sampb = trace.posterior['bkg'].to_numpy().flatten()
 
-    deproj.samples = samples
-    deproj.sb = pmc
-    deproj.sb_lo = pmcl
-    deproj.sb_hi = pmch
-    deproj.bkg = bfit
+        spb = np.array([sampb]).T
+
+        samples = np.append(sampc, spb, axis=1)
+        if samplefile is not None:
+            np.savetxt(samplefile, samples)
+            np.savetxt(samplefile+'.par',np.array([pars.shape[0]/nbetas,nbetas,min_beta,nmcmc]),header='pymc3')
+
+        # Compute output deconvolved brightness profile
+        Ksb = calc_sb_operator(rad, sourcereg, pars)
+        allsb = np.dot(Ksb, np.exp(samples.T))
+        bfit = np.median(np.exp(samples[:, npt]))
+        pmc = np.median(allsb, axis=1)
+        pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1)
+        pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1)
+
+        deproj.samples = samples
+        deproj.sb = pmc
+        deproj.sb_lo = pmcl
+        deproj.sb_hi = pmch
+        deproj.bkg = bfit
 
 
 
@@ -816,7 +847,7 @@ def OP(deproj,nmc=1000):
         x=MyDeprojVol(rinam,routam)
         vol=np.transpose(x.deproj_vol()).T
         em0 = prof.profile * area
-        e_em0 = prof.profile * area
+        e_em0 = prof.eprof * area
         corr = EdgeCorr(nbin,rinam,routam,em0)
 
     # Deproject and propagate error using Monte Carlo
@@ -1083,6 +1114,38 @@ class Deproject(object):
         else:
             print('No redshift and/or conversion factor, nothing to do')
 
+    def PlotOP(self,outfile=None):
+        if self.profile is None:
+            print('Error: No profile extracted')
+            return
+        if self.sb is None:
+            print('Error: No reconstruction available')
+            return
+
+        fig = plt.figure(figsize=(13, 10))
+        ax_size = [0.14, 0.14,
+                   0.83, 0.83]
+        ax = fig.add_axes(ax_size)
+        ax.minorticks_on()
+        ax.tick_params(length=20, width=1, which='major', direction='in', right='on', top='on')
+        ax.tick_params(length=10, width=1, which='minor', direction='in', right='on', top='on')
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(18)
+        plt.xlabel('Radius [arcmin]', fontsize=40)
+        plt.ylabel('SB [counts s$^{-1}$ arcmin$^{-2}$]', fontsize=40)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.errorbar(self.profile.bins, self.sb, xerr=self.profile.ebins, yerr=[self.sb-self.sb_lo,self.sb_hi-self.sb], fmt='o', color='blue', elinewidth=2,
+                     markersize=7, capsize=0,mec='blue',label='Reconstruction')
+        plt.fill_between(self.profile.bins,self.sb_lo,self.sb_hi,color='blue',alpha=0.5)
+        plt.errorbar(self.profile.bins, self.profile.profile, xerr=self.profile.ebins, yerr=self.profile.eprof, fmt='o', color='black', elinewidth=2,
+                     markersize=7, capsize=0,mec='black',label='Data')
+        if outfile is not None:
+            plt.savefig(outfile)
+            plt.close()
+        else:
+            plt.show(block=False)
+
     def PlotSB(self,outfile=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', lw=2,
                fmt='d', markersize=7, data_color='red', bkg_color='green', model_color='C0', skybkg_color='k'):
         """
@@ -1165,11 +1228,17 @@ class Deproject(object):
             psfmat = np.eye(prof.nbin)
         samples=self.samples
         Ksb = calc_sb_operator_psf(prof.bins, sourcereg, pars, prof.area, prof.effexp, psfmat)
-        allsb = np.dot(Ksb, np.exp(samples.T))
-        bfit = np.median(np.exp(samples[:, npt]))
-        pmc = np.median(allsb, axis=1) / prof.area / prof.effexp + prof.bkgprof
-        pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
-        pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
+        if self.radio:
+            allsb = np.dot(Ksb[:, :npt], np.exp(samples.T))
+            pmc = np.median(allsb, axis=1) / prof.area / prof.effexp
+            pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp
+            pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp
+        else:
+            allsb = np.dot(Ksb, np.exp(samples.T))
+            bfit = np.median(np.exp(samples[:, npt]))
+            pmc = np.median(allsb, axis=1) / prof.area / prof.effexp + prof.bkgprof
+            pmcl = np.percentile(allsb, 50. - 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
+            pmch = np.percentile(allsb, 50. + 68.3 / 2., axis=1) / prof.area / prof.effexp + prof.bkgprof
 
         ax.plot(prof.bins, pmc, color='C1', lw=lw, label='Total model')
         ax.fill_between(prof.bins, pmcl, pmch, color='C1', alpha=0.5)
@@ -1180,7 +1249,10 @@ class Deproject(object):
 
         ax.legend(loc=0,fontsize=22)
 
-        res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
+        if self.radio:
+            res = (pmc * prof.area * prof.effexp - prof.fluxdensity) / (pmc * prof.area * prof.effexp)
+        else:
+            res = (pmc * prof.area * prof.effexp - prof.counts) / (pmc * prof.area * prof.effexp)
         vmin=-0.5
         veff=np.max(np.abs(res))
         if veff > vmin:

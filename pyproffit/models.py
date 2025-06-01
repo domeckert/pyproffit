@@ -270,6 +270,50 @@ def BknPow(x,alpha1,alpha2,rf,norm,jump,bkg):
     c2 = np.power(10., bkg)
     return out + c2
 
+def BknPowSB(x,alpha1,alpha2,rf,norm,jump,bkg):
+    """
+    Broken power law 3D model projected along the line of sight for discontinuity modeling
+
+    .. math::
+
+        I(r) = I_0 \\int F(\\omega)^2 d\\ell + B
+
+    with :math:`\\omega^2 = r^2 + \ell^2` and
+
+    .. math::
+
+        F(\\omega) = \left\{ \\begin{array}{ll} \omega^{-\\alpha_1}, & \omega<r_f \\\\ \\frac{1}{jump}\omega ^{-\\alpha_2}, & \omega\\geq r_f
+        \end{array} \\right.
+
+    :param x: Radius in arcmin
+    :type x: numpy.ndarray
+    :param alpha1: :math:`\\alpha_1` parameter
+    :type alpha1: float
+    :param alpha2: :math:`\\alpha_2` parameter
+    :type alpha2: float
+    :param rf: rf parameter
+    :type rf: float
+    :param norm: log of I0 parameter
+    :type norm: float
+    :param jump: SB jump
+    :type jump: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
+    """
+    A1 = np.power(10.,norm)
+    A2 = A1 / jump
+    out = np.empty(len(x))
+    inreg = np.where(x < rf)
+    term1 = IntFunc(x[inreg],rf,alpha1,0.01*np.ones(len(x[inreg])),np.sqrt(rf**2-x[inreg]**2))
+    term2 = IntFunc(x[inreg],rf,alpha2,np.sqrt(rf**2-x[inreg]**2),1e3*np.ones(len(x[inreg])))
+    out[inreg] = A1 * term1 + A2 * term2
+    outreg = np.where(x >= rf)
+    term = IntFunc(x[outreg],rf,alpha2,0.01*np.ones(len(x[outreg])),1e3*np.ones(len(x[outreg])))
+    out[outreg] = A2 * term
+    c2 = np.power(10., bkg)
+    return out + c2
 
 class Model(object):
     """

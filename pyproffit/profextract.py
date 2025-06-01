@@ -490,7 +490,8 @@ class Profile(object):
                 if radio:
                     fluxdensity[i] = np.sum(img[id] / beamarea_pix)
                     efluxdensity[i] = np.sum(errmap[id]) / np.sqrt(nv * beamarea_pix)
-                    bkgprof[i] = np.sum(errmap[id] / beamarea_pix) / nv / pixsize ** 2
+                    bkgprof[i] = np.sum(errmap[id]) / np.sqrt(nv * beamarea_pix) / nv / pixsize ** 2
+                    #bkgprof[i] = np.sum(errmap[id] / beamarea_pix) / nv / pixsize ** 2
                     profile[i] = fluxdensity[i] / nv / pixsize ** 2
                     eprof[i] = efluxdensity[i] / nv / pixsize ** 2
                 else:

@@ -137,6 +137,62 @@ def Vikhlinin(x,beta,rc,alpha,rs,epsilon,gamma,norm,bkg):
     b2 = np.power(10., bkg)
     return n2 * term1 * term2 + b2
 
+
+def Exp(x, norm, re, bkg):
+    """
+    Single Exponential model
+
+    .. math::
+
+        I(r) = I0 e^(-x/re) + B
+
+    :param x: Radius in arcmin
+    :type x: numpy.ndarray
+    :param norm: log of I0 parameter
+    :type norm: float
+    :param re: re parameter
+    :type re: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
+    """
+    n2 = np.power(10., norm)
+    c2 = np.power(10., bkg)
+    out = n2 * np.exp(-x/re) + c2
+    return out
+
+
+def DoubleExp(x, norm_in, re_in, norm_out, re_out, bkg):
+    """
+    Double Exponential model
+
+    .. math::
+
+        I(r) = I0_in e^(-x/re_in) + I0_out e^(-x/re_out) + B
+
+    :param x: Radius in arcmin
+    :type x: numpy.ndarray
+    :param norm_in: log of I0_in parameter
+    :type norm_in: float
+    :param re_in: re_in parameter
+    :type re_in: float
+    :param norm_out: log of I0_out parameter
+    :type norm_out: float
+    :param re_out: re_out parameter
+    :type re_out: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
+    """
+    n2_in = np.power(10., norm_in)
+    n2_out = np.power(10., norm_out)
+    c2 = np.power(10., bkg)
+    out = n2_in * np.exp(-x/re_in) + n2_out * np.exp(-x/re_out) + c2
+    return out
+
+
 def IntFunc(omega,rf,alpha,xmin,xmax):
     """
     Numerical integration of a power law along the line of sight
@@ -214,6 +270,50 @@ def BknPow(x,alpha1,alpha2,rf,norm,jump,bkg):
     c2 = np.power(10., bkg)
     return out + c2
 
+def BknPowSB(x,alpha1,alpha2,rf,norm,jump,bkg):
+    """
+    Broken power law 3D model projected along the line of sight for discontinuity modeling
+
+    .. math::
+
+        I(r) = I_0 \\int F(\\omega)^2 d\\ell + B
+
+    with :math:`\\omega^2 = r^2 + \ell^2` and
+
+    .. math::
+
+        F(\\omega) = \left\{ \\begin{array}{ll} \omega^{-\\alpha_1}, & \omega<r_f \\\\ \\frac{1}{jump}\omega ^{-\\alpha_2}, & \omega\\geq r_f
+        \end{array} \\right.
+
+    :param x: Radius in arcmin
+    :type x: numpy.ndarray
+    :param alpha1: :math:`\\alpha_1` parameter
+    :type alpha1: float
+    :param alpha2: :math:`\\alpha_2` parameter
+    :type alpha2: float
+    :param rf: rf parameter
+    :type rf: float
+    :param norm: log of I0 parameter
+    :type norm: float
+    :param jump: SB jump
+    :type jump: float
+    :param bkg: log of B parameter
+    :type bkg: float
+    :return: Calculated model
+    :rtype: :class:`numpy.ndarray`
+    """
+    A1 = np.power(10.,norm)
+    A2 = A1 / jump
+    out = np.empty(len(x))
+    inreg = np.where(x < rf)
+    term1 = IntFunc(x[inreg],rf,alpha1,0.01*np.ones(len(x[inreg])),np.sqrt(rf**2-x[inreg]**2))
+    term2 = IntFunc(x[inreg],rf,alpha2,np.sqrt(rf**2-x[inreg]**2),1e3*np.ones(len(x[inreg])))
+    out[inreg] = A1 * term1 + A2 * term2
+    outreg = np.where(x >= rf)
+    term = IntFunc(x[outreg],rf,alpha2,0.01*np.ones(len(x[outreg])),1e3*np.ones(len(x[outreg])))
+    out[outreg] = A2 * term
+    c2 = np.power(10., bkg)
+    return out + c2
 
 class Model(object):
     """

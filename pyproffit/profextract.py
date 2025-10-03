@@ -31,8 +31,6 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
     :type xscale: str , optional
     :param yscale: Scale of the Y axis. Defaults to 'log'
     :type yscale: str , optional
-    :param lw: Line width. Defaults to 2
-    :type lw: int , optional
     :param fmt: Marker type following matplotlib convention. Defaults to 'd'
     :type fmt: str , optional
     :param markersize: Marker size. Defaults to 7
@@ -73,7 +71,10 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
         plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt, color='C%d' % i, elinewidth=2,
                      markersize=markersize, capsize=3, label=labels[i])
         if prof.radio and not all_rms_equal: # plot different rms lines if the rms are different (e.g. when multi-freq data are used)
-            plt.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--', label=labels[i] + ' noise')
+            if labels[i] == None:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--')
+            else:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--', label=labels[i] + ' noise')
 
     plt.legend(loc=0,fontsize=22)
     if axes is not None:
@@ -84,6 +85,195 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
 
     else:
         plt.show(block=False)
+
+def plot_alpha_profile(profs, freqs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='linear', fmt='o', markersize=7):
+    """
+    Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
+
+    :param profs: List of Profile objects to be plotted
+    :type profs: tuple
+    :param freqs: List of frequencies of the profiles
+    :type freqs: tuple
+    :param labels: List of labels for the legend (default=None)
+    :type labels: tuple
+    :param outfile: If outfile is not None, path to file name to output the plot
+    :type outfile: str
+    :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
+    :type axes: list , optional
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'linear'
+    :type yscale: str , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
+    """
+
+    if freqs is None:
+        print('Error: no freqs provided, cannot make spectral index profile. Exiting.')
+        return
+    else:
+        if len(freqs) != len(profs):
+            print('Error: the number of provided freqs does not match the number of input profiles. Exiting.')
+            return
+
+    if labels is None:
+        labels = [None] * len(profs)
+    else:
+        if len(labels) != len(profs):
+            print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
+            labels = [None] * len(profs)
+
+    fig = plt.figure(figsize=figsize)
+    ax_size = [0.14, 0.14,
+               0.83, 0.83]
+    ax = fig.add_axes(ax_size)
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+
+    plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+    plt.ylabel('Spectral index', fontsize=fontsize)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
+
+    alpha     = np.log10(profs[0].profile/profs[1].profile) / np.log10(freqs[1]/freqs[0])
+    alpha_err = (1/np.log(freqs[1]/freqs[0])) * np.sqrt((profs[0].eprof/profs[0].profile)**2 + (profs[1].eprof/profs[1].profile)**2)
+
+    plt.errorbar(profs[0].bins, alpha, xerr=profs[0].ebins, yerr=alpha_err, fmt=fmt, color='k', elinewidth=2,
+                     markersize=markersize, capsize=3)
+
+    plt.legend(loc=0,fontsize=22)
+    if axes is not None:
+        plt.axis(axes)
+
+    if outfile is not None:
+        plt.savefig(outfile)
+
+    else:
+        plt.show(block=False)
+
+
+def plot_multi_profiles_and_alpha(profs, freqs, labels=None, outfile=None, axesSB=None, ylimALPHA=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
+    """
+    Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
+
+    :param profs: List of Profile objects to be plotted
+    :type profs: tuple
+    :param freqs: List of frequencies of the profiles
+    :type freqs: tuple
+    :param labels: List of labels for the legend (default=None)
+    :type labels: tuple
+    :param axesSB: List of 4 numbers defining the X and Y axis ranges for the SB plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
+    :type axesSB: list , optional
+    :param ylimALPHA: List of 2 numbers defining the Y axis ranges for the alpha plot. Gives ylimALPHA=[y1, y2], the Y axis will be set between y1 and y2.
+    :type ylimALPHA: list , optional
+    :param outfile: If outfile is not None, path to file name to output the plot
+    :type outfile: str
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'linear'
+    :type yscale: str , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
+    """
+
+    if freqs is None:
+        print('Error: no freqs provided, cannot make spectral index profile. Exiting.')
+        return
+    else:
+        if len(freqs) != len(profs):
+            print('Error: the number of provided freqs does not match the number of input profiles. Exiting.')
+            return
+
+    print("Showing %d brightness profiles" % len(profs))
+
+    if labels is None:
+        labels = [None] * len(profs)
+    else:
+        if len(labels) != len(profs):
+            print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
+            labels = [None] * len(profs)
+
+    fig = plt.figure(figsize=figsize)
+    gs0 = gridspec.GridSpec(1, 1)
+    gs0.update(left=0.12, right=0.95, wspace=0.0, top=0.95, bottom=0.35)
+    ax = plt.subplot(gs0[0])
+
+    gs1 = gridspec.GridSpec(1, 1)
+    gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
+    ax1 = plt.subplot(gs1[0], sharex=ax)
+
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    ax.tick_params(labelbottom=False)  # hide x-labels on top panel
+
+    ax.set_ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
+
+    rms_values = [np.nanmean(prof.bkgprof) for prof in profs]
+    all_rms_equal = all(r == rms_values[0] for r in rms_values)
+    if all_rms_equal: # plot a single rms line if the mean rms is the same for all bkgprof profiles
+        ax.plot(profs[0].bins, profs[0].bkgprof, color='k', lw=2, ls='--', label='Noise')
+
+    # --- Plot top panel: profiles ---
+    for i, prof in enumerate(profs):
+        ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof,fmt=fmt, color='C%d' % i, elinewidth=2,
+                        markersize=markersize, capsize=3, label=labels[i])
+
+        if prof.radio and not all_rms_equal: # plot different rms lines if the rms are different (e.g. when multi-freq data are used)
+            if labels[i] == None:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--')
+            else:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--', label=labels[i] + ' noise')
+
+    ax.legend(loc=0, fontsize=22)
+
+    alpha = np.log10(profs[0].profile / profs[1].profile) / np.log10(freqs[1] / freqs[0])
+    alpha_err = (1 / np.log(freqs[1] / freqs[0])) * np.sqrt( (profs[0].eprof / profs[0].profile)**2 + (profs[1].eprof / profs[1].profile)**2 )
+
+    ax1.errorbar(profs[0].bins, alpha, xerr=profs[0].ebins, yerr=alpha_err,
+                    fmt=fmt, color='k', markersize=markersize, capsize=3, elinewidth=2)
+
+    ax1.set_xlabel("Radius [arcmin]", fontsize=fontsize)
+    ax1.set_ylabel(r"$\alpha$", fontsize=fontsize)
+    ax1.set_xscale(xscale)
+    ax1.set_yscale('linear')
+    ax1.minorticks_on()
+    ax1.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax1.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax1.get_xticklabels() + ax1.get_yticklabels()):
+        item.set_fontsize(18)
+
+    if axesSB is not None:
+        ax.axis(axesSB)
+
+    if ylimALPHA is not None:
+        ax1.set_ylim(ylimALPHA)
+
+    if outfile is not None:
+        plt.savefig(outfile)
+    else:
+        plt.show(block=False)
+
 
 class Profile(object):
     """

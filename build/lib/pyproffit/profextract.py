@@ -950,6 +950,10 @@ class Profile(object):
         :type outfile: str
         :param vignetting: Choose whether the model will be convolved with the vignetting model (i.e. multiplied by the exposure map) or if the actual surface brightness will be extracted (False). Defaults to True
         :type vignetting: bool
+        :param residual: Set whether the output should be the model only (False) or a residual map (True). Defaults to False
+        :type residual: bool
+        :param residual_type: Set whether the output residual map will be model-data ("sub") or model/data ("div"). Defaults to "sub"
+        :type residual_type: str
         """
         head = self.data.header
         pixsize = self.data.pixsize

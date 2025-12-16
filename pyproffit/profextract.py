@@ -542,7 +542,7 @@ class Profile(object):
         plt.scatter(self.cx, self.cy, color='r', marker='x')
         return
 
-    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, outsamples=None, fitter=None, thin=10):
+    def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, angle_low=0., angle_high=360., outsamples=None, fitter=None, thin=10):
         """
         Extract the median surface brightness profile in circular annuli from a provided Voronoi binned image, following the method outlined in Eckert et al. 2015
 
@@ -552,6 +552,10 @@ class Profile(object):
         :type rotation_angle: float
         :param nsim: Number of Monte Carlo realizations of the Voronoi image to be performed
         :type nsim: int
+        :param angle_low: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, lower position angle of the sector respective to the R.A. axis. Defaults to 0
+        :type angle_low: float
+        :param angle_high: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, upper position angle of the sector respective to the R.A. axis. Defaults to 360
+        :type angle_high: float
         :param outsamples: Name of output FITS file to store the bootstrap realizations of the median profile. Defaults to None
         :type outsamples: str
         :param fitter: A :class:`pyproffit.fitter.Fitter` object containing the result of a fit to the background region, for subtraction of the background to the resulting profile
@@ -600,13 +604,38 @@ class Profile(object):
         xtil = np.cos(ellang) * (x - self.cx) * pixsize + np.sin(ellang) * (y - self.cy) * pixsize
         ytil = -np.sin(ellang) * (x - self.cx) * pixsize + np.cos(ellang) * (y - self.cy) * pixsize
         rads = ellipse_ratio * np.hypot(xtil, ytil / ellipse_ratio)
-        #for i in range(self.nbin):
-        #    id = np.where(np.logical_and(
-        #        np.logical_and(np.logical_and(rads >= self.bins[i] - self.ebins[i], rads < self.bins[i] + self.ebins[i]),
-        #        errmap > 0.0),expo>0.0))  # left-inclusive
-        #    profile[i], eprof[i] = medianval(img[id], errmap[id], 1000)
-        #    area[i] = len(img[id]) * pixsize ** 2
-        #    effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
+        self.anglow = angle_low
+        self.anghigh = angle_high
+        # Convert degree to radian and rescale to 0-2pi
+        if angle_low != 0.0 or angle_high != 360.:
+            if angle_low < 0.0:
+                anglow = np.deg2rad(np.fmod(angle_low, 360.) + 360.)
+            else:
+                anglow = np.deg2rad(np.fmod(angle_low, 360.))
+            if angle_high < 0.0:
+                anghigh = np.deg2rad(np.fmod(angle_high, 360.) + 360.)
+            else:
+                anghigh = np.deg2rad(np.fmod(angle_high, 360.))
+        else:
+            anglow = 0.
+            anghigh = 2. * np.pi
+        # Compute angles and set them between 0 and 2pi
+        angles = np.arctan2(y - self.cy , x - self.cx)
+        aneg = np.where( angles < 0.)
+        angles[aneg] = angles[aneg] + 2. * np.pi
+        # Now set angles relative to anglow
+        if anghigh<anglow: #We cross the zero
+            anghigh = anghigh + 2.*np.pi - anglow
+        else:
+            anghigh = anghigh - anglow
+        #
+        zcross = np.where(angles < anglow)
+        zgr = np.where(angles >= anglow)
+        angles[zcross] = angles[zcross] + 2.*np.pi - anglow
+        angles[zgr] = angles[zgr] - anglow
+
+        notinsector = np.where(np.logical_or(angles <0., angles > anghigh))
+        rads[notinsector] = -1. # never selected
 
         all_prof, area = median_all_cov(data, self.bins, self.ebins, rads, nsim=nsim, fitter=fitter, thin=thin)
         profile, eprof = np.median(all_prof, axis=1), np.std(all_prof, axis=1)

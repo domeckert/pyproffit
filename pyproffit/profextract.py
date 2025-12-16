@@ -8,6 +8,8 @@ from scipy.optimize import brentq
 from .emissivity import *
 from astropy.cosmology import FlatLambdaCDM
 import math
+from astropy.convolution import Gaussian2DKernel
+
 
 def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
     """
@@ -29,8 +31,6 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
     :type xscale: str , optional
     :param yscale: Scale of the Y axis. Defaults to 'log'
     :type yscale: str , optional
-    :param lw: Line width. Defaults to 2
-    :type lw: int , optional
     :param fmt: Marker type following matplotlib convention. Defaults to 'd'
     :type fmt: str , optional
     :param markersize: Marker size. Defaults to 7
@@ -45,6 +45,89 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
             print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
             labels = [None] * len(profs)
 
+    fig = plt.figure(figsize=figsize)
+    ax_size = [0.14, 0.14,
+               0.83, 0.83]
+    ax = fig.add_axes(ax_size)
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+
+    plt.xlabel('Radius [arcmin]', fontsize=fontsize)
+    if profs[0].radio: # check if the first profile is radio to set the correct units (it will assume that all the others are radio too)
+        plt.ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
+        rms_values = [np.nanmean(prof.bkgprof) for prof in profs]
+        all_rms_equal = all(r == rms_values[0] for r in rms_values)
+        if all_rms_equal: # plot a single rms line if the mean rms is the same for all bkgprof profiles
+            plt.plot(profs[0].bins, profs[0].bkgprof, color='k', lw=2, ls='--', label='Noise')
+    else:
+        plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+    plt.xscale(xscale)
+    plt.yscale(yscale)
+    for i in range(len(profs)):
+        prof = profs[i]
+        plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt, color='C%d' % i, elinewidth=2,
+                     markersize=markersize, capsize=3, label=labels[i])
+        if prof.radio and not all_rms_equal: # plot different rms lines if the rms are different (e.g. when multi-freq data are used)
+            if labels[i] == None:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--')
+            else:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--', label=labels[i] + ' noise')
+
+    plt.legend(loc=0,fontsize=22)
+    if axes is not None:
+        plt.axis(axes)
+
+    if outfile is not None:
+        plt.savefig(outfile)
+
+    else:
+        plt.show(block=False)
+
+def plot_alpha_profile(profs, freqs, labels=None, outfile=None, axes=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='linear', fmt='o', markersize=7):
+    """
+    Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
+
+    :param profs: List of Profile objects to be plotted
+    :type profs: tuple
+    :param freqs: List of frequencies of the profiles
+    :type freqs: tuple
+    :param labels: List of labels for the legend (default=None)
+    :type labels: tuple
+    :param outfile: If outfile is not None, path to file name to output the plot
+    :type outfile: str
+    :param axes: List of 4 numbers defining the X and Y axis ranges for the plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
+    :type axes: list , optional
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'linear'
+    :type yscale: str , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
+    """
+
+    if freqs is None:
+        print('Error: no freqs provided, cannot make spectral index profile. Exiting.')
+        return
+    else:
+        if len(freqs) != len(profs):
+            print('Error: the number of provided freqs does not match the number of input profiles. Exiting.')
+            return
+
+    if labels is None:
+        labels = [None] * len(profs)
+    else:
+        if len(labels) != len(profs):
+            print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
+            labels = [None] * len(profs)
 
     fig = plt.figure(figsize=figsize)
     ax_size = [0.14, 0.14,
@@ -57,14 +140,15 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
         item.set_fontsize(18)
 
     plt.xlabel('Radius [arcmin]', fontsize=fontsize)
-
-    plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+    plt.ylabel('Spectral index', fontsize=fontsize)
     plt.xscale(xscale)
     plt.yscale(yscale)
-    for i in range(len(profs)):
-        prof = profs[i]
-        plt.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof, fmt=fmt, color='C%d' % i, elinewidth=2,
-                     markersize=markersize, capsize=3, label=labels[i])
+
+    alpha     = np.log10(profs[0].profile/profs[1].profile) / np.log10(freqs[1]/freqs[0])
+    alpha_err = (1/np.log(freqs[1]/freqs[0])) * np.sqrt((profs[0].eprof/profs[0].profile)**2 + (profs[1].eprof/profs[1].profile)**2)
+
+    plt.errorbar(profs[0].bins, alpha, xerr=profs[0].ebins, yerr=alpha_err, fmt=fmt, color='k', elinewidth=2,
+                     markersize=markersize, capsize=3)
 
     plt.legend(loc=0,fontsize=22)
     if axes is not None:
@@ -75,6 +159,121 @@ def plot_multi_profiles(profs, labels=None, outfile=None, axes=None, figsize=(13
 
     else:
         plt.show(block=False)
+
+
+def plot_multi_profiles_and_alpha(profs, freqs, labels=None, outfile=None, axesSB=None, ylimALPHA=None, figsize=(13, 10), fontsize=40, xscale='log', yscale='log', fmt='o', markersize=7):
+    """
+    Plot multiple surface brightness profiles on a single plot. This feature can be useful e.g. to compare profiles across multiple sectors
+
+    :param profs: List of Profile objects to be plotted
+    :type profs: tuple
+    :param freqs: List of frequencies of the profiles
+    :type freqs: tuple
+    :param labels: List of labels for the legend (default=None)
+    :type labels: tuple
+    :param axesSB: List of 4 numbers defining the X and Y axis ranges for the SB plot. Gives axes=[x1, x2, y1, y2], the X axis will be set between x1 and x2, and the Y axis will be set between y1 and y2.
+    :type axesSB: list , optional
+    :param ylimALPHA: List of 2 numbers defining the Y axis ranges for the alpha plot. Gives ylimALPHA=[y1, y2], the Y axis will be set between y1 and y2.
+    :type ylimALPHA: list , optional
+    :param outfile: If outfile is not None, path to file name to output the plot
+    :type outfile: str
+    :param figsize: Size of figure. Defaults to (13, 10)
+    :type figsize: tuple , optional
+    :param fontsize: Font size of the axis labels. Defaults to 40
+    :type fontsize: int , optional
+    :param xscale: Scale of the X axis. Defaults to 'log'
+    :type xscale: str , optional
+    :param yscale: Scale of the Y axis. Defaults to 'linear'
+    :type yscale: str , optional
+    :param fmt: Marker type following matplotlib convention. Defaults to 'd'
+    :type fmt: str , optional
+    :param markersize: Marker size. Defaults to 7
+    :type markersize: int , optional
+    """
+
+    if freqs is None:
+        print('Error: no freqs provided, cannot make spectral index profile. Exiting.')
+        return
+    else:
+        if len(freqs) != len(profs):
+            print('Error: the number of provided freqs does not match the number of input profiles. Exiting.')
+            return
+
+    print("Showing %d brightness profiles" % len(profs))
+
+    if labels is None:
+        labels = [None] * len(profs)
+    else:
+        if len(labels) != len(profs):
+            print('Error: the number of provided labels does not match the number of input profiles, we will not plot labels')
+            labels = [None] * len(profs)
+
+    fig = plt.figure(figsize=figsize)
+    gs0 = gridspec.GridSpec(1, 1)
+    gs0.update(left=0.12, right=0.95, wspace=0.0, top=0.95, bottom=0.35)
+    ax = plt.subplot(gs0[0])
+
+    gs1 = gridspec.GridSpec(1, 1)
+    gs1.update(left=0.12, right=0.95, wspace=0.0, top=0.35, bottom=0.12)
+    ax1 = plt.subplot(gs1[0], sharex=ax)
+
+    ax.minorticks_on()
+    ax.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+        item.set_fontsize(18)
+
+    ax.set_xscale(xscale)
+    ax.set_yscale(yscale)
+    ax.tick_params(labelbottom=False)  # hide x-labels on top panel
+
+    ax.set_ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
+
+    rms_values = [np.nanmean(prof.bkgprof) for prof in profs]
+    all_rms_equal = all(r == rms_values[0] for r in rms_values)
+    if all_rms_equal: # plot a single rms line if the mean rms is the same for all bkgprof profiles
+        ax.plot(profs[0].bins, profs[0].bkgprof, color='k', lw=2, ls='--', label='Noise')
+
+    # --- Plot top panel: profiles ---
+    for i, prof in enumerate(profs):
+        ax.errorbar(prof.bins, prof.profile, xerr=prof.ebins, yerr=prof.eprof,fmt=fmt, color='C%d' % i, elinewidth=2,
+                        markersize=markersize, capsize=3, label=labels[i])
+
+        if prof.radio and not all_rms_equal: # plot different rms lines if the rms are different (e.g. when multi-freq data are used)
+            if labels[i] == None:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--')
+            else:
+                ax.plot(prof.bins, prof.bkgprof, color='C%d' % i, lw=2, ls='--', label=labels[i] + ' noise')
+
+    ax.legend(loc=0, fontsize=22)
+
+    alpha = np.log10(profs[0].profile / profs[1].profile) / np.log10(freqs[1] / freqs[0])
+    alpha_err = (1 / np.log(freqs[1] / freqs[0])) * np.sqrt( (profs[0].eprof / profs[0].profile)**2 + (profs[1].eprof / profs[1].profile)**2 )
+
+    ax1.errorbar(profs[0].bins, alpha, xerr=profs[0].ebins, yerr=alpha_err,
+                    fmt=fmt, color='k', markersize=markersize, capsize=3, elinewidth=2)
+
+    ax1.set_xlabel("Radius [arcmin]", fontsize=fontsize)
+    ax1.set_ylabel(r"$\alpha$", fontsize=fontsize)
+    ax1.set_xscale(xscale)
+    ax1.set_yscale('linear')
+    ax1.minorticks_on()
+    ax1.tick_params(length=20, width=1, which='major', direction='in', right=True, top=True)
+    ax1.tick_params(length=10, width=1, which='minor', direction='in', right=True, top=True)
+    for item in (ax1.get_xticklabels() + ax1.get_yticklabels()):
+        item.set_fontsize(18)
+
+    if axesSB is not None:
+        ax.axis(axesSB)
+
+    if ylimALPHA is not None:
+        ax1.set_ylim(ylimALPHA)
+
+    if outfile is not None:
+        plt.savefig(outfile)
+    else:
+        plt.show(block=False)
+
 
 class Profile(object):
     """
@@ -139,7 +338,7 @@ class Profile(object):
             self.cy = center_dec - 1.
             self.ellangle = None
             self.ellratio = None
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            pixcrd = np.array([[self.cx, self.cy]], np.float64)
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
             self.cra = world[0][0]
             self.cdec = world[0][1]
@@ -207,7 +406,7 @@ class Profile(object):
             print('Centroid position:', x_c + 1, y_c + 1)
             self.cx = x_c
             self.cy = y_c
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            pixcrd = np.array([[self.cx, self.cy]], np.float64)
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
             self.cra = world[0][0]
             self.cdec = world[0][1]
@@ -255,7 +454,7 @@ class Profile(object):
 
             print('Coordinates of surface-brightness peak:', self.cx + 1, self.cy + 1)
 
-            pixcrd = np.array([[self.cx, self.cy]], np.float_)
+            pixcrd = np.array([[self.cx, self.cy]], np.float64)
 
             world = data.wcs_inp.all_pix2world(pixcrd, 0)
 
@@ -297,6 +496,8 @@ class Profile(object):
         self.effexp = None
         self.bkgprof = None
         self.bkgcounts = None
+        self.fluxdensity = None
+        self.efluxdensity = None
         self.custom = False
         self.ccf = None
         self.lumfact = None
@@ -308,6 +509,10 @@ class Profile(object):
             self.voronoi = True
         else:
             self.voronoi = False
+        if data.radio:
+            self.radio = True
+        else:
+            self.radio = False
 
         if binning=='log':
             self.islogbin = True
@@ -342,8 +547,6 @@ class Profile(object):
         :type angle_low: float
         :param angle_high: In case the surface brightness profile should be extracted across a sector instead of the whole azimuth, upper position angle of the sector respective to the R.A. axis. Defaults to 360
         :type angle_high: float
-        :param voronoi: Set whether the input data is a Voronoi binned image (True) or a standard raw count image (False). Defaults to False.
-        :type voronoi: bool
         :param box: Define whether the profile should be extract along an annulus or a box. The parameter definition of the box matches the DS9 definition. Defaults to False.
         :type box: bool
         :param width: In case box=True, set the full width of the box (in arcmin)
@@ -354,6 +557,7 @@ class Profile(object):
         data = self.data
         img = data.img
         voronoi = self.voronoi
+        radio   = self.radio
 
         rmsmap = False
         if data.rmsmap is not None:
@@ -372,6 +576,10 @@ class Profile(object):
             exposure = data.errmap
         bkg = data.bkg
         pixsize = data.pixsize
+        if radio:
+            beamarea_pix = data.beamarea_pix
+            #rms_jy_beam = data.rms_jy_beam
+            #rms_jy_arcmin = data.rms_jy_arcmin
         if not self.custom:
             if (self.islogbin):
                 self.bins, self.ebins = logbinning(self.binsize, self.maxrad)
@@ -387,6 +595,8 @@ class Profile(object):
             nbin = self.nbin
         profile, eprof, counts, area, effexp, bkgprof, bkgcounts = np.empty(self.nbin), np.empty(self.nbin), np.empty(
                 self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin), np.empty(self.nbin)
+        if radio:
+            fluxdensity, efluxdensity = np.empty(self.nbin), np.empty(self.nbin)
         y, x = np.indices(data.axes)
         if rotation_angle is not None:
             self.ellangle = rotation_angle
@@ -467,8 +677,16 @@ class Profile(object):
                     errmap = data.errmap
                 else:
                     errmap = data.rmsmap
-                profile[i] = np.sum(img[id]) / nv
-                eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
+                if radio:
+                    fluxdensity[i] = np.sum(img[id] / beamarea_pix)
+                    efluxdensity[i] = np.sum(errmap[id]) / np.sqrt(nv * beamarea_pix)
+                    bkgprof[i] = np.sum(errmap[id]) / np.sqrt(nv * beamarea_pix) / nv / pixsize ** 2
+                    #bkgprof[i] = np.sum(errmap[id] / beamarea_pix) / nv / pixsize ** 2
+                    profile[i] = fluxdensity[i] / nv / pixsize ** 2
+                    eprof[i] = efluxdensity[i] / nv / pixsize ** 2
+                else:
+                    profile[i] = np.sum(img[id]) / nv
+                    eprof[i] = np.sqrt(np.sum(errmap[id] ** 2)) / nv
                 area[i] = nv * pixsize ** 2
                 effexp[i] = 1. # Dummy, but to be consistent with PSF calculation
             else:
@@ -494,9 +712,14 @@ class Profile(object):
         self.effexp = effexp
 
         if not voronoi:
-            self.counts = counts
-            self.bkgprof = bkgprof
-            self.bkgcounts = bkgcounts
+            if radio:
+                self.fluxdensity = fluxdensity
+                self.efluxdensity = efluxdensity
+                self.bkgprof = bkgprof
+            else:
+                self.counts = counts
+                self.bkgprof = bkgprof
+                self.bkgcounts = bkgcounts
 
         if show_region:
             self.show_photons()
@@ -537,9 +760,20 @@ class Profile(object):
         mask = np.zeros(data.img.shape)
         mask[np.where(np.logical_and(np.logical_and((data.exposure > 0), (angles >= 0.)), (angles <= anghigh)))] = 1
         fig = plt.figure(figsize=(10,10))
-        s1=plt.subplot(111)
-        plt.imshow(mask * data.img, aspect='auto', origin='lower', vmin=0, vmax=1)
+        s1=plt.subplot(121)
+        s1.set_title('Original image')
+        if self.radio:
+            plt.imshow(np.log10(data.img), aspect='auto', origin='lower')
+        else:
+            plt.imshow(data.img, aspect='auto', origin='lower', vmin=0, vmax=1)
+        s2=plt.subplot(122)
+        s2.set_title('Sector applied')
+        if self.radio:
+            plt.imshow(np.log10(mask * data.img), aspect='auto', origin='lower')
+        else:
+            plt.imshow(mask * data.img, aspect='auto', origin='lower', vmin=0, vmax=1)
         plt.scatter(self.cx, self.cy, color='r', marker='x')
+
         return
 
     def MedianSB(self, ellipse_ratio=1.0, rotation_angle=0.0, nsim=1000, angle_low=0., angle_high=360., outsamples=None, fitter=None, thin=10):
@@ -773,14 +1007,21 @@ class Profile(object):
                 cols = []
                 cols.append(fits.Column(name='RADIUS', format='E', unit='arcmin', array=self.bins))
                 cols.append(fits.Column(name='WIDTH', format='E', unit='arcmin', array=self.ebins))
-                cols.append(fits.Column(name='SB', format='E', unit='cts s-1 arcmin-2', array=self.profile))
-                cols.append(fits.Column(name='ERR_SB', format='E', unit='cts s-1 arcmin-2', array=self.eprof))
+                if self.radio:
+                    cols.append(fits.Column(name='SB', format='E', unit='Jy arcmin-2', array=self.profile))
+                    cols.append(fits.Column(name='ERR_SB', format='E', unit='Jy arcmin-2', array=self.eprof))
+                else:
+                    cols.append(fits.Column(name='SB', format='E', unit='cts s-1 arcmin-2', array=self.profile))
+                    cols.append(fits.Column(name='ERR_SB', format='E', unit='cts s-1 arcmin-2', array=self.eprof))
                 cols.append(fits.Column(name='AREA', format='E', unit='arcmin2', array=self.area))
                 cols.append(fits.Column(name='EFFEXP', format='E', unit='s', array=self.effexp))
                 if self.counts is not None:
                     cols.append(fits.Column(name='BKG', format='E', unit='cts s-1 arcmin-2', array=self.bkgprof))
                     cols.append(fits.Column(name='COUNTS', format='I', unit='', array=self.counts))
                     cols.append(fits.Column(name='BKGCOUNTS', format='E', unit='', array=self.bkgcounts))
+                if self.fluxdensity is not None:
+                    cols.append(fits.Column(name='FLUXDENSITY', format='E', unit='Jy', array=self.fluxdensity))
+                    cols.append(fits.Column(name='EFLUXDENSITY', format='E', unit='Jy', array=self.efluxdensity))
                 if self.scatter is not None:
                     cols.append(fits.Column(name='SCATTER', format='E', array=self.scatter))
                     cols.append(fits.Column(name='ERR_SCATTER', format='E', array=self.err_scat))
@@ -821,6 +1062,8 @@ class Profile(object):
                 hdr.comments['BKGMAP'] = 'Path to background map file'
                 hdr['RMSMAP'] = self.data.rmsmap
                 hdr.comments['RMSMAP'] = 'Path to RMS file'
+                hdr['RMSVAL'] = self.data.rms_jy_beam
+                hdr.comments['RMSVAL'] = 'Value of RMS, if provided'
                 hdr['VORONOI'] = self.data.voronoi
                 hdr.comments['VORONOI'] = 'Voronoi on/off switch'
                 hdr['COMMENT'] = 'Written by pyproffit (Eckert et al. 2020)'
@@ -854,7 +1097,7 @@ class Profile(object):
         :param psfimage: Array containing an image of the PSF. The pixel size should be passed with psfpixsize parameter and must be equal to the
         pixel size of the image.
         :type psfimage: class:`numpy.ndarray`
-        :param psfpixsize: Pixel size of the PSF image in arcsec.
+        :param psfpixsize: Pixel size of the PSF image in arcmin.
         :type psfpixsize: float
         :param sourcemodel: Object of type :class:`pyproffit.models.Model` including a surface brightness model to account for surface brightness gradients across the bins. If sourcemodel=None a flat distribution is assumed across each bin. Defaults to None
         :type sourcemodel: class:`pyproffit.models.Model`
@@ -969,6 +1212,75 @@ class Profile(object):
                 psfout[n, p] = np.sum(blurred[sn])
         self.psfmat = psfout
 
+    def PSF_radio(self):
+        """
+        Function to calculate a 2D Gaussian PSF convolution matrix given the information on the radio beam in the image header.
+        To compute the PSF mixing matrix, images of each annuli are convolved with the PSF image using FFT and determine the fraction of photons leaking into neighbouring annuli. FFT-convolved images are then used to determine a mixing matrix. See Eckert et al. 2020 for more details.
+        """
+
+        #
+        rad = self.bins
+        erad = self.ebins
+        nbin = self.nbin
+        psfout = np.zeros((nbin, nbin))
+        exposure = self.data.exposure
+        y, x = np.indices(exposure.shape)
+        rads = np.hypot(x - self.cx, y - self.cy) * self.data.pixsize  # arcmin
+        kernel = None
+        #
+
+        sigma_maj = self.data.bmaj*60. / (2*np.sqrt(2*np.log(2))) # in arcsec
+        sigma_min = self.data.bmin*60. / (2*np.sqrt(2*np.log(2))) # in arcsec
+        bpa_rad = np.deg2rad(self.data.bpa)
+
+        #print(f'The beam is: {self.data.bmaj*60.:.2f} arcsec x {self.data.bmin*60.:.2f} arcsec, PA {self.data.bpa:.2f} deg')
+        #print(f'Will convolve with a 2D Gaussian with sigma_maj = {sigma_maj:.2f} arcsec, sigma_min = {sigma_min:.2f} arcsec, PA = {bpa_rad:.2f} rad')
+
+        # Size of the kernel array, with check if it is an odd integer
+        size = int(0.5*(sigma_maj+sigma_min)*35)
+        if size % 2:
+            pass
+        else:
+            size = size + 1
+
+        gaussian_2D_kernel = Gaussian2DKernel(x_stddev=sigma_maj, y_stddev=sigma_min, theta=bpa_rad, x_size=size, y_size=size)
+
+        psfimage = gaussian_2D_kernel.array
+        self.psfimage = psfimage
+
+        norm = np.sum(psfimage)
+        kernel = psfimage / norm
+
+        if kernel is None:
+            print('No kernel provided, bye bye')
+            return
+
+        # Sort pixels into radial bins
+        tol = 0.5e-5
+        sort_list = []
+        for n in range(nbin):
+            if n == 0:
+                sort_list.append(np.where(
+                    np.logical_and(rads >= 0, rads < np.round(rad[n] + erad[n], 5) + tol)))
+            else:
+                sort_list.append(np.where(np.logical_and(rads >= np.round(rad[n] - erad[n], 5) + tol,
+                                                                rads < np.round(rad[n] + erad[n], 5) + tol)))
+        # Calculate average of PSF image pixel-by-pixel and sort it by radial bins
+        for n in range(nbin):
+            # print('Working with bin',n+1)
+            region = sort_list[n]
+            npt = len(x[region])
+            imgt = np.zeros(exposure.shape)
+            imgt[region] = 1. / npt
+            # FFT-convolve image with kernel
+            blurred = convolve(imgt, kernel, mode='same')
+            numnoise = np.where(blurred<1e-15)
+            blurred[numnoise]=0.0
+            for p in range(nbin):
+                sn = sort_list[p]
+                psfout[n, p] = np.sum(blurred[sn])
+        self.psfmat = psfout
+
     def SaveModelImage(self, outfile, model=None, vignetting=True, residual=False, residual_type='sub'):
         """
         Compute a model image and output it to a FITS file
@@ -1064,7 +1376,7 @@ class Profile(object):
         if self.profile is None:
             print('Error: No profile extracted')
             return
-        plt.clf()
+
         fig = plt.figure(figsize=figsize)
         gs0 = gridspec.GridSpec(1, 1)
         if model is not None:
@@ -1099,11 +1411,17 @@ class Profile(object):
         if model is None:
             plt.xlabel('Radius [arcmin]', fontsize=fontsize)
             if not scatter:
-                plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+                if self.radio:
+                    plt.ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
+                else:
+                    plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
             else:
                 plt.ylabel('$\Sigma_{X}$', fontsize=fontsize)
         else:
-            plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
+            if self.radio:
+                plt.ylabel('SB [Jy/arcmin$^2$]', fontsize=fontsize)
+            else:
+                plt.ylabel('SB [cts/s/arcmin$^2$]', fontsize=fontsize)
         plt.yscale(yscale)
         plt.xscale(xscale)
 
@@ -1112,6 +1430,8 @@ class Profile(object):
                          markersize=markersize, capsize=0, mec=data_color, label='Brightness', **kwargs)
             if self.data.bkglink is not None:
                 plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Background')
+            if self.data.rmsmap is not None:
+                plt.plot(rads, self.bkgprof, color=bkg_color, lw=lw, label='Noise')
             if model is not None and samples is None:
                 tmod = model(rads, *model.params)
                 if self.psfmat is not None:

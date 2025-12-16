@@ -4,6 +4,43 @@ from astropy import wcs
 from scipy.ndimage.filters import gaussian_filter
 from scipy.interpolate import griddata
 
+def flatten(f):
+    """ Flatten a fits file so that it becomes a 2D image. Return new header and data """
+
+    naxis=f[0].header['NAXIS']
+    if naxis<2:
+        raise RadioError('Can\'t make map from this')
+    if naxis==2:
+        return fits.PrimaryHDU(header=f[0].header,data=f[0].data)
+
+    w = wcs.WCS(f[0].header)
+    wn=wcs.WCS(naxis=2)
+
+    wn.wcs.crpix[0]=w.wcs.crpix[0]
+    wn.wcs.crpix[1]=w.wcs.crpix[1]
+    wn.wcs.cdelt=w.wcs.cdelt[0:2]
+    wn.wcs.crval=w.wcs.crval[0:2]
+    wn.wcs.ctype[0]=w.wcs.ctype[0]
+    wn.wcs.ctype[1]=w.wcs.ctype[1]
+
+    header = wn.to_header()
+    header["NAXIS"]=2
+    copy=('EQUINOX','EPOCH','BMAJ', 'BMIN', 'BPA', 'RESTFRQ', 'TELESCOP', 'OBSERVER')
+    for k in copy:
+        r=f[0].header.get(k)
+        if r is not None:
+            header[k]=r
+
+    slice=[]
+    for i in range(naxis,0,-1):
+        if i<=2:
+            slice.append(np.s_[:],)
+        else:
+            slice.append(0)
+
+    hdu = fits.PrimaryHDU(header=header,data=f[0].data[tuple(slice)])
+    return hdu
+
 def get_extnum(fitsfile):
     """
     Find the extension number of the first IMAGE extension in an input FITS file
@@ -50,8 +87,12 @@ class Data(object):
     :type voronoi: bool , optional
     :param rmsmap: Path to error map if the data is not Poisson distributed
     :type rmsmap: str , optional
+    :param rmsval: Value of rms to make an rmsmap with constant value
+    :type rmsval: float , optional
+    :param radio: Define whether the input image is a radio image or not (default=False)
+    :type radio: bool , optional
     '''
-    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None):
+    def __init__(self, imglink, explink=None, bkglink=None, voronoi=False, rmsmap=None, rmsval=None, radio=False):
         '''
         Constructor of class Data
 
@@ -59,17 +100,26 @@ class Data(object):
         if imglink is None:
             print('Error: Image file not provided')
             return
-        fimg = fits.open(imglink)
-        next = get_extnum(fimg)
-        self.img = fimg[next].data.astype(float)
+        if radio:
+            fimg = flatten(fits.open(imglink))
+            self.img = fimg.data.astype(float)
+            head = fimg.header
+        else:
+            fimg = fits.open(imglink)
+            next = get_extnum(fimg)
+            self.img = fimg[next].data.astype(float)
+            head = fimg[next].header
+            fimg.close()
         self.imglink = imglink
         self.explink = explink
         self.bkglink = bkglink
         self.voronoi = voronoi
+        self.radio  = radio
         self.rmsmap = rmsmap
-        head = fimg[next].header
         self.header = head
         self.wcs_inp = wcs.WCS(head, relax=False)
+        self.axes = self.img.shape
+
         if 'CDELT2' in head:
             self.pixsize = head['CDELT2'] * 60.  # arcmin
         elif 'CD2_2' in head:
@@ -77,10 +127,57 @@ class Data(object):
         else:
             print('No pixel size could be found in header, will assume a pixel size of 2.5 arcsec')
             self.pixsize = 2.5 / 60.
-        self.axes = self.img.shape
+
+        if radio:
+            self.bmaj = head['BMAJ'] * 60.  # arcmin
+            self.bmin = head['BMIN'] * 60.  # arcmin
+            self.bpa = head['BPA']  # deg
+            print('The beam is: {:.2f} arcsec x {:.2f} arcsec, PA {:.2f} deg'.format(self.bmaj*60., self.bmin*60., self.bpa))
+
+            # calc beam area
+            beammaj = self.bmaj/(2.0*(2*np.log(2))**0.5) # Convert to sigma
+            beammin = self.bmin/(2.0*(2*np.log(2))**0.5) # Convert to sigma
+            beamarea_arcmin = 2*np.pi*1.0*beammaj*beammin
+            self.beamarea_pix = beamarea_arcmin/(self.pixsize*self.pixsize)
+            beamarea_arcsec = self.beamarea_pix*self.pixsize*self.pixsize*3600. #in arcsec^2
+            print('The beam area is: {:.2f} arcsec^2'.format(beamarea_arcsec))
+            if rmsval:
+                self.rms_jy_beam = rmsval
+                self.rms_jy_arcmin = rmsval/(self.beamarea_pix*self.pixsize*self.pixsize)
+                print('The noise is: {:.2e} Jy/beam = {:.2e} Jy/arcmin^2'.format(self.rms_jy_beam, self.rms_jy_arcmin))
+                self.rmsmap = np.full(self.axes, rmsval)
+            elif rmsmap:
+                frms = flatten(fits.open(rmsmap))
+                rms = frms.data.astype(float)
+                if rms.shape != self.axes:
+                    print('Error: Image and RMS map sizes do not match')
+                    return
+                self.rmsmap = rms
+            else:
+                print('No rmsmap nor rmsval provided, will assume an rms of zero (so no error bars will be displayed)')
+                self.rmsmap = np.zeros(self.axes)
+                self.rms_jy_beam = None
+                self.rms_jy_arcmin = None
+        else:
+            if rmsval:
+                self.rmsmap = np.full(self.axes, rmsval)
+            elif rmsmap:
+                frms = fits.open(rmsmap)
+                next = get_extnum(frms)
+                rms = frms[next].data.astype(float)
+                if rms.shape != self.axes:
+                    print('Error: Image and RMS map sizes do not match')
+                    return
+                self.rmsmap = rms
+                frms.close()
+            else:
+                self.rmsmap = None
+                self.rms_jy_beam = None
+                self.rms_jy_arcmin = None
+
         if voronoi:
             self.errmap = fimg[1].data.astype(float)
-        fimg.close()
+
         if explink is None:
             self.exposure = np.ones(self.axes)
         else:
@@ -105,17 +202,7 @@ class Data(object):
                 return
             self.bkg = bkg
             fbkg.close()
-        if rmsmap is not None:
-            frms = fits.open(rmsmap)
-            next = get_extnum(frms)
-            rms = frms[next].data.astype(float)
-            if rms.shape != self.axes:
-                print('Error: Image and RMS map sizes do not match')
-                return
-            self.rmsmap = rms
-            frms.close()
-        else:
-            self.rmsmap = None
+
         self.filth = None
 
     def region(self, regfile):
@@ -251,6 +338,10 @@ class Data(object):
         imgc = np.copy(self.img)
         imgc[chimg] = 0.0
 
+        if self.radio:
+            print('!! Working with a radio image: forcing smoothing_scale=0. Use dmfilth at your own risk !!')
+            smoothing_scale = 0
+
         # High-pass filter
         print('Applying high-pass filter')
         gsb = gaussian_filter(imgc, smoothing_scale)
@@ -271,7 +362,10 @@ class Data(object):
         print('Filling holes')
         area_to_fill = np.where(np.logical_and(int_vals > 0., self.exposure == 0))
         dmfilth = np.copy(self.img)
-        dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill] * self.defaultexpo[area_to_fill])
+        if self.radio:
+            dmfilth[area_to_fill] = int_vals[area_to_fill]
+        else:
+            dmfilth[area_to_fill] = np.random.poisson(int_vals[area_to_fill] * self.defaultexpo[area_to_fill])
 
         self.filth = dmfilth
 

@@ -109,7 +109,7 @@ class Data(object):
             next = get_extnum(fimg)
             self.img = fimg[next].data.astype(float)
             head = fimg[next].header
-            fimg.close()
+
         self.imglink = imglink
         self.explink = explink
         self.bkglink = bkglink
@@ -203,6 +203,7 @@ class Data(object):
             self.bkg = bkg
             fbkg.close()
 
+        fimg.close()
         self.filth = None
 
     def region(self, regfile):
